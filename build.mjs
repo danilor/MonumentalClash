@@ -1,4 +1,4 @@
-// Bundles the game into dist/ (one classic script, so dist/index.html also works when opened from disk).
+// Bundles the game into docs/ (one classic script, so docs/index.html also works when opened from disk).
 //   node build.mjs           production build
 //   node build.mjs --serve   development server with rebuild-on-change on http://localhost:8080
 import { context, build } from 'esbuild';
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const serve = process.argv.includes('--serve');
-const outdir = resolve(root, 'dist');
+const outdir = resolve(root, 'docs');
 mkdirSync(outdir, { recursive: true });
 copyFileSync(resolve(root, 'src/index.html'), resolve(outdir, 'index.html'));
 
