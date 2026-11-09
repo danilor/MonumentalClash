@@ -7,6 +7,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { open, browserAvailable } from './browser.mjs';
 import { H, HEX_W, LAYOUT, S, W } from '../src/ui/theme.js';
+import { REVEAL } from '../src/ui/diceroll.js';
+import { BARBARIAN } from '../src/engine/data/constants.js';
+import { addUnit } from '../src/engine/state.js';
+import { nbrs } from '../src/engine/queries.js';
+import { act, capitalOf, fresh, give } from './scenario.mjs';
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '../dist/index.html');
 const skip = !browserAvailable() ? 'no Chromium-family browser found (set BROWSER_PATH)' : !existsSync(dist) ? 'run "npm run build" first' : false;
 
@@ -79,6 +84,113 @@ const markGame = (app) => app.eval(() => { window.__old = window.__game; });
 const waitNewGame = (app) =>
   app.page.waitForFunction(() => window.__game && window.__game !== window.__old && window.__ctl && window.__ctl.humanCanAct() && !window.__ctl.pumping, null, { timeout: 60000, polling: 200 });
 const gameLength = (app) => app.eval(() => ({ ages: window.__game.s.ages, age: window.__game.s.age, round: window.__game.s.round }));
+
+// ------------------------------------------------------------ the battle window and its dice roll
+const DIE = 40; // the size of one die in the battle window
+const faceKey = (f) => `${f.v}/${f.icon}`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const FACE_SET = [[1, 'leader'], [2, 'cavalry'], [3, 'infantry'], [4, 'elephant'], [5, 'infantry'], [6, 'infantry']].map(([v, icon]) => ({ v, icon }));
+const diceOf = (n, from = 0) => Array.from({ length: n }, (_, i) => FACE_SET[(i * 5 + from) % FACE_SET.length]);
+const DICE = { a: diceOf(4), d: diceOf(3, 2) };
+
+/** Play one round of battle in the game window with invented dice, so that nothing depends on luck. `__closed` turns true once the window is gone.
+ * The roll is held at its start, to be moved by `seekRoll`; with `hold: false` it runs by itself. */
+const startRound = (app, { a, d, owners = [0, 1], hold = true }) =>
+  app.eval(
+    ({ a, d, owners, hold }) => {
+      const sum = (list) => list.reduce((n, x) => n + x.v, 0);
+      const marks = (list) => list.filter((x) => x.icon === 'infantry').length;
+      const bonusA = Math.min(3, marks(a));
+      const bonusD = Math.min(1, marks(d));
+      const cvA = sum(a) + bonusA + 2;
+      const cvD = sum(d) + bonusD;
+      const ev = {
+        type: 'battle_round',
+        hex: window.__game.s.cities.find((c) => c.owner === 0).hex,
+        round: 1,
+        domain: 'land',
+        a: { owner: owners[0], dice: a, cv: cvA, hits: Math.floor(cvA / 5), bonus: bonusA, mod: 2, card: null, lost: 1 },
+        d: { owner: owners[1], dice: d, cv: cvD, hits: Math.floor(cvD / 5), bonus: bonusD, mod: 0, card: null, lost: 2, fortress: false },
+        cancelA: 0,
+        cancelD: 0,
+      };
+      window.__closed = false;
+      window.__ctl.playEvent(ev, null).then(() => {
+        window.__closed = true;
+      });
+      const top = window.__ctl.scene.modals.at(-1); // the window exists as soon as the event is played
+      if (hold && top && top.roll) top.roll.seek(0);
+    },
+    { a, d, owners, hold },
+  );
+
+/** Jump the dice roll of the topmost battle window to `t` ms of design time; that also stops it from running on by itself. */
+const seekRoll = (app, t) => app.eval((ms) => window.__ctl.scene.modals.at(-1).roll.seek(ms), t);
+
+/** What the topmost battle window shows right now (null when it has no dice roll). */
+const rollState = (app) =>
+  app.eval(() => {
+    const m = window.__ctl.scene.modals.at(-1);
+    const r = m && m.roll;
+    if (!r) return null;
+    const key = (f) => (f ? `${f.v}/${f.icon}` : null);
+    const home = (d) => d.root.visible && Math.abs(d.root.x - d.x) < 1e-6 && Math.abs(d.root.y - d.y) < 1e-6 && Math.abs(d.root.angle) < 1e-6 && d.root.scaleX === 1 && d.root.alpha === 1;
+    return {
+      playing: r.playing,
+      total: r.total,
+      end: r.end,
+      dice: r.dice.length,
+      shown: r.dice.filter((d) => d.root.visible).length,
+      home: r.dice.filter(home).length,
+      sides: r.dice.map((d) => (d.plan.dir < 0 ? 'a' : 'd')),
+      faces: r.dice.map((d) => key(d.face)),
+      finals: r.dice.map((d) => key(d.final)),
+      stages: r.stages.map((s) => (s.visible ? Math.round(s.alpha * 100) / 100 : null)),
+      closed: window.__closed,
+    };
+  });
+
+const rollButtons = async (app) => (await buttons(app)).map((b) => b.label).filter((label) => label === 'Show result' || label === 'Continue');
+
+/** Where the dice of the topmost battle window lie, and how big the window is. */
+const diceLayout = (app) =>
+  app.eval(() => {
+    const m = window.__ctl.scene.modals.at(-1);
+    return { w: m.w, h: m.h, dice: m.roll.dice.map((d) => ({ x: d.x, y: d.y, side: d.plan.dir < 0 ? 'a' : 'd' })) };
+  });
+
+/** Every text in the topmost window, the ones still hidden included. */
+const modalTexts = (app) =>
+  app.eval(() => {
+    const out = [];
+    const walk = (list) => {
+      for (const o of list) {
+        if (typeof o.text === 'string') out.push(o.text);
+        if (o.list) walk(o.list);
+      }
+    };
+    walk(window.__ctl.scene.modals.at(-1).content.list);
+    return out;
+  });
+
+/** Confirm a battle window the way a player does: one press ends the roll, the next closes the window. */
+async function dismissRound(app) {
+  for (let i = 0; i < 2 && (await modals(app)); i++) await app.key('Space');
+  await app.waitFor(() => window.__closed === true && window.__ctl.scene.modals.length === 0);
+}
+
+function assertDiceFit({ w, h, dice }, label) {
+  const r = DIE / 2;
+  for (const d of dice) {
+    assert.ok(d.x - r >= 0 && d.x + r <= w && d.y - r >= 0 && d.y + r <= h, `${label}: a die at ${d.x},${d.y} sticks out of the ${w}x${h} window`);
+    assert.ok(d.side === 'a' ? d.x + r <= w / 2 : d.x - r >= w / 2, `${label}: a ${d.side} die at ${d.x} crosses the middle`);
+  }
+  for (let i = 0; i < dice.length; i++) {
+    for (let j = i + 1; j < dice.length; j++) {
+      assert.ok(Math.abs(dice[i].x - dice[j].x) >= DIE || Math.abs(dice[i].y - dice[j].y) >= DIE, `${label}: dice ${i} and ${j} overlap`);
+    }
+  }
+}
 
 test('the game window: title, new game, dialogs and a turn against the computer', { skip, timeout: 280000 }, async (t) => {
   const app = await open('');
@@ -262,6 +374,213 @@ test('a game of 4 Ages is played to the end in the game window, and the next gam
       assert.ok((await hudTexts(app)).includes(`of ${ages}`), (await hudTexts(app)).join(' | '));
     });
 
+    assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
+  } finally {
+    await app.close();
+  }
+});
+
+// The battle window with invented rounds, so that the dice are known. `seekRoll` pins the roll to a moment of its timeline.
+test('the battle window rolls the dice before it shows the result, and the roll can be skipped', { skip, timeout: 200000 }, async (t) => {
+  const app = await open('?seed=7', { storage: { 'coc.speed': 'fast' } });
+  try {
+    await app.ready();
+    if (await modals(app)) await app.key('Escape');
+    const gameBefore = await app.eval(() => JSON.stringify(window.__game.s));
+    const play = async (dice = DICE) => {
+      await startRound(app, dice);
+      await app.waitFor(() => window.__ctl.scene.modals.some((m) => m.roll));
+    };
+
+    await t.test('the dice are thrown one after another and land, and only then does the result appear, step by step', async () => {
+      await play();
+      await seekRoll(app, 0);
+      let v = await rollState(app);
+      assert.equal(v.dice, DICE.a.length + DICE.d.length);
+      assert.deepEqual([v.playing, v.shown, v.stages], [true, 0, [null, null, null]], 'no die is on the table and there is no result yet');
+      assert.deepEqual(await rollButtons(app), ['Show result']);
+
+      await seekRoll(app, 150);
+      v = await rollState(app);
+      assert.ok(v.shown > 0 && v.shown < v.dice, `${v.shown} of ${v.dice} dice are on the table 150 ms in`);
+
+      await seekRoll(app, 400);
+      const air = await rollState(app);
+      assert.deepEqual([air.shown, air.home, air.stages], [air.dice, 0, [null, null, null]], 'every die is in the air and the result is still hidden');
+
+      await seekRoll(app, air.end + REVEAL.gap + REVEAL.fade / 2);
+      v = await rollState(app);
+      assert.deepEqual([v.playing, v.stages], [true, [0.5, null, null]], 'the dice total and Combat value fade in first');
+      await seekRoll(app, air.end + REVEAL.gap + REVEAL.step + REVEAL.fade / 2);
+      v = await rollState(app);
+      assert.deepEqual([v.home, v.stages], [v.dice, [1, 0.5, null]], 'every die has settled; the hits come next');
+      await dismissRound(app);
+    });
+
+    await t.test('Space during the roll shows the result at once without closing the window; the next press closes it', async () => {
+      await play();
+      await seekRoll(app, 300);
+      await app.key('Space');
+      const v = await rollState(app);
+      assert.ok(v, 'the window is still there');
+      assert.deepEqual([v.playing, v.closed, v.stages], [false, false, [1, 1, 1]]);
+      assert.deepEqual(v.faces, v.finals, 'every die shows the face the engine rolled');
+      assert.equal(v.home, v.dice, 'and lies in its place');
+      assert.deepEqual(await rollButtons(app), ['Continue']);
+
+      await app.key('Space');
+      await app.waitFor(() => window.__closed === true);
+      assert.equal(await modals(app), 0);
+    });
+
+    await t.test('a key that is held down skips the roll but does not also close the window', async () => {
+      await play();
+      await seekRoll(app, 300);
+      const keyboard = app.page.keyboard;
+      for (let i = 0; i < 5; i++) await keyboard.down('Space'); // the first press, then the repeats of a held key
+      await keyboard.up('Space');
+      await app.wait(250);
+      const v = await rollState(app);
+      assert.ok(v, 'the window is still there');
+      assert.deepEqual([v.playing, v.closed], [false, false]);
+      await app.key('Enter');
+      await app.waitFor(() => window.__closed === true);
+    });
+
+    await t.test('the Show result button skips the roll, and Continue closes the window', async () => {
+      await play();
+      await seekRoll(app, 500);
+      await clickLabel(app, 'Show result');
+      const v = await rollState(app);
+      assert.deepEqual([v.playing, v.closed, v.stages], [false, false, [1, 1, 1]]);
+      assert.deepEqual(await rollButtons(app), ['Continue']);
+      await clickLabel(app, 'Continue');
+      await app.waitFor(() => window.__closed === true);
+      assert.equal(await modals(app), 0);
+    });
+
+    await t.test('left alone, the roll ends by itself and the window waits for the player', async () => {
+      await play({ ...DICE, hold: false });
+      await app.waitFor(() => !window.__ctl.scene.modals.at(-1).roll.playing, null, 15000);
+      const v = await rollState(app);
+      assert.deepEqual([v.closed, v.stages, v.home], [false, [1, 1, 1], v.dice]);
+      assert.deepEqual(await rollButtons(app), ['Continue']);
+      await app.wait(600);
+      assert.equal(await modals(app), 1, 'the window does not close by itself');
+      await app.key('Enter');
+      await app.waitFor(() => window.__closed === true);
+    });
+
+    await t.test('large and lopsided throws still fit in the window, each side on its own half', async () => {
+      for (const [na, nd] of [[12, 9], [5, 6], [1, 1], [3, 0]]) {
+        await play({ a: diceOf(na), d: diceOf(nd, 2) });
+        await seekRoll(app, 1e6);
+        const v = await rollState(app);
+        assert.equal(v.dice, na + nd);
+        assert.deepEqual([v.playing, v.home], [false, na + nd]);
+        assertDiceFit(await diceLayout(app), `${na} against ${nd}`);
+        await dismissRound(app);
+      }
+    });
+
+    await t.test('there is no window at Instant speed, nor for a fight between the computer and the Barbarians', async () => {
+      await app.eval(() => window.__ctl.setSpeed('instant'));
+      await startRound(app, DICE);
+      await app.waitFor(() => window.__closed === true);
+      assert.equal(await modals(app), 0);
+
+      await app.eval(() => window.__ctl.setSpeed('fast'));
+      await startRound(app, { ...DICE, owners: [1, BARBARIAN] });
+      assert.equal(await modals(app), 0);
+      await app.waitFor(() => window.__closed === true);
+    });
+
+    await t.test('none of it changes the game itself', async () => {
+      assert.equal(await app.eval(() => JSON.stringify(window.__game.s)), gameBefore);
+    });
+
+    assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
+  } finally {
+    await app.close();
+  }
+});
+
+/** A saved game in which three of the player's Infantry stand next to two Barbarian ones. The same attack is made here, in Node, to know how the game must end up. */
+function stageBattle() {
+  const g = fresh('dice-roll-window');
+  const cap = capitalOf(g);
+  give(g, 0, { advances: ['tactics'] });
+  const target = nbrs(g.s, cap.hex).find((k) => ['plains', 'forest'].includes(g.s.map.hexes[k].terrain));
+  assert.ok(target, 'the capital has a neighbour to attack');
+  for (let i = 0; i < 2; i++) addUnit(g.s, BARBARIAN, 'infantry', target);
+  const army = [1, 2, 3].map(() => addUnit(g.s, 0, 'infantry', cap.hex).id);
+  const save = JSON.stringify({ v: 1, at: Date.now(), state: g.s });
+  act(g, { type: 'move', units: army, to: target });
+  return { save, army, target, after: JSON.stringify(g.s) };
+}
+
+test('a real battle: the window shows the dice the engine rolled, and the game ends up as the engine decided', { skip, timeout: 200000 }, async () => {
+  const staged = stageBattle();
+  const app = await open('', { storage: { 'coc.save': staged.save, 'coc.speed': 'fast', 'coc.seenHelp': '1' } });
+  try {
+    await waitScene(app, 'Menu');
+    await markGame(app);
+    await clickLabel(app, 'Continue game');
+    await waitNewGame(app);
+    await app.eval(
+      ({ ids, to }) => {
+        const ctl = window.__ctl;
+        ctl.prompts.ask = async (prompt) => prompt.default; // questions (to retreat, say) get the engine's own answer, as in the Node run
+        const playEvent = ctl.playEvent.bind(ctl);
+        window.__rounds = [];
+        ctl.playEvent = (ev, next) => {
+          const played = playEvent(ev, next);
+          if (ev.type === 'battle_round') {
+            window.__rounds.push(JSON.parse(JSON.stringify(ev)));
+            const top = ctl.scene.modals.at(-1);
+            if (top && top.roll) top.roll.seek(0); // hold the dice where they start, before the roll can end by itself
+          }
+          return played;
+        };
+        window.__done = false;
+        ctl.act({ type: 'move', units: ids, to }).then((r) => {
+          window.__done = r.ok ? true : `refused: ${r.error}`;
+        });
+      },
+      { ids: staged.army, to: staged.target },
+    );
+
+    let windows = 0;
+    for (;;) {
+      await app.page.waitForFunction(() => window.__done !== false || window.__ctl.scene.modals.some((m) => m.roll), null, { timeout: 30000, polling: 50 });
+      if ((await app.eval(() => window.__done)) !== false) break;
+      windows += 1;
+      await app.eval(() => {
+        window.__shown = window.__ctl.scene.modals.at(-1);
+      });
+      const ev = await app.eval(() => window.__rounds.at(-1));
+      const v = await rollState(app);
+      assert.equal(v.playing, true, `round ${ev.round}: the roll was held at its start`);
+      for (const side of ['a', 'd']) {
+        const shown = v.finals.filter((_, i) => v.sides[i] === side).sort();
+        assert.deepEqual(shown, ev[side].dice.map(faceKey).sort(), `round ${ev.round}: the dice thrown by the ${side === 'a' ? 'attacker' : 'defender'} are the engine's`);
+      }
+
+      await app.key('Space');
+      const done = await rollState(app);
+      assert.deepEqual([done.playing, done.stages, done.faces], [false, [1, 1, 1], done.finals]);
+      const texts = await modalTexts(app);
+      for (const side of ['a', 'd']) {
+        const line = `${ev[side].cv} ÷ 5 = ${plural(ev[side].hits, 'hit', 'hits')} on the enemy`;
+        assert.ok(texts.includes(line), `round ${ev.round}: "${line}" is explained in the window: ${texts.join(' | ')}`);
+      }
+
+      await app.key('Space');
+      await app.waitFor(() => window.__shown.closed === true);
+    }
+    assert.ok(windows >= 1, 'the battle opened a window');
+    assert.equal(await app.eval(() => window.__done), true);
+    assert.equal(await app.eval(() => JSON.stringify(window.__game.s)), staged.after, 'the dice that were shown did not change what the engine decided');
     assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
   } finally {
     await app.close();

@@ -128,7 +128,7 @@ Move Army units into a space that holds enemy units or an enemy city to attack. 
 
 When all the defenders are gone, the attacking Army units take the city. The captor gains Gold equal to the city's size (+1 if it was Happy, only 1 if it was Angry); a Barbarian city is worth just 1 Gold, and beating Barbarian units earns 1 more. The captured city becomes Angry, and the old owner places a free Settler in one of the remaining cities.
 
-Battles you take part in are shown round by round with the dice. Press **Continue** (or Space or Enter) for the next step, unless the animation speed is Instant.
+Battles you take part in are shown round by round. Each round opens a battle window in which both sides' dice are rolled onto a table, one after another, and then the Combat value, the hits and the losses are explained step by step. Click **Show result** (or press Space or Enter) to skip the roll, and **Continue** (or Space or Enter again) to close the window. When the animation speed is Instant, and for fights between the computer and the Barbarians, only a short message is shown.
 
 ### Cities and Mood
 
@@ -218,7 +218,7 @@ most. It uses exactly the same rules interface as you do.
 * A hexagonal map with generated terrain art and a symbol for every unit and building type, tinted with its owner's colour. Highlighted spaces (green, red, yellow, blue) show what the selected units can do.
 * Player cards, a panel for the selected city or unit, a list of recent events, the full **Log**, and an **Overview** of each civilization with its score breakdown.
 * Windows for researching Advances (the computer's Advances are marked), cards, Abilities, constructing and recruiting, Influence, and choosing how a newly explored region is turned.
-* A round-by-round **battle** window with the dice, and a **game over** window with the final scores.
+* A round-by-round **battle** window in which the dice roll onto a table before the result is explained, and a **game over** window with the final scores.
 * Explanations on hover for almost everything, and disabled buttons that say why they are disabled.
 * Moves, turn banners and battles are animated, and the animation speed can be set to Normal, Fast or Instant.
 * The game saves itself after every action; **Continue game** picks it up again.
@@ -235,6 +235,7 @@ most. It uses exactly the same rules interface as you do.
 * **Selectable game length:** choose 4 to 12 Ages on the title screen (6 by default). The top bar shows "AGE V of 6", restarting keeps the length, and saved games from older versions open as 6-Age games.
 * **Bigger map and clearer symbols:** the hexes are a little larger, the side panels were re-flowed so the whole board still fits, and the symbols for units, buildings and Wonders were redrawn.
 * **New name:** the game is now called Monumental Clash (title screen, browser tab and package name).
+* **Dice roll in battles:** the battle window rolls the dice onto a table before it explains the result. Show result, Space or Enter skips the roll; Instant animation speed still skips the window altogether.
 
 ## What is still to do
 
@@ -255,7 +256,7 @@ These are suggestions, not promises:
 
 - [ ] **Difficulty levels** for the computer opponent (easier and harder), and different play styles.
 - [ ] **Sound:** effects and music. The game is silent today.
-- [ ] **Better artwork and animation:** the art is simple and generated in the browser; hand-made illustrations and combat animations would help.
+- [ ] **Better artwork and animation:** the art is simple and generated in the browser; hand-made illustrations and animated fights on the map (only the dice roll is animated today) would help.
 - [ ] **Touch and small screens:** the window is a fixed 1280×720 scaled to fit, and explanations appear on hover, which touch screens do not have.
 - [ ] **Several save slots**, and exporting or importing a save. There is one autosave today, kept in the browser.
 - [ ] **Undo** for actions that involve no dice or hidden cards.

@@ -1,27 +1,57 @@
-// The battle report: one round of dice for each side, shown as a small window the player confirms.
+// The battle report: one round of dice for each side, rolled onto a small table and then explained step by step.
+// The player confirms it; the first click (or Space or Enter) while the dice are still rolling only finishes the roll.
 import { ACTION_CARDS } from '../engine/data/cards.js';
+import { COMBAT_DIE } from '../engine/data/constants.js';
 import { C, PLAYER_COLORS, PLAYER_HEX, TERRAIN, TXT } from './theme.js';
 import { Button, Modal, drawPanel, icon, txt } from './widgets.js';
 import { ownerName } from './info.js';
 import { terrainOf } from '../engine/queries.js';
+import { REVEAL, diePose, planDice, revealAt, rollEnd, rollLength } from './diceroll.js';
 
 const DIE = 40;
 const GAP = 6;
+const DICE_Y = 124; // top of the dice area
+const FACES = COMBAT_DIE.map(([v, ic]) => ({ v, icon: ic }));
+const STAGES = 3; // 1: dice total and combat value, 2: the hits, 3: who loses what
 
-function dieBox(scene, x, y, d, color) {
-  const c = scene.add.container(x, y);
+/** One die, drawn around its own centre so that it can spin and swell. `final` is the face the engine rolled. */
+function makeDie(scene, x, y, color, final) {
+  const root = scene.add.container(x, y);
   const g = scene.add.graphics();
-  const inf = d.icon === 'infantry';
-  drawPanel(g, 0, 0, DIE, DIE, { fill: 0x10171f, border: inf ? C.gold : color, radius: 7, line: 2 });
-  c.add(g);
-  c.add(txt(scene, DIE / 2, inf ? 15 : DIE / 2, String(d.v), { size: 22, bold: true, origin: 0.5 }));
-  if (inf) c.add(icon(scene, 'u_infantry', DIE / 2, 31, 13).setTint(0xffd23f));
-  return c;
+  const value = txt(scene, 0, 0, '', { size: 22, bold: true, origin: 0.5 });
+  const mark = icon(scene, 'u_infantry', 0, 11, 13).setTint(0xffd23f);
+  root.add([g, value, mark]);
+  let drawn = '';
+  const die = {
+    root,
+    x,
+    y,
+    final,
+    plan: null,
+    face: null, // what it shows now
+    show(f, glow = 0) {
+      const inf = f.icon === 'infantry';
+      const key = `${f.v}${inf ? 'i' : ''}${Math.round(glow * 10)}`;
+      if (key === drawn) return;
+      drawn = key;
+      die.face = f;
+      g.clear();
+      if (glow > 0) {
+        g.fillStyle(C.gold, 0.3 * glow);
+        g.fillRoundedRect(-DIE / 2 - 4, -DIE / 2 - 4, DIE + 8, DIE + 8, 10);
+      }
+      drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 0x10171f, border: inf ? C.gold : color, radius: 7, line: 2 });
+      value.setText(String(f.v)).setY(inf ? -5 : 0);
+      mark.setVisible(inf);
+    },
+  };
+  return die;
 }
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-function sideColumn(modal, ctl, ev, key, x, w) {
+/** One side of the battle. The result lines go into the `stages` containers; returns where the column ends and its dice. */
+function sideColumn(modal, ctl, ev, key, x, w, stages) {
   const scene = modal.scene;
   const side = ev[key];
   const cancel = key === 'a' ? ev.cancelA : ev.cancelD;
@@ -32,14 +62,20 @@ function sideColumn(modal, ctl, ev, key, x, w) {
 
   const perRow = Math.max(1, Math.floor((w + GAP) / (DIE + GAP)));
   const rows = Math.ceil(side.dice.length / perRow);
-  side.dice.forEach((d, i) => {
+  const area = Math.max(2, rows); // both sides keep room for two rows so that their results line up
+  const table = scene.add.graphics();
+  drawPanel(table, x, DICE_Y - 6, w, area * (DIE + GAP) - GAP + 12, { fill: 0x131b26, border: C.border, radius: 10, line: 1 });
+  modal.add(table);
+  const top = DICE_Y + ((area - rows) * (DIE + GAP)) / 2;
+  const dice = side.dice.map((d, i) => {
     const inRow = Math.min(perRow, side.dice.length - Math.floor(i / perRow) * perRow);
     const rowW = inRow * (DIE + GAP) - GAP;
-    const dx = x + (w - rowW) / 2 + (i % perRow) * (DIE + GAP);
-    const dy = 124 + Math.floor(i / perRow) * (DIE + GAP);
-    modal.add(dieBox(scene, dx, dy, d, PLAYER_COLORS[side.owner]));
+    const cx = x + (w - rowW) / 2 + (i % perRow) * (DIE + GAP) + DIE / 2;
+    const cy = top + Math.floor(i / perRow) * (DIE + GAP) + DIE / 2;
+    const die = makeDie(scene, cx, cy, PLAYER_COLORS[side.owner], d);
+    return die;
   });
-  let y = 124 + Math.max(2, rows) * (DIE + GAP) + 6;
+  let y = DICE_Y + area * (DIE + GAP) + 6;
 
   const sum = side.dice.reduce((n, d) => n + d.v, 0);
   const other = side.cv - sum - side.bonus - side.mod;
@@ -47,34 +83,36 @@ function sideColumn(modal, ctl, ev, key, x, w) {
   if (side.bonus) lines.push(['Infantry bonus', `+${side.bonus}`]);
   if (side.mod) lines.push(['Cards and weapons', side.mod > 0 ? `+${side.mod}` : `${side.mod}`]);
   if (other) lines.push(['Other effects', other > 0 ? `+${other}` : `${other}`]);
+  const total = stages[0];
   for (const [label, val] of lines) {
-    modal.add(txt(scene, x + 14, y, label, { size: 13, color: TXT.muted }));
-    modal.add(txt(scene, x + w - 14, y, String(val), { size: 13, color: TXT.text, origin: [1, 0] }));
+    total.add(txt(scene, x + 14, y, label, { size: 13, color: TXT.muted }));
+    total.add(txt(scene, x + w - 14, y, String(val), { size: 13, color: TXT.text, origin: [1, 0] }));
     y += 18;
   }
   const g = scene.add.graphics();
   g.lineStyle(1, C.border, 1);
   g.lineBetween(x + 14, y + 1, x + w - 14, y + 1);
-  modal.add(g);
+  total.add(g);
   y += 5;
-  modal.add(txt(scene, x + 14, y, 'Combat value', { size: 15, bold: true }));
-  modal.add(txt(scene, x + w - 14, y, String(side.cv), { size: 17, bold: true, color: TXT.gold, origin: [1, 0] }));
+  total.add(txt(scene, x + 14, y, 'Combat value', { size: 15, bold: true }));
+  total.add(txt(scene, x + w - 14, y, String(side.cv), { size: 17, bold: true, color: TXT.gold, origin: [1, 0] }));
   y += 24;
-  modal.add(txt(scene, x + 14, y, `${side.cv} ÷ 5 = ${plural(side.hits, 'hit', 'hits')} on the enemy`, { size: 13, color: TXT.text }));
+  const hits = stages[1];
+  hits.add(txt(scene, x + 14, y, `${side.cv} ÷ 5 = ${plural(side.hits, 'hit', 'hits')} on the enemy`, { size: 13, color: TXT.text }));
   y += 18;
   if (cancel) {
-    modal.add(txt(scene, x + 14, y, `${plural(cancel, 'hit', 'hits')} against this side cancelled (Fortress, Warships or card)`, { size: 12, color: TXT.good, wrap: w - 28 }));
+    hits.add(txt(scene, x + 14, y, `${plural(cancel, 'hit', 'hits')} against this side cancelled (Fortress, Warships or card)`, { size: 12, color: TXT.good, wrap: w - 28 }));
     y += 30;
   }
   if (side.card) {
-    modal.add(txt(scene, x + 14, y, `Card: ${ACTION_CARDS[side.card].name}`, { size: 12, color: '#ffe9a8', wrap: w - 28 }));
+    hits.add(txt(scene, x + 14, y, `Card: ${ACTION_CARDS[side.card].name}`, { size: 12, color: '#ffe9a8', wrap: w - 28 }));
     y += 16;
   }
   if (key === 'd' && side.fortress) {
-    modal.add(txt(scene, x + 14, y, 'The Fortress added a die.', { size: 12, color: '#ffe9a8' }));
+    hits.add(txt(scene, x + 14, y, 'The Fortress added a die.', { size: 12, color: '#ffe9a8' }));
     y += 16;
   }
-  return y;
+  return { y, dice };
 }
 
 function cardTitle(card) {
@@ -100,10 +138,13 @@ export function playBattleRound(ctl, ev) {
     return ctl.sleep(700);
   }
   return new Promise((resolve) => {
-    const w = 700;
+    const w = 740;
     const h = 470;
     const sea = ev.domain === 'sea';
     const terr = TERRAIN[terrainOf(g.s, ev.hex)] || 'Sea';
+    let live = true; // false once the window is gone: nothing may touch its objects then
+    let rolling = true;
+    let counter = null;
     const modal = new Modal(scene, {
       title: sea ? 'Sea battle' : 'Battle',
       subtitle: `Round ${ev.round} · ${terr}`,
@@ -113,31 +154,108 @@ export function playBattleRound(ctl, ev) {
       depth: 1500,
       shade: 0.45,
       onClose: () => {
-        scene.input.keyboard.off('keydown-SPACE', next);
-        scene.input.keyboard.off('keydown-ENTER', next);
+        live = false;
+        if (counter) counter.stop();
+        scene.input.keyboard.off('keydown-SPACE', onKey);
+        scene.input.keyboard.off('keydown-ENTER', onKey);
         resolve();
       },
     });
-    const next = () => modal.close();
-    const half = (w - 60) / 2;
-    const ya = sideColumn(modal, ctl, ev, 'a', 20, half);
-    const yd = sideColumn(modal, ctl, ev, 'd', w - 20 - half, half);
+    const stages = Array.from({ length: STAGES }, () => modal.add(scene.add.container(0, 0)));
+    const half = (w - 80) / 2;
+    const A = sideColumn(modal, ctl, ev, 'a', 20, half, stages);
+    const D = sideColumn(modal, ctl, ev, 'd', w - 20 - half, half, stages);
+    const bottom = Math.max(A.y, D.y);
     const mid = scene.add.graphics();
     mid.lineStyle(1, C.border, 1);
-    mid.lineBetween(w / 2, 84, w / 2, Math.max(ya, yd) + 4);
+    mid.lineBetween(w / 2, 84, w / 2, bottom + 4);
     modal.add(mid);
-    modal.add(txt(scene, w / 2, 124 + 30, 'VS', { size: 14, bold: true, color: TXT.dim, origin: 0.5 }));
-    const yb = Math.max(ya, yd) + 10;
+    modal.add(txt(scene, w / 2, DICE_Y + DIE + GAP / 2, 'VS', { size: 14, bold: true, color: TXT.dim, origin: 0.5 }));
+    const yb = bottom + 10;
 
     const you = ev.a.owner === 0 ? ev.a : ev.d;
     const them = ev.a.owner === 0 ? ev.d : ev.a;
     const yourLoss = you.lost ? `You lose ${plural(you.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'You lose nothing.';
     const theirLoss = them.lost ? `The enemy loses ${plural(them.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'The enemy loses nothing.';
-    modal.add(txt(scene, w / 2, yb, `${yourLoss}  ${theirLoss}`, { size: 15, bold: true, color: you.lost > them.lost ? TXT.bad : you.lost < them.lost ? TXT.good : TXT.text, origin: [0.5, 0] }));
-    modal.add(txt(scene, w / 2, h - 66, 'Dice with an Infantry mark add +1 CV for each Infantry unit you have in the fight (up to the number of marked dice). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 60, align: 'center' }));
-    const b = new Button(scene, w / 2 - 70, h - 38, 140, 30, 'Continue', next, { style: 'primary', size: 14 });
+    stages[2].add(txt(scene, w / 2, yb, `${yourLoss}  ${theirLoss}`, { size: 15, bold: true, color: you.lost > them.lost ? TXT.bad : you.lost < them.lost ? TXT.good : TXT.text, origin: [0.5, 0] }));
+    modal.add(txt(scene, w / 2, h - 66, 'Dice with an Infantry mark add +1 CV for each Infantry unit you have in the fight (up to the number of marked dice). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: 'center' }));
+
+    // Both sides throw together: the dice are launched alternately, the attacker's from the left and the defender's from the right.
+    const order = [];
+    for (let i = 0; i < Math.max(A.dice.length, D.dice.length); i++) {
+      if (A.dice[i]) order.push([A.dice[i], -1]);
+      if (D.dice[i]) order.push([D.dice[i], 1]);
+    }
+    const plans = planDice(order.map(([, dir]) => dir), Math.random, FACES); // cosmetic only: the real dice were rolled by the engine
+    const dice = order.map(([die], i) => {
+      die.plan = plans[i];
+      return die;
+    });
+    const shadows = scene.add.graphics(); // on the table, under the dice
+    modal.add(shadows);
+    for (const d of dice) modal.add(d.root);
+    const end = rollEnd(plans);
+    const total = rollLength(plans, STAGES);
+    const apply = (t) => {
+      if (!live) return;
+      shadows.clear();
+      for (const d of dice) {
+        const p = diePose(d.plan, t - d.plan.delay);
+        d.root.setVisible(p.shown);
+        if (!p.shown) continue;
+        d.show(p.face || d.final, p.glow);
+        d.root.setPosition(d.x + p.dx, d.y + p.dy).setAngle(p.angle).setScale(p.scale).setAlpha(p.alpha);
+        if (p.lift > 0.02) {
+          shadows.fillStyle(0x000000, 0.3 * p.alpha * (1 - 0.5 * p.lift));
+          shadows.fillEllipse(d.x, d.y + 13, 36 - 8 * p.lift, 11);
+        }
+      }
+      stages.forEach((s, k) => {
+        const r = revealAt(t, end, k);
+        s.setVisible(r > 0).setAlpha(r).setY((1 - r) * REVEAL.rise);
+      });
+    };
+    const finish = () => {
+      if (!live || !rolling) return;
+      rolling = false;
+      if (counter) counter.stop();
+      counter = null;
+      apply(total);
+      b.setLabel('Continue');
+    };
+    // While the dice roll, the first click only skips ahead to the result; the next one closes the window.
+    const next = () => (rolling ? finish() : modal.close());
+    const onKey = (e) => {
+      if (!e || !e.repeat) next();
+    };
+    const b = new Button(scene, w / 2 - 70, h - 38, 140, 30, 'Show result', next, { style: 'primary', size: 14 });
     modal.add(b);
-    scene.input.keyboard.on('keydown-SPACE', next);
-    scene.input.keyboard.on('keydown-ENTER', next);
+    scene.input.keyboard.on('keydown-SPACE', onKey);
+    scene.input.keyboard.on('keydown-ENTER', onKey);
+
+    modal.roll = {
+      total,
+      end,
+      dice,
+      stages,
+      get playing() {
+        return rolling;
+      },
+      seek: (t) => {
+        if (counter) counter.stop();
+        counter = null;
+        if (t >= total) finish();
+        else apply(t);
+      },
+      skip: finish,
+    };
+    apply(0);
+    counter = scene.tweens.addCounter({
+      from: 0,
+      to: total,
+      duration: Math.max(1, total * ctl.tempo),
+      onUpdate: (tw) => apply(tw.getValue()),
+      onComplete: finish,
+    });
   });
 }

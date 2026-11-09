@@ -83,8 +83,13 @@ export class Controller {
     store.set(SPEED_KEY, name);
   }
 
+  /** How much the animation speed shortens waits: 1 at design speed. */
+  get tempo() {
+    return SPEED[this.speed] ?? 1;
+  }
+
   sleep(ms) {
-    const t = ms * (SPEED[this.speed] ?? 1);
+    const t = ms * this.tempo;
     return new Promise((resolve) => {
       if (this.dead) return; // never resolves: whatever was waiting belongs to a finished scene
       if (t <= 0) resolve();
