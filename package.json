@@ -1,0 +1,20 @@
+{
+  "name": "monumental-clash",
+  "version": "1.0.0",
+  "description": "Monumental Clash: an offline single-player (1 vs 1 computer) strategy game, an unofficial adaptation of a published board game, built with Phaser.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs --serve",
+    "test": "node --test test/*.test.mjs",
+    "simulate": "node test/simulate.mjs"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.0"
+  }
+}
