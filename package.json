@@ -1,7 +1,7 @@
 {
   "name": "monumental-clash",
   "version": "1.0.0",
-  "description": "Monumental Clash: an offline single-player (1 vs 1 computer) strategy game, an unofficial adaptation of a published board game, built with Phaser.",
+  "description": "Monumental Clash: an offline single-player strategy game against 1 to 3 computer opponents, an unofficial adaptation of a published board game, built with Phaser.",
   "private": true,
   "type": "module",
   "scripts": {

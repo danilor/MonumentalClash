@@ -1,15 +1,38 @@
-import { REGION_TILES, START_TILE, REGION_OFFSETS, HOME_TOPS, HIDDEN_TOPS } from './data/blocks.js';
+import { REGION_TILES, REGION_OFFSETS, BOARDS, turnOffset } from './data/blocks.js';
 import { ACTION_DECK_LIST, OBJECTIVE_CARD_LIST, EVENT_CARD_LIST } from './data/cards.js';
 import { WONDER_IDS } from './data/wonders.js';
 import { START_ADVANCES } from './data/advances.js';
+import { BARBARIAN } from './data/constants.js';
 import { key } from './hex.js';
-import { normalizeAges } from './queries.js';
+import { normalizeAges, normalizeOpponents } from './queries.js';
 import { seedFromString, shuffle, randInt } from './rng.js';
 
-export const PLAYER_NAMES = ['You', 'Computer'];
+// States saved by version 1 numbered the Barbarians 2 (there were only two players).
+const STATE_VERSION = 2;
+const V1_BARBARIAN = 2;
 
-export function regionHexKeys(top) {
-  return REGION_OFFSETS.map(([dq, dr]) => key(top[0] + dq, top[1] + dr));
+/** The name a player gets when the caller gives none: "You", then "Computer" (or "Computer 1", "Computer 2"...). */
+export const defaultName = (i, count) => (i === 0 ? 'You' : count === 2 ? 'Computer' : `Computer ${i}`);
+
+/** Bring a state saved by an older version up to date. Safe to call on a current state. */
+export function upgradeState(s) {
+  if ((s.version || 1) >= STATE_VERSION) return s;
+  for (const c of s.cities) {
+    if (c.owner === V1_BARBARIAN) c.owner = BARBARIAN;
+    for (const type of Object.keys(c.buildings)) if (c.buildings[type] === V1_BARBARIAN) c.buildings[type] = BARBARIAN;
+    for (const w of c.wonders) if (w.builder === V1_BARBARIAN) w.builder = BARBARIAN;
+  }
+  for (const u of s.units) if (u.owner === V1_BARBARIAN) u.owner = BARBARIAN;
+  s.version = STATE_VERSION;
+  return s;
+}
+
+/** The four hexes of a Region, in the order top, left, right, bottom, tilted `rot` steps of 60 degrees. */
+export function regionHexKeys(top, rot = 0) {
+  return REGION_OFFSETS.map((o) => {
+    const [dq, dr] = turnOffset(o, rot);
+    return key(top[0] + dq, top[1] + dr);
+  });
 }
 
 /** Terrain of hex slot idx for a region tile terrain array and orientation. */
@@ -37,10 +60,17 @@ export function newPlayer(idx, name, human) {
   };
 }
 
+/**
+ * Options: seed, ages, opponents (computer players, 1 to 3: the board grows with the table), names, humans.
+ * Without `opponents`, the length of `humans` sets the table size.
+ */
 export function createState(opts = {}) {
   const seed = opts.seed ?? Math.floor(Math.random() * 1e9);
+  const sized = opts.opponents ?? (Array.isArray(opts.humans) ? opts.humans.length - 1 : undefined);
+  const count = 1 + normalizeOpponents(sized);
+  const board = BOARDS[count];
   const s = {
-    version: 1,
+    version: STATE_VERSION,
     seed,
     rng: seedFromString(seed),
     ages: normalizeAges(opts.ages),
@@ -49,10 +79,8 @@ export function createState(opts = {}) {
     phase: 'main',
     current: 0,
     first: 0,
-    players: [
-      newPlayer(0, opts.names?.[0] ?? PLAYER_NAMES[0], opts.humans ? opts.humans[0] : true),
-      newPlayer(1, opts.names?.[1] ?? PLAYER_NAMES[1], opts.humans ? opts.humans[1] : false),
-    ],
+    players: Array.from({ length: count }, (_, i) =>
+      newPlayer(i, opts.names?.[i] ?? defaultName(i, count), opts.humans ? !!opts.humans[i] : i === 0)),
     map: { hexes: {}, regions: [] },
     cities: [],
     units: [],
@@ -71,11 +99,11 @@ export function createState(opts = {}) {
     final: null,
   };
 
-  // Regions: two start tiles + 8 hidden tiles drawn from the 16.
-  const tileIds = shuffle(s, REGION_TILES.map((t) => t.id)).slice(0, HIDDEN_TOPS.length);
-  const addRegion = (top, terrain, flipped, home) => {
+  // Regions: one start tile per player, and the face-down tiles drawn from the 16.
+  const tileIds = shuffle(s, REGION_TILES.map((t) => t.id)).slice(0, board.hidden.length);
+  const addRegion = ({ top, rot }, terrain, flipped, home) => {
     const id = s.map.regions.length;
-    const keys = regionHexKeys(top);
+    const keys = regionHexKeys(top, rot);
     const region = { id, top, terrain, flipped, home, keys };
     s.map.regions.push(region);
     keys.forEach((k, idx) => {
@@ -88,17 +116,10 @@ export function createState(opts = {}) {
     });
     return region;
   };
-  HOME_TOPS.forEach((h, p) => addRegion(h.top, START_TILE, h.flipped, p));
-  HIDDEN_TOPS.forEach((top, i) => addRegion(top, REGION_TILES[tileIds[i] - 1].terrain, null, null));
-
-  // Start cities (Happy) and one Settler each, on the Plains of the home region.
-  s.players.forEach((p, i) => {
-    const reg = s.map.regions[i];
-    const capital = reg.keys.find((k) => s.map.hexes[k].terrain === 'plains');
-    p.homeHex = capital;
-    addCity(s, i, capital, 'happy');
-    addUnit(s, i, 'settler', capital);
-  });
+  // With two players the seats are fixed. Around a bigger table the seating is random: the player in seat i
+  // takes the home board `(i + shift) % count` (the boards run clockwise, like the seats).
+  board.homes.forEach((h) => addRegion(h, h.tile, h.flipped, null));
+  board.hidden.forEach((h, i) => addRegion(h, REGION_TILES[tileIds[i] - 1].terrain, null, null));
 
   s.decks.action = shuffle(s, [...ACTION_DECK_LIST]);
   s.decks.objective = shuffle(s, OBJECTIVE_CARD_LIST.map((c) => c.id));
@@ -110,8 +131,19 @@ export function createState(opts = {}) {
     p.hand.objective.push(s.decks.objective.pop());
   });
 
-  s.first = randInt(s, 2);
+  s.first = randInt(s, count);
   s.current = s.first;
+  const shift = count > 2 ? randInt(s, count) : 0;
+
+  // Start cities (Happy) and one Settler each, on the Plains of the home region.
+  s.players.forEach((p, i) => {
+    const reg = s.map.regions[(i + shift) % count];
+    reg.home = i;
+    const capital = reg.keys.find((k) => s.map.hexes[k].terrain === 'plains');
+    p.homeHex = capital;
+    addCity(s, i, capital, 'happy');
+    addUnit(s, i, 'settler', capital);
+  });
   return s;
 }
 

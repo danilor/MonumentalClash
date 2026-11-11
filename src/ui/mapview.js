@@ -4,10 +4,12 @@ import { HEX_H, HEX_SCALE as K, HEX_TEX_W, HEX_W, H, LAYOUT, PLAYER_COLORS, S, W
 import { icon, tip, txt } from './widgets.js';
 import { textureForTerrain } from './textures.js';
 import { cityAt, citySize } from '../engine/queries.js';
+import { BARBARIAN } from '../engine/data/constants.js';
 import { DIRS } from '../engine/hex.js';
 
 const DIR_ANGLE = [60, 120, 180, 240, 300, 0]; // screen direction of each entry of DIRS (degrees, y down)
-const BARB = 2;
+const BARB = BARBARIAN;
+const OWNERS = [0, 1, 2, 3, BARB];
 
 const corner = (cx, cy, deg, r = S) => [cx + r * Math.cos((deg * Math.PI) / 180), cy + r * Math.sin((deg * Math.PI) / 180)];
 export const hexCorners = (cx, cy, r = S) => [-30, 30, 90, 150, 210, 270].map((a) => corner(cx, cy, a, r));
@@ -49,11 +51,47 @@ export class MapView {
     this.onRightClick = () => {};
     this.describe = () => '';
     this.hlTween = null;
+    this.zoom = 1;
+    this.ox = HEX_W * 4; // the point of the board (in unscaled pixels) that lies at the centre of the area
+    this.oy = 1.5 * S * 3;
   }
 
-  pos(k) {
+  /** The layers that make up the board: they are scaled together when a big board has to be shrunk to fit. */
+  layers() {
+    return [this.terrainLayer, this.gfx, this.hlGfx, this.pieceLayer, this.markLayer, this.selGfx, this.fxLayer, this.hoverGfx, this.previewLayer, this.zoneLayer];
+  }
+
+  /** Centre the board in its area and, when it is bigger than the area (3 and 4 players), shrink it to fit. */
+  fit(s) {
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const k of Object.keys(s.map.hexes)) {
+      const [q, r] = k.split(',').map(Number);
+      const x = HEX_W * (r + q / 2);
+      const y = 1.5 * S * q;
+      x0 = Math.min(x0, x - HEX_W / 2);
+      x1 = Math.max(x1, x + HEX_W / 2);
+      y0 = Math.min(y0, y - S);
+      y1 = Math.max(y1, y + S);
+    }
+    this.ox = (x0 + x1) / 2;
+    this.oy = (y0 + y1) / 2;
+    this.zoom = Math.min(1, (this.area.w - 8) / (x1 - x0), (this.area.h - 8) / (y1 - y0));
+    for (const l of this.layers()) l.setScale(this.zoom).setPosition(this.cx * (1 - this.zoom), this.cy * (1 - this.zoom));
+  }
+
+  /** Where a space is on the board before it is scaled (what the layers draw with). */
+  at(k) {
     const [q, r] = k.split(',').map(Number);
-    return { x: this.cx + HEX_W * (r + q / 2 - 4), y: this.cy + 1.5 * S * (q - 3) };
+    return { x: this.cx + HEX_W * (r + q / 2) - this.ox, y: this.cy + 1.5 * S * q - this.oy };
+  }
+
+  /** Where the centre of a space is on the screen. */
+  pos(k) {
+    const p = this.at(k);
+    return { x: this.cx + (p.x - this.cx) * this.zoom, y: this.cy + (p.y - this.cy) * this.zoom };
   }
 
   /** Texture of a space; the variant depends on its position so neighbours do not look identical. */
@@ -64,12 +102,13 @@ export class MapView {
 
   /** Create the clickable hex areas (once per game). */
   buildZones(s) {
+    this.fit(s);
     this.zoneLayer.removeAll(true);
     this.zones.clear();
     this.regionOf.clear();
     for (const k of Object.keys(s.map.hexes)) {
       this.regionOf.set(k, s.map.hexes[k].region);
-      const { x, y } = this.pos(k);
+      const { x, y } = this.at(k);
       const pts = hexCorners(HEX_W / 2, HEX_H / 2, S - 1).map(([px, py]) => new Phaser.Geom.Point(px, py));
       const zone = this.scene.add.zone(x, y, HEX_W, HEX_H);
       zone.setInteractive(new Phaser.Geom.Polygon(pts), Phaser.Geom.Polygon.Contains);
@@ -89,7 +128,7 @@ export class MapView {
   setHover(k) {
     this.hoverGfx.clear();
     if (!k) return;
-    const { x, y } = this.pos(k);
+    const { x, y } = this.at(k);
     this.hoverGfx.lineStyle(2.5, 0xffffff, 0.75);
     this.hoverGfx.strokePoints(hexCorners(x, y, S - 3).map(([px, py]) => ({ x: px, y: py })), true);
   }
@@ -107,7 +146,7 @@ export class MapView {
     this.gfx.clear();
     const hidden = new Map();
     for (const h of Object.values(s.map.hexes)) {
-      const { x, y } = this.pos(h.k);
+      const { x, y } = this.at(h.k);
       const img = icon(this.scene, this.textureAt(h.k, h.terrain), x, y, HEX_TEX_W);
       this.terrainLayer.add(img);
       if (h.terrain === null) {
@@ -135,7 +174,7 @@ export class MapView {
     const g = this.gfx;
     const edges = [];
     for (const h of Object.values(s.map.hexes)) {
-      const { x, y } = this.pos(h.k);
+      const { x, y } = this.at(h.k);
       DIRS.forEach(([dq, dr], d) => {
         const n = s.map.hexes[`${h.q + dq},${h.r + dr}`];
         if (n && n.region === h.region) return;
@@ -171,13 +210,13 @@ export class MapView {
     const hide = this.view.hide;
     for (const h of Object.values(s.map.hexes)) {
       if (h.terrain === null) continue;
-      const { x, y } = this.pos(h.k);
+      const { x, y } = this.at(h.k);
       const c = this.scene.add.container(x, y);
       this.pieceLayer.add(c);
       const city = cityAt(s, h.k);
       const units = s.units.filter((u) => u.hex === h.k && !hide.has(u.id));
       const groups = [];
-      for (const owner of [0, 1, BARB]) {
+      for (const owner of OWNERS) {
         for (const type of ['ship', 'infantry', 'settler']) {
           const n = units.filter((u) => u.owner === owner && u.type === type).length;
           if (n) groups.push({ owner, type, n });
@@ -212,7 +251,7 @@ export class MapView {
     }
     for (const city of s.cities) {
       if (city.port && city.buildings.port !== undefined) {
-        const { x, y } = this.pos(city.port);
+        const { x, y } = this.at(city.port);
         this.pieceLayer.add(icon(this.scene, 'b_port', x - 28 * K, y - 30 * K, 17 * K).setTint(PLAYER_COLORS[city.buildings.port]).setAlpha(0.95));
       }
     }
@@ -227,7 +266,7 @@ export class MapView {
     if (!list || !list.size) return;
     for (const [k, h] of list) {
       const spec = HL[h.kind] || HL.info;
-      const { x, y } = this.pos(k);
+      const { x, y } = this.at(k);
       const pts = hexCorners(x, y, S - 2).map(([px, py]) => ({ x: px, y: py }));
       g.fillStyle(spec.color, spec.fill);
       g.fillPoints(pts, true);
@@ -246,7 +285,7 @@ export class MapView {
     g.clear();
     const k = this.view.selected;
     if (!k || !this.zones.has(k)) return;
-    const { x, y } = this.pos(k);
+    const { x, y } = this.at(k);
     const pts = hexCorners(x, y, S - 3).map(([px, py]) => ({ x: px, y: py }));
     g.lineStyle(5, 0x000000, 0.55);
     g.strokePoints(pts, true);
@@ -265,7 +304,7 @@ export class MapView {
     this.previewLayer.removeAll(true);
     if (!list) return;
     for (const { k, terrain } of list) {
-      const { x, y } = this.pos(k);
+      const { x, y } = this.at(k);
       this.previewLayer.add(icon(this.scene, this.textureAt(k, terrain), x, y, HEX_TEX_W));
     }
     this.outline(list.map((q) => q.k));
@@ -280,7 +319,7 @@ export class MapView {
   outline(keys) {
     const g = this.scene.add.graphics();
     for (const k of keys) {
-      const { x, y } = this.pos(k);
+      const { x, y } = this.at(k);
       const pts = hexCorners(x, y, S - 3).map(([px, py]) => ({ x: px, y: py }));
       g.lineStyle(6, 0x000000, 0.6);
       g.strokePoints(pts, true);
@@ -292,7 +331,7 @@ export class MapView {
 
   // ---------------------------------------------------------- animation
   floatText(k, text, color = '#ffffff', { dy = -46 * K, delay = 0, size = 16 } = {}) {
-    const { x, y } = this.pos(k);
+    const { x, y } = this.at(k);
     const t = txt(this.scene, x, y - 8, text, { size, bold: true, origin: 0.5, color, stroke: '#000000', strokeThickness: 4 });
     t.setAlpha(0);
     this.fxLayer.add(t);
@@ -309,7 +348,7 @@ export class MapView {
   }
 
   pulse(k, color = 0xffffff, radius = S) {
-    const { x, y } = this.pos(k);
+    const { x, y } = this.at(k);
     const ring = this.scene.add.graphics();
     ring.lineStyle(4, color, 1);
     ring.strokeCircle(0, 0, radius * 0.6);
@@ -329,7 +368,7 @@ export class MapView {
   flashRegion(keys, color = 0xffffff) {
     const g = this.scene.add.graphics();
     for (const k of keys) {
-      const { x, y } = this.pos(k);
+      const { x, y } = this.at(k);
       g.fillStyle(color, 0.8);
       g.fillPoints(hexCorners(x, y, S - 1).map(([px, py]) => ({ x: px, y: py })), true);
     }
@@ -347,8 +386,8 @@ export class MapView {
 
   /** Slide copies of the moving units from one hex to another. */
   slide(units, from, to, ms = 420) {
-    const a = this.pos(from);
-    const b = this.pos(to);
+    const a = this.at(from);
+    const b = this.at(to);
     const c = this.scene.add.container(a.x, a.y);
     const kinds = new Map();
     for (const u of units) {

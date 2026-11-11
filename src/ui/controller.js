@@ -18,7 +18,7 @@ import { createDialogs } from './dialogs.js';
 import { createPrompts } from './prompts.js';
 import { playBattleRound } from './battle.js';
 import { countText, hexLines, placeWords } from './info.js';
-import { RES, TXT } from './theme.js';
+import { PLAYER_HEX, RES, TXT, cap, seatName, turnLabel } from './theme.js';
 import { SAVE_KEY, SPEED_KEY, store } from './store.js';
 
 const SPEED = { normal: 0.75, fast: 0.3, instant: 0 };
@@ -595,7 +595,7 @@ export class Controller {
           if (this.dead) return;
           continue;
         }
-        if (this.g.cur === 1 && s.phase === 'main' && s.turn) {
+        if (this.isComputer(this.g.cur) && s.phase === 'main' && s.turn) {
           await this.aiStep();
           if (this.dead) return;
           continue;
@@ -654,10 +654,17 @@ export class Controller {
     if (g.pending) g.respond(g.pending.default);
   }
 
+  /** Computers play the turns of every seat that is not a human (the human is always the first seat). */
+  isComputer(p) {
+    const pl = this.g.s.players[p];
+    return !!pl && !pl.human;
+  }
+
   async aiStep() {
     const g = this.g;
     const s = g.s;
-    if (!s.turn || s.turn.player !== 1) return;
+    if (!s.turn || !this.isComputer(s.turn.player)) return;
+    const who = s.turn.player;
     this.hud.update();
     await this.sleep(420);
     await new Promise((r) => setTimeout(r, 20)); // let the "thinking" text paint before the search blocks
@@ -667,7 +674,7 @@ export class Controller {
     let pick;
     const t0 = performance.now();
     try {
-      pick = chooseAction(g, 1);
+      pick = chooseAction(g, who);
     } catch (e) {
       console.error(e);
       pick = { action: { type: 'end_turn' } };
@@ -683,7 +690,7 @@ export class Controller {
       res = { ok: false };
     }
     if (!res.ok) {
-      console.warn('The computer\'s action was rejected:', pick.action, res.error);
+      console.warn(`The computer's action was rejected (${g.name(who)}):`, pick.action, res.error);
       this.before = cloneState(g.s);
       this.newLog = [];
       g.apply({ type: 'end_turn' });
@@ -733,7 +740,7 @@ export class Controller {
   }
 
   who(p) {
-    return p === 0 ? 'You' : 'The computer';
+    return cap(seatName(this.g.s, p));
   }
 
   async playEvent(ev, next) {
@@ -747,7 +754,7 @@ export class Controller {
         this.draw();
         this.hud.update();
         if (!fast) {
-          await this.hud.banner(ev.player === 0 ? 'Your turn' : "Computer's turn", `Age ${roman(ev.age)} · Round ${ev.round} of 3`, ev.player === 0 ? '#7fb2ff' : '#ff8f87', 450 * (SPEED[this.speed] || 0.3));
+          await this.hud.banner(turnLabel(s, ev.player), `Age ${roman(ev.age)} · Round ${ev.round} of 3`, PLAYER_HEX[ev.player], 450 * (SPEED[this.speed] || 0.3));
         }
         break;
       }
@@ -799,14 +806,14 @@ export class Controller {
       case 'wonder': {
         this.syncBefore('all');
         this.draw();
-        if (!fast) await this.hud.banner(`${this.who(ev.player) === 'You' ? 'You' : 'The computer'} built a Wonder`, WONDERS[ev.wonder].name, '#ffe9a8', 900 * (SPEED[this.speed] || 0.3));
+        if (!fast) await this.hud.banner(`${this.who(ev.player)} built a Wonder`, WONDERS[ev.wonder].name, '#ffe9a8', 900 * (SPEED[this.speed] || 0.3));
         break;
       }
       case 'capture': {
         this.syncBefore('all');
         this.draw();
         void map.pulse(ev.hex, 0xff6a5f, 60);
-        this.hud.toast(`${this.who(ev.by)} captured a city!`, ev.by === 0 ? 'good' : 'error', 2200);
+        this.hud.toast(`${this.who(ev.by)} captured a city!`, ev.by === 0 ? 'good' : ev.from === 0 ? 'error' : 'info', 2200);
         await this.sleep(500);
         break;
       }
@@ -824,10 +831,10 @@ export class Controller {
         break;
       case 'advance':
         this.hud.update();
-        if (ev.player === 1) this.hud.toast(`The computer learned ${ADVANCES[ev.advance].name}.`, 'info', 2000);
+        if (ev.player !== 0) this.hud.toast(`${this.who(ev.player)} learned ${ADVANCES[ev.advance].name}.`, 'info', 2000);
         break;
       case 'card':
-        if (ev.player === 1) this.hud.toast(`The computer played ${ACTION_CARDS[ev.card].name}.`, 'info', 2200);
+        if (ev.player !== 0) this.hud.toast(`${this.who(ev.player)} played ${ACTION_CARDS[ev.card].name}.`, 'info', 2200);
         break;
       case 'objective':
         this.hud.toast(`${this.who(ev.player)} completed the objective “${OBJECTIVES[ev.objective].name}”!`, ev.player === 0 ? 'good' : 'info', 2600);
@@ -862,7 +869,7 @@ export class Controller {
         break;
       }
       case 'event':
-        if (ev.player === 1) await this.prompts.eventCard(ev);
+        if (ev.player !== 0) await this.prompts.eventCard(ev);
         this.syncBefore('all');
         this.draw();
         break;
@@ -914,7 +921,9 @@ export class Controller {
 
 /** Build a Controller for a (new or loaded) game and start playing. `intro(ctl)` may return a promise to wait for first. */
 export function startController(scene, g, { fresh = false, intro = null } = {}) {
-  attachAI(g, 1);
+  g.s.players.forEach((p) => {
+    if (!p.human) attachAI(g, p.idx);
+  });
   if (fresh) g.begin();
   const ctl = new Controller(scene, g);
   window.__game = g;

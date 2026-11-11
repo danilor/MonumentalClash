@@ -1,13 +1,13 @@
 // Shared helpers for the test suite and the simulation script.
 import { Game } from '../src/engine/game.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
-import { BARBARIAN, PIECE_LIMITS, RESOURCES, STACK_LIMIT, SHIP_CAPACITY } from '../src/engine/data/constants.js';
+import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, RESOURCES, STACK_LIMIT, SHIP_CAPACITY } from '../src/engine/data/constants.js';
 import { ACTION_DECK_LIST } from '../src/engine/data/cards.js';
 import { OBJECTIVE_CARD_LIST } from '../src/engine/data/cards.js';
 import { WONDER_IDS } from '../src/engine/data/wonders.js';
 import { GROUPS } from '../src/engine/data/advances.js';
 import { randInt, seedFromString } from '../src/engine/rng.js';
-import { resLimit, totalAges } from '../src/engine/queries.js';
+import { allOwners, resLimit, totalAges } from '../src/engine/queries.js';
 
 export function makeRand(seed) {
   const st = { rng: seedFromString(String(seed)) };
@@ -23,6 +23,11 @@ export function checkInvariants(g) {
   const s = g.s;
   const errs = [];
   const bad = (m) => errs.push(m);
+  const seats = s.players.length;
+  if (seats < 2 || seats > MAX_PLAYERS) bad(`${seats} players at the table`);
+  if (Object.keys(s.map.hexes).length !== { 2: 40, 3: 60, 4: 72 }[seats]) bad(`${Object.keys(s.map.hexes).length} hexes for ${seats} players`);
+  if (!Number.isInteger(s.first) || s.first < 0 || s.first >= seats) bad(`first player ${s.first}`);
+  if (s.turn && (s.turn.player < 0 || s.turn.player >= seats)) bad(`turn of player ${s.turn.player}`);
   for (const pl of s.players) {
     for (const r of RESOURCES) {
       const v = pl.res[r];
@@ -90,7 +95,7 @@ export function checkInvariants(g) {
     for (const [b, col] of Object.entries(c.buildings)) {
       const k = `${b}:${col}`;
       bcount[k] = (bcount[k] || 0) + 1;
-      if (![0, 1, BARBARIAN].includes(col)) bad(`building colour ${col}`);
+      if (!allOwners(s).includes(col)) bad(`building colour ${col}`);
     }
     if (c.buildings.port !== undefined) {
       const adj = c.port && s.map.hexes[c.port] && s.map.hexes[c.port].terrain === 'sea';
@@ -118,7 +123,9 @@ export function checkInvariants(g) {
   const objAll = [...s.decks.objective, ...s.decks.objectiveDiscard, ...s.players.flatMap((p) => [...p.hand.objective, ...p.completed.filter((c) => c.side === 'obj' || c.card).map((c) => c.card)])];
   if (new Set(objAll).size !== objAll.length && objAll.length > OBJECTIVE_CARD_LIST.length) bad(`objective cards ${objAll.length}`);
 
-  const wonderAll = [...s.decks.wonder, ...s.players.flatMap((p) => p.hand.wonder), ...wonders.keys()];
+  // A Wonder whose city was destroyed leaves the game (rulebook p.28), but its builder still lists it.
+  const destroyedWonders = s.players.flatMap((p) => p.builtWonders).filter((id) => !wonders.has(id));
+  const wonderAll = [...s.decks.wonder, ...s.players.flatMap((p) => p.hand.wonder), ...wonders.keys(), ...destroyedWonders];
   if (wonderAll.length !== WONDER_IDS.length || new Set(wonderAll).size !== WONDER_IDS.length) bad(`wonder cards: ${wonderAll.join(',')}`);
 
   if (s.turn && s.turn.actionsLeft < 0) bad(`actionsLeft ${s.turn.actionsLeft}`);
@@ -144,14 +151,14 @@ const WEIGHT = { end: 0.5, move: 1.2, advance: 2, collect: 1.5, recruit: 1.5, fo
 
 /**
  * Play a whole game with a random chooser. `chooser(g, p, list, rand)` may be supplied to override the choice.
- * `ages` sets the game length (the default length when omitted).
+ * `ages` sets the game length (the default length when omitted) and `opponents` the number of computer players.
  * Returns { g, steps, rejected, errors }.
  */
-export function playRandomGame({ seed = 'fuzz', maxSteps = 4000, check = true, chooser = null, pending = false, ages } = {}) {
+export function playRandomGame({ seed = 'fuzz', maxSteps = 4000, check = true, chooser = null, pending = false, ages, opponents = 1 } = {}) {
   const rand = makeRand(`rand:${seed}`);
-  const g = Game.create({ seed: String(seed), humans: [true, false], ages });
+  const g = Game.create({ seed: String(seed), humans: Array.from({ length: opponents + 1 }, (_, i) => i === 0), ages, opponents });
   const answer = (_g, prompt) => randomAnswer(rand, prompt);
-  g.policy = pending ? [null, answer] : [answer, answer];
+  g.policy = g.s.players.map((_, i) => (pending && i === 0 ? null : answer));
   g.begin();
   const errors = [];
   let steps = 0;

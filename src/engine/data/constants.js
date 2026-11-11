@@ -19,7 +19,13 @@ export const BUILDING_ADVANCE = {
   temple: 'myths',
 };
 
-export const BARBARIAN = 2;
+// The human sits in seat 0, the computer players in the seats after, clockwise around the table.
+// The Barbarians always use the highest possible index, so they never clash with a seat.
+export const MIN_OPPONENTS = 1;
+export const MAX_OPPONENTS = 3;
+export const DEFAULT_OPPONENTS = 1;
+export const MAX_PLAYERS = 1 + MAX_OPPONENTS;
+export const BARBARIAN = MAX_PLAYERS;
 
 export const PIECE_LIMITS = {
   settlements: 7,

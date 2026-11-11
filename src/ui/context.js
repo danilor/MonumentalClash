@@ -3,11 +3,11 @@ import { BARBARIAN } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, wonderBlocked } from '../engine/city.js';
 import { canPay } from '../engine/core.js';
-import { cityAt, citySize, hasAdv, terrainOf } from '../engine/queries.js';
-import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT } from './theme.js';
+import { cityAt, citySize, foesOf, hasAdv, terrainOf } from '../engine/queries.js';
+import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, seatLabel, turnLabel } from './theme.js';
 import { RIGHT_X, LOG_Y } from './panels.js';
 import { Button, Checkbox, Stepper, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
-import { countText, unitCounts, UNIT_NAME } from './info.js';
+import { countText, ownedBy, ownerName, unitCounts, UNIT_NAME } from './info.js';
 import { influenceTargets } from './citydialogs.js';
 
 const X = RIGHT_X + 8;
@@ -77,8 +77,10 @@ export class Context {
       return;
     }
     if (!ctl.humanCanAct()) {
-      this.text(s.turn && s.turn.player === 1 ? "Computer's turn" : 'Please wait', { size: 17, bold: true, color: '#ff8f87', serif: true });
-      this.text('Watch what the computer does. You can still click any space to inspect it.', { color: TXT.muted });
+      const mover = s.turn && s.turn.player !== 0 ? s.turn.player : null;
+      this.text(mover !== null ? turnLabel(s, mover) : 'Please wait', { size: 17, bold: true, color: PLAYER_HEX[mover ?? 1], serif: true });
+      const watching = s.players.length === 2 ? 'the computer' : mover !== null ? seatLabel(s, mover) : 'the computers';
+      this.text(`Watch what ${watching} does. You can still click any space to inspect it.`, { color: TXT.muted });
       this.gap(6);
       this.legend();
       return;
@@ -142,8 +144,8 @@ export class Context {
     const ctl = this.ctl;
     const s = ctl.g.s;
     const own = city.owner === 0;
-    const who = own ? 'Your city' : city.owner === BARBARIAN ? 'Barbarian city' : 'Enemy city';
-    const col = city.owner === 0 ? '#7fb2ff' : city.owner === 1 ? '#ff8f87' : '#b7a6c9';
+    const who = `${ownerName(ctl.g, city.owner)} city`;
+    const col = city.owner === 0 ? '#7fb2ff' : PLAYER_HEX[city.owner];
     this.text(who, { size: 15, bold: true, color: col, gap: 2 });
     const moodIcon = icon(this.scene, `mood_${city.mood}`, X + PAD + 9, this.y + 9, 18);
     this.box.add(moodIcon);
@@ -155,7 +157,7 @@ export class Context {
     this.y += 22;
     const blds = BUILDING_ORDER.filter((b) => city.buildings[b] !== undefined).map((b) => {
       const o = city.buildings[b];
-      return `${BUILDING_NAME[b]}${o !== city.owner ? (o === 0 ? ' (yours)' : o === 1 ? " (enemy's)" : ' (barbarian)') : ''}`;
+      return `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(ctl.g, o)})` : ''}`;
     });
     this.text(`Buildings: ${blds.length ? blds.join(', ') : 'none'}`, { size: 12, color: TXT.muted, gap: 2 });
     if (city.wonders.length) this.text(`Wonders: ${city.wonders.map((w) => WONDERS[w.id].name).join(', ')}`, { size: 12, color: '#ffe9a8', gap: 2 });
@@ -246,7 +248,7 @@ export class Context {
     const k = sel.hex;
     const gr = sel.groups;
     const hasMine = ['ship', 'infantry', 'settler'].some((t) => gr[t].free.length + gr[t].locked.length > 0);
-    const foes = [1, BARBARIAN].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => c.infantry + c.settler + c.ship > 0);
+    const foes = [...foesOf(s, 0), BARBARIAN].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => c.infantry + c.settler + c.ship > 0);
     if (!hasMine && !foes.length) return;
     this.rule();
     if (hasMine) {
@@ -277,7 +279,7 @@ export class Context {
       if (can) this.moveHelp(sea);
     }
     for (const [o, cnt] of foes) {
-      this.text(`${o === 1 ? 'Enemy' : 'Barbarian'} units: ${countText(cnt)}`, { size: 13, bold: true, color: o === 1 ? '#ff8f87' : '#b7a6c9' });
+      this.text(`${ownerName(ctl.g, o)} units: ${countText(cnt)}`, { size: 13, bold: true, color: PLAYER_HEX[o] });
     }
   }
 

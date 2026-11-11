@@ -2,7 +2,7 @@
 import { BARBARIAN } from './data/constants.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from './data/cards.js';
 import { GROUPS } from './data/advances.js';
-import { citiesOf, cityAt, hasBuilding, nbrs, unitsOf, hexDistance } from './queries.js';
+import { citiesOf, cityAt, foesOf, hasBuilding, nbrs, unitsOf, hexDistance } from './queries.js';
 import { gainRes } from './core.js';
 
 const SUPPLY_COST = { eureka: 'ideas', wealth: 'gold', ore_supplies: 'ore', wood_supplies: 'wood', food_supplies: 'food' };
@@ -13,6 +13,9 @@ const countBuilding = (s, p, type) => citiesOf(s, p).filter((c) => hasBuilding(c
 const armyOf = (s, p) => unitsOf(s, p, 'infantry');
 const warfareCount = (s, p) => GROUPS.warfare.advances.filter((a) => owned(s, p).includes(a.id)).length;
 const completeGroups = (s, p) => Object.keys(GROUPS).filter((gid) => ownsGroup(s, p, gid)).length;
+const foeCities = (s, p) => foesOf(s, p).flatMap((f) => citiesOf(s, f));
+/** Whether `measure` is higher for p than for every other player, by at least `margin`. */
+const leads = (s, p, measure, margin = 1) => foesOf(s, p).every((f) => measure(p) >= measure(f) + margin);
 
 /** Which fully-owned Governments are not yet used for a completed Government objective. */
 function freeGovernment(s, p) {
@@ -22,17 +25,16 @@ function freeGovernment(s, p) {
 
 /** Status objectives: returns { ok, detail? }. Does not spend anything. */
 export function checkStatus(s, p, id) {
-  const foe = 1 - p;
   const pl = s.players[p];
   const mine = citiesOf(s, p);
   const done = (obj) => pl.completed.some((c) => c.id === obj);
   switch (id) {
     case 'large_civ': return { ok: mine.length >= 6 };
-    case 'science_lead': return { ok: countBuilding(s, p, 'academy') > countBuilding(s, foe, 'academy') };
-    case 'coastal_lead': return { ok: countBuilding(s, p, 'port') > countBuilding(s, foe, 'port') };
-    case 'religious_fervor': return { ok: countBuilding(s, p, 'temple') > countBuilding(s, foe, 'temple') };
-    case 'fortifications': return { ok: countBuilding(s, p, 'fortress') > countBuilding(s, foe, 'fortress') };
-    case 'advanced_culture': return { ok: pl.advances.length >= 6 && pl.advances.length > s.players[foe].advances.length };
+    case 'science_lead': return { ok: leads(s, p, (x) => countBuilding(s, x, 'academy')) };
+    case 'coastal_lead': return { ok: leads(s, p, (x) => countBuilding(s, x, 'port')) };
+    case 'religious_fervor': return { ok: leads(s, p, (x) => countBuilding(s, x, 'temple')) };
+    case 'fortifications': return { ok: leads(s, p, (x) => countBuilding(s, x, 'fortress')) };
+    case 'advanced_culture': return { ok: pl.advances.length >= 6 && leads(s, p, (x) => owned(s, x).length) };
     case 'city_planner': return { ok: ownsGroup(s, p, 'construction') };
     case 'education_lead': return { ok: ownsGroup(s, p, 'education') };
     case 'culture_focus': return { ok: ownsGroup(s, p, 'culture') };
@@ -40,7 +42,7 @@ export function checkStatus(s, p, id) {
     case 'trade_focus': return { ok: ownsGroup(s, p, 'economy') };
     case 'seafarers': return { ok: ownsGroup(s, p, 'seafaring') };
     case 'militarized': return { ok: ownsGroup(s, p, 'warfare') };
-    case 'goal_focused': return { ok: completeGroups(s, p) > completeGroups(s, foe) };
+    case 'goal_focused': return { ok: leads(s, p, (x) => completeGroups(s, x)) };
     case 'government': {
       const gov = freeGovernment(s, p);
       return { ok: !!gov, detail: gov };
@@ -57,22 +59,21 @@ export function checkStatus(s, p, id) {
     case 'colony':
       return { ok: pl.homeHex !== null && mine.some((c) => hexDistance(c.hex, pl.homeHex) >= 5) };
     case 'consulate':
-      return { ok: citiesOf(s, foe).filter((c) => Object.values(c.buildings).includes(p)).length >= 2 };
+      return { ok: foeCities(s, p).filter((c) => Object.values(c.buildings).includes(p)).length >= 2 };
     case 'metropolis': return { ok: mine.some((c) => 1 + Object.keys(c.buildings).length + c.wonders.length >= 5) };
     case 'expansionist':
       return { ok: mine.filter((c) => nbrs(s, c.hex).every((n) => !cityAt(s, n))).length >= 4 };
     case 'sea_blockade':
       return {
-        ok: citiesOf(s, foe).some(
+        ok: foeCities(s, p).some(
           (c) => c.port && s.units.filter((u) => u.type === 'ship' && u.owner === p && u.hex === c.port).length >= 2,
         ),
       };
     case 'large_fleet': {
       const mineShips = unitsOf(s, p, 'ship').length;
-      const theirs = unitsOf(s, foe, 'ship').length;
-      return { ok: mineShips >= 4 || (mineShips >= 2 && mineShips > theirs) };
+      return { ok: mineShips >= 4 || (mineShips >= 2 && leads(s, p, (x) => unitsOf(s, x, 'ship').length)) };
     }
-    case 'large_army': return { ok: armyOf(s, p).length >= armyOf(s, foe).length + 4 };
+    case 'large_army': return { ok: leads(s, p, (x) => armyOf(s, x).length, 4) };
     case 'standing_army':
       return {
         ok:
@@ -82,7 +83,8 @@ export function checkStatus(s, p, id) {
     case 'military_might':
       return { ok: !done('standing_army') && armyOf(s, p).length + unitsOf(s, p, 'ship').length >= 12 };
     case 'threat': {
-      const n = armyOf(s, p).filter((u) => nbrs(s, u.hex).some((h) => cityAt(s, h) && cityAt(s, h).owner === foe)).length;
+      const foes = foesOf(s, p);
+      const n = armyOf(s, p).filter((u) => nbrs(s, u.hex).some((h) => cityAt(s, h) && foes.includes(cityAt(s, h).owner))).length;
       return { ok: n >= 4 };
     }
     default: return { ok: false };

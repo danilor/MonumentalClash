@@ -1,6 +1,6 @@
 # Monumental Clash
 
-A turn-based civilization strategy game for your web browser. You lead a young civilization against a computer-controlled rival:
+A turn-based civilization strategy game for your web browser. You lead a young civilization against one to three computer-controlled rivals:
 explore a hidden map, found and grow cities, research Advances, raise Wonders and fight for the most Victory Points before the last Age ends.
 
 It runs completely offline and is built with [Phaser 3](https://phaser.io). Its rules adapt a published civilization board game
@@ -12,24 +12,25 @@ It runs completely offline and is built with [Phaser 3](https://phaser.io). Its 
 
 ## About the game
 
-You and the computer each begin with one city, one Settler, 2 Food and the Advances Farming and Mining, in your own region of a small hexagonal world:
-ten regions of four spaces each, surrounded by a ring of Sea. Regions you have not seen are face-down until one of your units gets next to them.
+You and every computer opponent each begin with one city, one Settler, 2 Food and the Advances Farming and Mining, in your own region of a hexagonal world:
+regions of four spaces each, surrounded by a ring of Sea. The world grows with the number of players, as in the printed game: 10 regions for two players, 15 for three and 18 for four.
+Regions you have not seen are face-down until one of your units gets next to them.
 Over a number of **Ages** you:
 
 * explore the map and found new cities,
 * collect Food, Wood, Ore, Ideas and Gold, and keep your cities happy,
 * research Advances (48 in 12 categories) that unlock buildings, units and special powers,
 * build Wonders and complete Objectives,
-* defend yourself against the other civilization and the Barbarians, or attack them.
+* defend yourself against the other civilizations and the Barbarians, or attack them.
 
 When the last Age ends, the player with the most **Victory Points (VP)** wins.
 
-* **Players:** you (Blue) against the computer (Red). The Barbarians (purple) are played by the game.
+* **Players:** you (Blue) against 1 to 3 computers (Red, Yellow and Green), so 2 to 4 players in all. The Barbarians (purple) are played by the game.
 * **Length:** 4 to 12 Ages, 6 by default. An Age is three rounds plus a Status Phase, so a default game is 18 turns for each player.
 * **A turn:** up to 3 actions, then **End Turn**.
 * **Content:** 48 Advances in 12 categories (three of them are Governments), 8 Wonders, 42 Action cards, 26 Objective cards and 18 Event cards.
 * **Artwork:** drawn by the game itself when it starts, so there are no image or sound files to download and
-  nothing to host except `dist/index.html` and `dist/game.js`.
+  nothing to host except `docs/index.html` and `docs/game.js`.
 
 > Monumental Clash is an unofficial fan project. It is not affiliated with or endorsed by the designers or publisher of the board game it adapts.
 
@@ -42,7 +43,8 @@ npm install
 npm run build
 ```
 
-Then open `dist/index.html` in a current desktop browser (tested with Microsoft Edge). It works straight from disk; no web server is needed.
+Then open `docs/index.html` in a current desktop browser (tested with Microsoft Edge). It works straight from disk; no web server is needed.
+The build writes to `docs/` so that GitHub Pages can serve the game from there; after a change to `src/`, run `npm run build` again and reload the page.
 
 For development, `npm start` serves the game at <http://localhost:8080> and rebuilds when a file changes.
 
@@ -54,12 +56,15 @@ Everything below is also in the game: press **Rules** (top right of the board) o
 
 ### Starting a game
 
-The title screen has four controls:
+The title screen has five controls:
 
 * **New game** starts a game at once. The first time, the how-to-play window opens over the map; press **Esc** to close it.
 * **Continue game** appears when a saved game exists and carries on where you stopped. It shows the saved Age and round.
-* **Game length** (**-** and **+**) sets how many Ages the next new game lasts, from 4 to 12 (6 by default). The choice is remembered. Restarting from the in-game Menu keeps the length of the game you were playing.
+* **Opponents** (**-** and **+**) sets how many computer opponents the next new game has, from 1 to 3 (1 by default). With 1 computer the board is the standard one for two players; with 2 or 3 it grows to the larger boards of the printed game for three and four players. The line under the controls says how many players that makes. The choice is remembered.
+* **Game length** (**-** and **+**) sets how many Ages the next new game lasts, from 4 to 12 (6 by default). The choice is remembered.
 * **How to play** opens the rules window.
+
+Restarting from the in-game Menu, or starting another game from the game-over window, keeps the length and the number of opponents of the game you were playing; the title screen is where you change them.
 
 ### The goal
 
@@ -71,20 +76,20 @@ Have the most **Victory Points (VP)** when the last Age ends. Hover over a playe
 * 4 VP for every Wonder you have built (the Great Pyramid is worth 5). If the city of a Wonder is captured, its points are shared between the builder and the new owner; the Great Pyramid always stays with its builder.
 * Bonus VP from some Events and cards.
 
-A tie is won by the builder of the Great Pyramid; after that, by the player with more points from cities and buildings, then Advances, Objectives, Wonders and Events. The game also ends early if one player has no cities left.
+A tie is won by the builder of the Great Pyramid if they are among the tied players; after that, by the player with more points from cities and buildings, then Advances, Objectives, Wonders and Events. Players who are still level share the win. The game also ends early if any player has no cities left.
 
 ### Ages, rounds and turns
 
-* A game is a number of **Ages**. Each Age has **3 rounds**, and in every round both players take one turn. After round 3 comes the **Status Phase**.
+* A game is a number of **Ages**. Each Age has **3 rounds**, and in every round every player takes one turn, clockwise around the board starting with the first player. After round 3 comes the **Status Phase**.
 * On your turn you may take up to **3 actions**, then press **End Turn**. Unused actions are lost. Some cards and abilities are free and do not use up an action.
-* When you end your turn the computer plays its own, with each move shown on the map (you can speed this up in the Menu), and then it is your turn again.
+* When you end your turn each computer plays its own in turn, with each move shown on the map (you can speed this up in the Menu), and then it is your turn again.
 
 ### The screen
 
 The window is 1280×720 and scales to fit the browser.
 
 * **Top bar:** the Age and round, who goes first, whose turn it is, your remaining actions, and the **Log**, **Rules** and **Menu** buttons.
-* **Left:** a card for each player (you in blue, the computer in red) with Victory Points, Government, resources and storage limits, Mood and Culture tokens, cities, Advances, Army, Settlers and Ships, cards in hand and the tracker for the next Event. **Overview** lists a player's Advances, Wonders, Objectives and score.
+* **Left:** a card for each player (you in blue, the computers in red, yellow and green) with Victory Points, Government, resources and storage limits, Mood and Culture tokens, cities, Advances, Army, Settlers and Ships, cards in hand and the tracker for the next Event. With 3 or 4 players your card stays in full and the computers' cards are smaller, showing the figures that matter at a glance. **Overview** lists a player's Advances, Wonders, Objectives and score; click a card to open it.
 * **Centre:** the map.
 * **Right:** what you have selected and what you can do with it, with a short list of recent events below.
 * **Bottom:** **Advance**, **Cards** and **Abilities** open their windows, and **End Turn** ends your turn.
@@ -100,7 +105,7 @@ Each of these uses one action, except where noted:
 * **Recruit:** train Infantry (1 Food, 1 Ore), Settlers (2 Food) or Ships (2 Wood; the city needs a Port).
 * **Wonder:** build a Wonder from your hand in a Happy city.
 * **Happiness:** spend Mood tokens to raise the Mood of a city.
-* **Influence:** spend Culture to win over a building in a city of the other player.
+* **Influence:** spend Culture to win over a building in a city of another player.
 * **Move:** move up to 3 groups of units to explore, attack or sail.
 * **Action cards and Abilities:** play a card or use a power from the **Cards** and **Abilities** buttons (free or for one action, as it says).
 
@@ -108,7 +113,7 @@ Click a city or unit to see what it can do. Buttons that are not available say w
 
 ### Map and units
 
-* The board is ten regions of four spaces, surrounded by a ring of Sea. Face-down regions (shown with "?") are revealed when one of your land units steps next to them or a Ship sails beside them. You choose how the new region is turned.
+* The board is made of regions of four spaces, surrounded by a ring of Sea: 10 regions (40 spaces) for 2 players, 15 (60 spaces) for 3 and 18 (72 spaces) for 4. Every player starts in a revealed region of their own, seated around the board; around a table of 3 or 4 your seat is chosen at random. Larger boards are scaled down to fit the window. Face-down regions (shown with "?") are revealed when one of your land units steps next to them or a Ship sails beside them. You choose how the new region is turned.
 * **Infantry** fight. They can only move once you have researched Tactics. At most 4 Army units may share a space.
 * **Settlers** found cities. They cannot enter enemy spaces without Army units.
 * **Ships** sail through connected Sea spaces, carry up to 2 land units each and stop when they meet an enemy Ship. To board, select land units next to your Ship and click its space. To land, select the Ship's space, set the number of Ships to 0 and click a land space beside it.
@@ -128,7 +133,7 @@ Move Army units into a space that holds enemy units or an enemy city to attack. 
 
 When all the defenders are gone, the attacking Army units take the city. The captor gains Gold equal to the city's size (+1 if it was Happy, only 1 if it was Angry); a Barbarian city is worth just 1 Gold, and beating Barbarian units earns 1 more. The captured city becomes Angry, and the old owner places a free Settler in one of the remaining cities.
 
-Battles you take part in are shown round by round. Each round opens a battle window in which both sides' dice are rolled onto a table, one after another, and then the Combat value, the hits and the losses are explained step by step. Click **Show result** (or press Space or Enter) to skip the roll, and **Continue** (or Space or Enter again) to close the window. When the animation speed is Instant, and for fights between the computer and the Barbarians, only a short message is shown.
+Battles you take part in are shown round by round. Each round opens a battle window in which both sides' dice are rolled onto a table, one after another, and then the Combat value, the hits and the losses are explained step by step. Click **Show result** (or press Space or Enter) to skip the roll, and **Continue** (or Space or Enter again) to close the window. When the animation speed is Instant, and for fights you are not part of (computers against each other or against the Barbarians), only a short message is shown.
 
 ### Cities and Mood
 
@@ -147,23 +152,23 @@ Battles you take part in are shown round by round. Each round opens a battle win
 
 ### Events and Barbarians
 
-* Events come from a shared deck. Most affect only the player who drew the card; some affect both players. An icon in the corner of a card is resolved first.
+* Events come from a shared deck. Most affect only the player who drew the card; some affect every player. An icon in the corner of a card is resolved first.
 * **Barbarians** appear through Events and some Action cards. A Barbarian Settlement and an Infantry appear about two spaces from the cities of the player who drew the Event, and Barbarian armies near that player's cities step towards the nearest city and fight whatever they find there. That player chooses the order, and the route when there is a tie.
 * Barbarian units and cities block Collecting in their space. Attack them by moving into them.
 * A city the Barbarians capture becomes theirs, and its owner receives a free Settler in another city.
 
 ### The Status Phase
 
-After round 3 of every Age both players go through the Status Phase, step by step:
+After round 3 of every Age every player goes through the Status Phase, one after the other from the first player, step by step:
 
 1. **Complete Objectives:** Objective cards you fulfil now are scored.
 2. **Free Advance:** choose any Advance you can research, for free.
 3. **Draw new cards:** 1 Action card and 1 Objective card.
 4. **Raze a city** (optional): remove one of your size 1 cities for 1 Gold. You keep at least one city.
 5. **Change Government** (optional): pay 1 Culture and 1 Mood token to switch to another Government you qualify for.
-6. **First player:** the player with more Mood and Culture tokens decides who goes first in the next Age (the owner of the Great Lighthouse always decides).
+6. **First player:** the player with the most Mood and Culture tokens decides who goes first in the next Age (on a tie, the first of the tied players in turn order; the owner of the Great Lighthouse always decides).
 
-After the Status Phase of the last Age the game ends. A window shows both final scores with a breakdown, and lets you start a new game of the same length, look over the board or go back to the title screen.
+After the Status Phase of the last Age the game ends. A window shows every player's final score with a breakdown, and lets you start a new game of the same length and table size, look over the board or go back to the title screen.
 
 ### Controls
 
@@ -186,10 +191,10 @@ After the Status Phase of the last Age the game ends. A window shows both final 
 
 ### The rules
 
-The complete two-player base game, rule for rule (apart from the gaps listed under [What is still to do](#what-is-still-to-do)):
+The complete base game for two to four players (you and one to three computers), rule for rule (apart from the gaps listed under [What is still to do](#what-is-still-to-do)):
 
-* Setup, the hexagonal map of ten face-down Regions with an outer Sea ring, and exploring new Regions (you choose the orientation when the rules allow a choice).
-* The Ages (6 by default, 4 to 12 if you choose), 3 rounds, 3 actions per turn and the full Status Phase: Objectives, free Advance, drawing cards, razing a city, changing Government and choosing the first player.
+* Setup, the hexagonal maps for two, three and four players (10, 15 and 18 face-down Regions with an outer Sea ring, laid out as in the printed game's rulebook, with a home Region for every player), and exploring new Regions (you choose the orientation when the rules allow a choice).
+* The Ages (6 by default, 4 to 12 if you choose), 3 rounds, 3 actions per turn, turns that pass clockwise around the table, and the full Status Phase: Objectives, free Advance, drawing cards, razing a city, changing Government and choosing the first player.
 * Every main action: Advance, Found City, Collect, Construct, Recruit, Move, Influence, Increase Happiness, Wonder, Action cards.
 * Resources, the Food limit, Culture and Mood tokens, city size and capacity, city Mood and the effects of activating a city more than once per turn.
 * All 48 Advances in 12 categories, including the three Governments, and the 8 Wonders.
@@ -205,20 +210,21 @@ Details that are easy to get wrong are covered too, each with its own regression
 * The Great Library lends one Advance for the turn (its discounts and Food limit end with the turn). The Great Mausoleum lets its owner take the top discard instead of drawing.
 * Barbarians: you choose the order in which their armies advance, a Barbarian city is worth a flat 1 Gold, and beating Barbarian units adds 1 more.
 * Fanaticism only places its free Infantry in a city with room for it, and the owner of overloaded Ships decides which unit is left behind after a naval battle.
+* With three or four players: Objectives that compare players (such as Science Lead and Large Army) need a lead over every opponent, Espionage asks which opponent to take from (only those with something to take are offered), a city can be captured from any player and its loser places a Settler, the Great Pyramid breaks a tie only if its builder is among the tied players, and the game ends at the next Status Phase when any player has no city left.
 
-### The computer opponent
+### The computer opponents
 
-The computer lists the sensible actions available to it, plays each one out on a copy of the game (several times when dice
+Every computer lists the sensible actions available to it, plays each one out on a copy of the game (several times when dice
 or unseen cards are involved, with everything it could not see reshuffled), and keeps the one that improves its position
-most. It uses exactly the same rules interface as you do.
+most. It uses exactly the same rules interface as you do, and each one plays for itself against all the others.
 
 ### The interface
 
-* A title screen with **New game**, **Continue game**, the **Game length** selector (4 to 12 Ages) and **How to play**.
-* A hexagonal map with generated terrain art and a symbol for every unit and building type, tinted with its owner's colour. Highlighted spaces (green, red, yellow, blue) show what the selected units can do.
-* Player cards, a panel for the selected city or unit, a list of recent events, the full **Log**, and an **Overview** of each civilization with its score breakdown.
-* Windows for researching Advances (the computer's Advances are marked), cards, Abilities, constructing and recruiting, Influence, and choosing how a newly explored region is turned.
-* A round-by-round **battle** window in which the dice roll onto a table before the result is explained, and a **game over** window with the final scores.
+* A title screen with **New game**, **Continue game**, the **Opponents** selector (1 to 3 computers), the **Game length** selector (4 to 12 Ages) and **How to play**.
+* A hexagonal map with generated terrain art and a symbol for every unit and building type, tinted with its owner's colour. Highlighted spaces (green, red, yellow, blue) show what the selected units can do. The map is scaled to fit the window, so the larger boards of three and four players are drawn a little smaller.
+* Player cards (a compact card for each computer when there are three or four players), a panel for the selected city or unit, a list of recent events, the full **Log**, and an **Overview** of each civilization with its score breakdown.
+* Windows for researching Advances (the computers' Advances are marked), cards, Abilities, constructing and recruiting, Influence, and choosing how a newly explored region is turned.
+* A round-by-round **battle** window in which the dice roll onto a table before the result is explained, and a **game over** window with a column of final scores for every player.
 * Explanations on hover for almost everything, and disabled buttons that say why they are disabled.
 * Moves, turn banners and battles are animated, and the animation speed can be set to Normal, Fast or Instant.
 * The game saves itself after every action; **Continue game** picks it up again.
@@ -226,12 +232,13 @@ most. It uses exactly the same rules interface as you do.
 
 ### Under the hood
 
-* The rules engine has no dependency on Phaser, so the same code runs in the game, in the tests and in computer-vs-computer simulations. A game can be started from a fixed seed.
-* Automated tests cover the rules, scoring, saving and loading, random play, computer-vs-computer games, the rule details listed above and a browser test that plays through the real game window.
+* The rules engine has no dependency on Phaser, so the same code runs in the game, in the tests and in computer-vs-computer simulations. A game can be started from a fixed seed, at any table size.
+* Automated tests cover the rules, scoring, saving and loading, random play, computer-vs-computer games at every table size, the rule details listed above, the rules for three and four players (`test/multiplayer.test.mjs`) and a browser test that plays through the real game window.
 * Development scripts for simulations, fuzzing and screenshots (see [For developers](#for-developers)).
 
 ### Recent changes
 
+* **1 to 3 computer opponents:** choose the number of computers on the title screen (1 by default), for 2 to 4 players in all. The map grows with the table (10, 15 or 18 regions, from the printed game's rulebook) and is scaled to fit the window, every computer has its own colour and card, and turns, the Status Phase, Espionage, Objectives and the final scores all work for every player. Saved games from older versions still open.
 * **Selectable game length:** choose 4 to 12 Ages on the title screen (6 by default). The top bar shows "AGE V of 6", restarting keeps the length, and saved games from older versions open as 6-Age games.
 * **Bigger map and clearer symbols:** the hexes are a little larger, the side panels were re-flowed so the whole board still fits, and the symbols for units, buildings and Wonders were redrawn.
 * **New name:** the game is now called Monumental Clash (title screen, browser tab and package name).
@@ -243,7 +250,7 @@ most. It uses exactly the same rules interface as you do.
 
 These parts of the printed game are not in Monumental Clash yet:
 
-- [ ] **More than two players.** There is only 1 human against 1 computer: no two-player hot-seat, no online play and no extra computer players.
+- [ ] **Human opponents.** Every opponent is a computer: there is no hot-seat play with several people at one screen and no online play.
 - [ ] **The expansion content:** Civilizations, Leaders, Market, Obelisk, Observatory, Cavalry and Elephants, and the Pirates.
 - [ ] **The exact printed cards.** The rulebook does not list every card, so the Action, Objective and Event cards and the Advance descriptions are original reconstructions
   written to match the mechanics in the rulebook. They do not match the printed cards one for one.
@@ -254,7 +261,7 @@ These parts of the printed game are not in Monumental Clash yet:
 
 These are suggestions, not promises:
 
-- [ ] **Difficulty levels** for the computer opponent (easier and harder), and different play styles.
+- [ ] **Difficulty levels** for the computer opponents (easier and harder), and different play styles.
 - [ ] **Sound:** effects and music. The game is silent today.
 - [ ] **Better artwork and animation:** the art is simple and generated in the browser; hand-made illustrations and animated fights on the map (only the dice roll is animated today) would help.
 - [ ] **Touch and small screens:** the window is a fixed 1280×720 scaled to fit, and explanations appear on hover, which touch screens do not have.
@@ -270,19 +277,18 @@ These are suggestions, not promises:
 
 ```
 src/engine   the rules, with no dependency on Phaser. Actions are generators that ask questions through prompts.
-src/ai       the computer opponent
+src/ai       the computer opponents
 src/ui       the Phaser scenes, dialogs and drawing code
 test         the automated tests and development scripts
-docs         the screenshot shown at the top of this file
+docs         the built game (written by npm run build, and served by GitHub Pages) and the screenshot shown at the top of this file
 source       the rulebook that the rules follow
-dist         the built game (created by npm run build)
 ```
 
-* `npm test` runs the whole suite: rules scenarios, scoring, saving and loading, random-play fuzzing, computer-vs-computer games,
-  regression tests for the rule details listed above (`test/fidelity.test.mjs`) and a browser smoke test. The browser test needs `npm run build` first and a Chrome or Edge install (set `BROWSER_PATH` if it is in an unusual place); it is skipped otherwise.
-* `npm run simulate -- 6 1 --check` plays 6 computer-vs-computer games from seed 1 and checks the game state after every action. Add `--ages=N` (4 to 12) to change the game length.
-* `node test/fuzz.mjs 1 50` plays 50 random games to look for rule violations (also accepts `--ages=N`).
-* `node test/shot.mjs out.png "?seed=7"` takes a screenshot of the built game. A numeric `?seed=` in the address starts a game with that seed straight away.
+* `npm test` runs the whole suite: rules scenarios, scoring, saving and loading, random-play fuzzing, computer-vs-computer games at every table size,
+  regression tests for the rule details listed above (`test/fidelity.test.mjs`), the rules for three and four players (`test/multiplayer.test.mjs`) and a browser smoke test. The browser test needs `npm run build` first and a Chrome or Edge install (set `BROWSER_PATH` if it is in an unusual place); it is skipped otherwise.
+* `npm run simulate -- 6 1 --check` plays 6 computer-vs-computer games from seed 1 and checks the game state after every action. Add `--ages=N` (4 to 12) to change the game length and `--opponents=N` (1 to 3) to change the number of computers at the table.
+* `node test/fuzz.mjs 1 50` plays 50 random games to look for rule violations (also accepts `--ages=N` and `--opponents=N`).
+* `node test/shot.mjs out.png "?seed=7"` takes a screenshot of the built game. A numeric `?seed=` in the address starts a game with that seed straight away; add `&opponents=N` (1 to 3) to choose the table size, as in `"?seed=7&opponents=3"`.
 * `?debug=textures` shows every generated texture.
 * In the browser console `__game`, `__ctl` and `__phaser` give access to the game state, the controller and Phaser.
 

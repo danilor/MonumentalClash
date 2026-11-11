@@ -1,17 +1,20 @@
-// Random-play fuzzing of the rules engine: node test/fuzz.mjs [firstSeed] [count] [--ages=6] [-v]
+// Random-play fuzzing of the rules engine: node test/fuzz.mjs [firstSeed] [count] [--ages=6] [--opponents=1] [-v]
 import { playRandomGame } from './harness.mjs';
+import { normalizeOpponents } from '../src/engine/queries.js';
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
 const verbose = process.argv.includes('-v');
+const opt = (name) => (process.argv.find((a) => a.startsWith(`--${name}=`)) || '').slice(name.length + 3) || undefined;
 const first = Number(args[0] || 1);
 const count = Number(args[1] || 10);
-const ages = (process.argv.find((a) => a.startsWith('--ages=')) || '').slice('--ages='.length) || undefined;
+const ages = opt('ages');
+const opponents = normalizeOpponents(opt('opponents'));
 let bad = 0;
 const total = {};
 for (let i = 0; i < count; i++) {
   const seed = first + i;
   const t0 = Date.now();
-  const r = playRandomGame({ seed, ages });
+  const r = playRandomGame({ seed, ages, opponents });
   const s = r.g.s;
   for (const [k, v] of Object.entries(r.stats.events)) total[k] = (total[k] || 0) + v;
   if (verbose || !r.over || r.errors.length) {

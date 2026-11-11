@@ -8,11 +8,10 @@ import { armyAt, citiesOf, citySize, hasAdv, isPortCity, seaNbrs, terrainOf } fr
 import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, TERRAIN, TXT, costText } from './theme.js';
 import { Choice, Flow, confirmModal, optionModal } from './modals.js';
 import { Checkbox, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
-import { UNIT_NAME } from './info.js';
+import { UNIT_NAME, ownerName } from './info.js';
 
 const BUILD_ORDER = ['academy', 'fortress', 'port', 'temple'];
 const BUILD_ICON = { academy: 'b_academy', fortress: 'b_fortress', port: 'b_port', temple: 'b_temple' };
-const OWNER = { 0: 'Your', 1: 'Enemy', 2: 'Barbarian' };
 const STACK_DEPTH = 1100;
 
 const cityLine = (s, c) => `${TERRAIN[terrainOf(s, c.hex)]} city · size ${citySize(c)} · ${MOOD_NAME[c.mood]}`;
@@ -347,7 +346,7 @@ async function influenceDialog(ctl, city) {
     title: 'Influence Culture',
     text: `Click the city you want to influence. This city reaches ${range} space${range === 1 ? '' : 's'}; the tag on each city shows how many extra Culture tokens it takes to reach it.`,
     options: [
-      ...targets.map(({ target, boost }) => ({ id: target.id, label: `${OWNER[target.owner]} city`, hex: target.hex, tag: boost ? `+${boost} Culture` : 'In range' })),
+      ...targets.map(({ target, boost }) => ({ id: target.id, label: `${ownerName(ctl.g, target.owner)} city`, hex: target.hex, tag: boost ? `+${boost} Culture` : 'In range' })),
       { id: '__cancel', label: 'Cancel' },
     ],
   });
@@ -380,7 +379,7 @@ async function influenceDialog(ctl, city) {
       f.add(row);
       f.y += row.h + 6;
     }
-  } else f.text(`Target: ${BUILDING_NAME[building]} in the ${OWNER[target.owner].toLowerCase()} city.`, { bold: true, gap: 6 });
+  } else f.text(`Target: ${BUILDING_NAME[building]} in the ${ownerName(ctl.g, target.owner).toLowerCase()} city.`, { bold: true, gap: 6 });
   let arts = null;
   const artsOk = hasAdv(s, 0, 'arts') && !s.turn.used.arts && canPay(s, 0, { culture: 1 + boost });
   let update = () => {};
@@ -408,7 +407,7 @@ async function influenceDialog(ctl, city) {
     },
     { label: 'Cancel', w: 130, fn: () => modal.close() },
   ]);
-  modal = f.finish({ title: 'Influence Culture', subtitle: `Target: ${OWNER[target.owner].toLowerCase()} ${cityLine(s, target)}`, closable: true });
+  modal = f.finish({ title: 'Influence Culture', subtitle: `Target: ${ownerName(ctl.g, target.owner).toLowerCase()} ${cityLine(s, target)}`, closable: true });
   update();
 }
 

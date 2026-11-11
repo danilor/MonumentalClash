@@ -4,7 +4,7 @@ import { ADVANCES, ADVANCE_GROUPS } from '../engine/data/advances.js';
 import { advanceBlocked, advanceCost } from '../engine/advance.js';
 import { planPayment } from '../engine/core.js';
 import { hasAdv } from '../engine/queries.js';
-import { BUILDING_NAME, C, PLAYER_COLORS, TXT } from './theme.js';
+import { BUILDING_NAME, C, PLAYER_COLORS, TXT, cap, joinNames, seatLabel, seatName } from './theme.js';
 import { Button, Checkbox, Modal, drawPanel, hitBox, icon, resRow, tip, txt } from './widgets.js';
 
 const MODAL_W = 1160;
@@ -46,7 +46,8 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
   const scene = ctl.scene;
   const s = ctl.g.s;
   const pl = s.players[0];
-  const foe = s.players[1];
+  const foes = s.players.slice(1);
+  const heldBy = (id) => foes.filter((f) => f.advances.includes(id));
   const offered = pick ? new Set(pick.options) : null;
   const borrowed = s.turn && s.turn.player === 0 ? s.turn.libAdv : null;
 
@@ -80,7 +81,7 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       { label: 'You have it', fill: 0x1f4d36, border: C.good },
       { label: 'Can research', fill: 0x25364f, border: C.gold },
       { label: 'Locked', fill: 0x141b25, border: 0x2a3646 },
-      { label: 'Computer has it', fill: 0x141b25, border: 0x2a3646, bar: PLAYER_COLORS[1] },
+      ...foes.map((f) => ({ label: `${seatLabel(s, f.idx)} has it`, fill: 0x141b25, border: 0x2a3646, bar: PLAYER_COLORS[f.idx] })),
     ];
     for (let i = legend.length - 1; i >= 0; i--) {
       const it = legend[i];
@@ -127,10 +128,12 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
         else if (chip.hover && st !== 'locked') border = 0xffffff;
         bg.clear();
         drawPanel(bg, 0, 0, w, CHIP_H, { fill: sel ? 0x34527a : fill, border, radius: 7, line: sel ? 3 : 1.5 });
-        if (foe.advances.includes(adv.id)) {
-          bg.fillStyle(PLAYER_COLORS[1], 1);
-          bg.fillRect(3, 7, 3, CHIP_H - 14);
-        }
+        const had = heldBy(adv.id);
+        const seg = (CHIP_H - 14) / Math.max(1, had.length);
+        had.forEach((f, i) => {
+          bg.fillStyle(PLAYER_COLORS[f.idx], 1);
+          bg.fillRect(3, 7 + i * seg, 3, seg);
+        });
         label.setColor(st === 'locked' ? TXT.dim : st === 'owned' ? '#d8ffe6' : st === 'borrowed' ? '#e6d8ff' : TXT.text);
         marks.forEach((m) => m.setAlpha(st === 'locked' ? 0.4 : 1));
       };
@@ -148,7 +151,8 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
         const lines = [adv.name, adv.text];
         if (st === 'locked') lines.push('', `Locked: ${whyLocked(adv.id)}`);
         if (st === 'borrowed') lines.push('', 'Borrowed from the Great Library for this turn.');
-        if (foe.advances.includes(adv.id)) lines.push('', 'The computer has this Advance.');
+        const had = heldBy(adv.id);
+        if (had.length) lines.push('', `${cap(joinNames(had.map((f) => seatName(s, f.idx))))} ${had.length === 1 ? 'has' : 'have'} this Advance.`);
         return lines.join('\n');
       });
       box.add(c);

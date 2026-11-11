@@ -1,8 +1,8 @@
 // The battle report: one round of dice for each side, rolled onto a small table and then explained step by step.
 // The player confirms it; the first click (or Space or Enter) while the dice are still rolling only finishes the roll.
 import { ACTION_CARDS } from '../engine/data/cards.js';
-import { COMBAT_DIE } from '../engine/data/constants.js';
-import { C, PLAYER_COLORS, PLAYER_HEX, TERRAIN, TXT } from './theme.js';
+import { BARBARIAN, COMBAT_DIE } from '../engine/data/constants.js';
+import { C, PLAYER_COLORS, PLAYER_HEX, TERRAIN, TXT, cap, seatName } from './theme.js';
 import { Button, Modal, drawPanel, icon, txt } from './widgets.js';
 import { ownerName } from './info.js';
 import { terrainOf } from '../engine/queries.js';
@@ -131,7 +131,7 @@ export function playBattleRound(ctl, ev) {
       const them = ev.a.owner === 0 ? ev.d : ev.a;
       text = `Battle, round ${ev.round}: you lose ${plural(you.lost, 'unit', 'units')}, the enemy loses ${plural(them.lost, 'unit', 'units')}.`;
     } else {
-      const att = ev.a.owner === 1 ? 'The computer' : 'Barbarians';
+      const att = ev.a.owner === BARBARIAN ? 'Barbarians' : cap(seatName(g.s, ev.a.owner));
       text = `${att} fights at round ${ev.round}: ${plural(ev.a.lost, 'unit', 'units')} lost by the attacker, ${plural(ev.d.lost, 'unit', 'units')} by the defender.`;
     }
     ctl.hud.toast(text, 'info', 1500);

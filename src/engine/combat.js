@@ -4,7 +4,7 @@ import { ACTION_CARDS, COMBAT_EFFECTS } from './data/cards.js';
 import { randInt } from './rng.js';
 import {
   unitById, unitsAt, armyAt, shipsAt, cityAt, citiesOf, hasAdv, hasBuilding, playerOwnsWonder,
-  citySize, settlementsLeft, buildingsLeft, unitsLeft,
+  citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners,
 } from './queries.js';
 import {
   gainRes, applyPayment, planPayment, canPay, removeUnits, addUnitTo, unitFlags, discardCard, removeCity,
@@ -65,7 +65,7 @@ export function trimCargo(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return [];
   const lost = [];
-  for (const owner of [0, 1, BARBARIAN]) {
+  for (const owner of allOwners(s)) {
     const cargo = unitsAt(s, hex).filter((u) => u.owner === owner && u.type !== 'ship');
     if (!cargo.length) continue;
     const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
@@ -83,7 +83,7 @@ export function trimCargo(g, hex) {
 export function* trimCargoChoice(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return;
-  for (const owner of [0, 1]) {
+  for (const { idx: owner } of s.players) {
     const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
     const cargo = () => unitsAt(s, hex).filter((u) => u.owner === owner && u.type !== 'ship');
     while (cargo().length > cap && new Set(cargo().map((u) => u.type)).size > 1) {

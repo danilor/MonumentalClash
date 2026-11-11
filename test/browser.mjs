@@ -19,7 +19,7 @@ const candidates = [
 export const browserAvailable = () => candidates.some((p) => existsSync(p));
 export const browserPath = () => candidates.find((p) => existsSync(p));
 
-/** Open the game (dist/index.html) and return helpers. Game coordinates are 1280x720. */
+/** Open the game (docs/index.html, the output of npm run build) and return helpers. Game coordinates are 1280x720. */
 export async function open(query = '', { viewport = { width: 1280, height: 720 }, storage = null } = {}) {
   const executablePath = browserPath();
   const browser = await chromium.launch({ executablePath, headless: true, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -30,7 +30,7 @@ export async function open(query = '', { viewport = { width: 1280, height: 720 }
     if (['error', 'warning'].includes(m.type()) && !IGNORED.some((re) => re.test(text))) problems.push(`[${m.type()}] ${text}`);
   });
   page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}\n${e.stack || ''}`));
-  const url = `${pathToFileURL(resolve(root, 'dist/index.html')).href}${query}`;
+  const url = `${pathToFileURL(resolve(root, 'docs/index.html')).href}${query}`;
   if (storage) {
     await page.addInitScript((entries) => {
       for (const [k, v] of Object.entries(entries)) if (!localStorage.getItem(`__init_${k}`)) {

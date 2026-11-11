@@ -4,11 +4,11 @@ import { GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from '../engine/data/cards.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkStatus } from '../engine/objectives.js';
-import { citySize, citySizeCap, hasBuilding, hexDistance, isHidden, nbrs, resLimit } from '../engine/queries.js';
+import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isHidden, nbrs, resLimit } from '../engine/queries.js';
 import { battleOdds } from './odds.js';
 
 export const DEFAULTS = {
-  foe: 0.85, // how much the opponent's position counts against ours
+  foe: 0.85, // how much the opponents' positions count against ours (the strongest weighs as much as the rest together)
   aggression: 1, // eagerness to march on enemy cities
   noise: 0.05, // random jitter so the AI is not perfectly predictable
 };
@@ -131,20 +131,22 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x));
 /** How close a Status objective is to being completed (0..1). Event objectives return a small constant. */
 function objectiveProgress(s, q, id) {
   const pl = s.players[q];
-  const foe = s.players[1 - q];
+  const foes = foesOf(s, q);
   const mine = s.cities.filter((c) => c.owner === q);
   const chk = checkStatus(s, q, id);
   if (chk.ok) return 1;
   if (OBJECTIVES[id].kind !== 'status') return 0.08;
   const grp = (gid) => groupCount(pl, gid) / 4;
   const buildingCount = (pp, type) => s.cities.filter((c) => c.owner === pp && hasBuilding(c, type)).length;
+  const lead = (type) => clamp01(0.3 + 0.35 * (buildingCount(q, type) - Math.max(...foes.map((f) => buildingCount(f, type))) + 1));
   switch (id) {
     case 'large_civ': return mine.length / 6;
-    case 'science_lead': return clamp01(0.3 + 0.35 * (buildingCount(q, 'academy') - buildingCount(1 - q, 'academy') + 1));
-    case 'coastal_lead': return clamp01(0.3 + 0.35 * (buildingCount(q, 'port') - buildingCount(1 - q, 'port') + 1));
-    case 'religious_fervor': return clamp01(0.3 + 0.35 * (buildingCount(q, 'temple') - buildingCount(1 - q, 'temple') + 1));
-    case 'fortifications': return clamp01(0.3 + 0.35 * (buildingCount(q, 'fortress') - buildingCount(1 - q, 'fortress') + 1));
-    case 'advanced_culture': return clamp01(pl.advances.length / 6) * (pl.advances.length > foe.advances.length ? 1 : 0.5);
+    case 'science_lead': return lead('academy');
+    case 'coastal_lead': return lead('port');
+    case 'religious_fervor': return lead('temple');
+    case 'fortifications': return lead('fortress');
+    case 'advanced_culture':
+      return clamp01(pl.advances.length / 6) * (foes.every((f) => pl.advances.length > s.players[f].advances.length) ? 1 : 0.5);
     case 'city_planner': return grp('construction');
     case 'education_lead': return grp('education');
     case 'culture_focus': return grp('culture');
@@ -167,7 +169,7 @@ function objectiveProgress(s, q, id) {
     case 'large_fleet': return s.units.filter((u) => u.owner === q && u.type === 'ship').length / 4;
     case 'large_army': {
       const n = (pp) => s.units.filter((u) => u.owner === pp && u.type === 'infantry').length;
-      return clamp01((n(q) - n(1 - q)) / 4) * 0.8;
+      return clamp01((n(q) - Math.max(...foes.map(n))) / 4) * 0.8;
     }
     case 'standing_army': return mine.filter((c) => s.units.some((u) => u.owner === q && u.type === 'infantry' && u.hex === c.hex)).length / 4;
     case 'military_might': return s.units.filter((u) => u.owner === q && u.type !== 'settler').length / 12;
@@ -234,13 +236,13 @@ function danger(s, q, ix) {
   const armyOf = (k, owner) => (ix.units.get(k) || []).filter((u) => u.owner === owner && u.type === 'infantry').length;
   for (const c of s.cities) {
     if (c.owner !== q) continue;
-    const attackers = { 0: 0, 1: 0, 2: 0 };
+    const attackers = {};
     for (const n of nbrs(s, c.hex)) {
       for (const u of ix.units.get(n) || []) {
-        if (u.owner !== q && u.type === 'infantry' && canAttack(s, u.owner)) attackers[u.owner] += 1;
+        if (u.owner !== q && u.type === 'infantry' && canAttack(s, u.owner)) attackers[u.owner] = (attackers[u.owner] || 0) + 1;
       }
     }
-    const worst = Math.max(attackers[0], attackers[1], attackers[2]);
+    const worst = Math.max(0, ...Object.values(attackers));
     if (!worst) continue;
     const def = armyOf(c.hex, q);
     const odds = battleOdds(Math.min(worst, 5), def, { fortress: hasBuilding(c, 'fortress') });
@@ -319,12 +321,14 @@ export function sideValue(s, q, cfg = DEFAULTS, ix = null) {
   return v;
 }
 
-/** Overall evaluation from player p's point of view. */
+/** Overall evaluation from player p's point of view: our position against the strongest and the average opponent. */
 export function evaluate(s, p, cfg = DEFAULTS) {
   const ix = { units: unitsByHex(s) };
   let revealed = 0;
   for (const r of s.map.regions) if (r.flipped !== null) revealed += 1;
-  return sideValue(s, p, cfg, ix) - cfg.foe * sideValue(s, 1 - p, cfg, ix) + 0.9 * revealed;
+  const foes = foesOf(s, p).map((f) => sideValue(s, f, cfg, ix));
+  const rivals = (Math.max(...foes) + foes.reduce((a, b) => a + b, 0) / foes.length) / 2;
+  return sideValue(s, p, cfg, ix) - cfg.foe * rivals + 0.9 * revealed;
 }
 
 export { isHidden };

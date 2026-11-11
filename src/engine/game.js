@@ -1,8 +1,8 @@
 // The Game facade: owns the state, runs rule flows (generators) and hands prompts to players.
 import { BARBARIAN, MAIN_ACTIONS_PER_TURN, ROUNDS_PER_AGE } from './data/constants.js';
-import { createState } from './state.js';
+import { createState, upgradeState } from './state.js';
 import { RuleError, clampResources, fail, gainRes } from './core.js';
-import { hasAdv, revealedDistances } from './queries.js';
+import { hasAdv, nextSeat, revealedDistances, turnOrder } from './queries.js';
 import { choose } from './prompts.js';
 import { plural } from './text.js';
 import { advanceAction } from './advance.js';
@@ -42,7 +42,7 @@ export function newTurn(player) {
 /** Trade routes: each Settler/Ship pairs with a different enemy city (not Angry) within 2 revealed spaces. Max 4. */
 export function tradeRoutes(s, p) {
   if (!hasAdv(s, p, 'trade_routes')) return [];
-  const foes = s.cities.filter((c) => c.owner === 1 - p && c.mood !== 'angry');
+  const foes = s.cities.filter((c) => c.owner !== p && c.owner !== BARBARIAN && c.mood !== 'angry');
   const mine = s.units.filter((u) => u.owner === p && (u.type === 'settler' || u.type === 'ship'));
   const near = new Map(mine.map((u) => [u.id, revealedDistances(s, u.hex, 2)]));
   const holder = new Map();
@@ -97,8 +97,9 @@ function* endTurn(g) {
     clampResources(g, p);
   }
   g.emit({ type: 'turn_end', player: p });
-  if (p === s.first) {
-    yield* startTurn(g, 1 - p);
+  // Play passes clockwise from the first player; the round ends after the last seat has played.
+  if (p !== turnOrder(s)[s.players.length - 1]) {
+    yield* startTurn(g, nextSeat(s, p));
     return;
   }
   if (s.round >= ROUNDS_PER_AGE) {
@@ -154,10 +155,10 @@ export function checkAnswer(prompt, answer) {
 
 export class Game {
   constructor(state) {
-    this.s = state;
+    this.s = upgradeState(state);
     this.pending = null; // prompt waiting for a human answer
     this.events = []; // animation/log events since the last drainEvents()
-    this.policy = [null, null]; // per player: (game, prompt) => answer, answered synchronously
+    this.policy = state.players.map(() => null); // per player: (game, prompt) => answer, answered synchronously
     this.noSnapshot = false; // skip rollback snapshots (used by AI simulations)
     this.promptSeq = 0;
     this._it = null;
@@ -284,7 +285,7 @@ export class Game {
 
   /**
    * Look-ahead copies for the AI. Everything `viewer` cannot see (unrevealed Region tiles, the order of the draw
-   * piles, the other player's hand) is reshuffled once; each call of the returned function gives an independent
+   * piles, the other players' hands) is reshuffled once; each call of the returned function gives an independent
    * game with fresh dice. Prompts are answered with their defaults.
    */
   sandbox(viewer = null, rand = Math.random) {
@@ -295,7 +296,7 @@ export class Game {
     return () => {
       const g = new Game(JSON.parse(text));
       g.noSnapshot = true;
-      g.policy = [dflt, dflt];
+      g.policy = g.s.players.map(() => dflt);
       g.s.rng = (rand() * 4294967296) >>> 0;
       return g;
     };
@@ -306,7 +307,7 @@ export class Game {
     const g = new Game(JSON.parse(JSON.stringify(this.s)));
     g.noSnapshot = true;
     const dflt = (_g, prompt) => prompt.default;
-    g.policy = [dflt, dflt];
+    g.policy = g.s.players.map(() => dflt);
     if (reseed) g.s.rng = (Math.random() * 4294967296) >>> 0;
     return g;
   }
@@ -330,10 +331,10 @@ export function determinize(s, viewer, rand = Math.random) {
   for (const k of ['event', 'wonder']) shuffled(s.decks[k], rand);
   for (const k of ['action', 'objective']) {
     const pool = [...s.decks[k]];
-    const foe = viewer === null ? null : s.players[1 - viewer];
-    if (foe) pool.push(...foe.hand[k]);
+    const foes = viewer === null ? [] : s.players.filter((pl) => pl.idx !== viewer);
+    for (const foe of foes) pool.push(...foe.hand[k]);
     shuffled(pool, rand);
-    if (foe) foe.hand[k] = pool.splice(0, foe.hand[k].length);
+    for (const foe of foes) foe.hand[k] = pool.splice(0, foe.hand[k].length);
     s.decks[k] = pool;
   }
 }

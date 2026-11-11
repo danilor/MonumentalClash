@@ -1,6 +1,6 @@
 // The Status Phase that closes every Age, and the end of the game.
 import { ADVANCES, GROUPS, GOVERNMENT_GROUPS } from './data/advances.js';
-import { citiesOf, citySize, owns, playerOwnsWonder, totalAges } from './queries.js';
+import { citiesOf, citySize, owns, playerOwnsWonder, totalAges, turnOrder } from './queries.js';
 import {
   applyPayment, clampResources, drawActionCard, drawObjectiveCard, gainRes, planPayment, removeCity,
 } from './core.js';
@@ -110,19 +110,22 @@ function* changeGovernment(g, p) {
 function* firstPlayer(g) {
   const s = g.s;
   const total = (p) => s.players[p].mood + s.players[p].culture;
-  const lighthouse = [0, 1].find((p) => playerOwnsWonder(s, p, 'great_lighthouse'));
+  const lighthouse = s.players.find((pl) => playerOwnsWonder(s, pl.idx, 'great_lighthouse'));
   let decider;
-  if (lighthouse !== undefined) decider = lighthouse;
-  else if (total(0) === total(1)) decider = s.first;
-  else decider = total(0) > total(1) ? 0 : 1;
+  if (lighthouse) decider = lighthouse.idx;
+  else {
+    // The most Mood + Culture tokens decides. Among a tie, the current first player does, or else the tied
+    // player closest to their left (clockwise): the first of them in turn order.
+    const best = Math.max(...s.players.map((pl) => total(pl.idx)));
+    decider = turnOrder(s).find((p) => total(p) === best);
+  }
+  const seats = turnOrder(s);
+  seats.unshift(...seats.splice(seats.indexOf(decider), 1));
   const next = yield* choose(g, decider, {
     kind: 'first_player',
     title: 'First Player',
     text: 'Choose who goes first in the next Round.',
-    options: [
-      { id: String(decider), label: `${g.name(decider)} go first` },
-      { id: String(1 - decider), label: `${g.name(1 - decider)} go first` },
-    ],
+    options: seats.map((p) => ({ id: String(p), label: `${g.name(p)} go first` })),
     default: String(decider),
   });
   s.first = Number(next);
@@ -132,7 +135,7 @@ function* firstPlayer(g) {
 /** Runs the whole Status Phase. Leaves s.phase === 'over' when the game ended. */
 export function* statusPhase(g) {
   const s = g.s;
-  const order = [s.first, 1 - s.first];
+  const order = turnOrder(s);
   s.phase = 'status';
   const step = (n) => {
     s.status = { step: n, title: STATUS_STEPS[n - 1] };

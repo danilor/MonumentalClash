@@ -2,7 +2,7 @@
 import { ACTION_CARDS, TOP_EFFECTS } from './data/cards.js';
 import { ADVANCES } from './data/advances.js';
 import { BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
-import { armyAt, citiesOf, cityById, resLimit } from './queries.js';
+import { armyAt, citiesOf, cityById, foesOf, resLimit } from './queries.js';
 import { discardCard, drawActionCard, drawObjectiveCard, fail, gainRes, moodUp, planPayment } from './core.js';
 import { choose, chooseMany } from './prompts.js';
 import { availableAdvances, quickAdvance } from './advance.js';
@@ -74,18 +74,29 @@ const EFFECTS = {
 
   *espionage(g, p, a) {
     const s = g.s;
-    const foe = s.players[1 - p];
-    const options = RESOURCES.filter((r) => foe.res[r] > 0 && s.players[p].res[r] < resLimit(s, p, r));
-    if (!options.length) fail('The opponent has nothing you can take.');
+    const takeable = (f) => RESOURCES.filter((r) => s.players[f].res[r] > 0 && s.players[p].res[r] < resLimit(s, p, r));
+    const stock = (f) => takeable(f).reduce((n, r) => n + s.players[f].res[r], 0);
+    const marks = foesOf(s, p).filter((f) => takeable(f).length).sort((x, y) => stock(y) - stock(x));
+    if (!marks.length) fail('No opponent has anything you can take.');
+    let foe = marks.includes(a.player) ? a.player : marks.find((f) => takeable(f).includes(a.resource));
+    if (foe === undefined) {
+      foe = marks.length === 1
+        ? marks[0]
+        : Number(yield* choose(g, p, {
+          kind: 'choice', title: 'Espionage', text: 'Choose the player you spy on.',
+          options: marks.map((f) => ({ id: String(f), label: g.name(f) })), default: String(marks[0]),
+        }));
+    }
+    const options = takeable(foe);
     const pick = options.includes(a.resource)
       ? a.resource
       : yield* choose(g, p, {
-        kind: 'pick_resource', title: 'Espionage', text: 'Take 1 resource from the opponent.',
+        kind: 'pick_resource', title: 'Espionage', text: `Take 1 resource from ${g.name(foe)}.`,
         options: options.map((r) => ({ id: r, label: r })), default: options[0],
       });
-    foe.res[pick] -= 1;
+    s.players[foe].res[pick] -= 1;
     gainRes(g, p, { [pick]: 1 });
-    g.log(`${g.name(p)} steals 1 ${pick}.`);
+    g.log(`${g.name(p)} steals 1 ${pick} from ${g.name(foe)}.`);
   },
 
   *quick_advance(g, p, a) {

@@ -7,12 +7,13 @@ import { checkInvariants } from './harness.mjs';
 
 const auto = (_g, prompt) => prompt.default;
 
-/** A started game where player 0 moves first and every question is answered with its default. */
-export function fresh(seed = 'scenario', { ages } = {}) {
-  const g = Game.create({ seed, humans: [true, true], ages });
-  g.s.first = 0;
-  g.s.current = 0;
-  g.policy = [auto, auto];
+/** A started game (two players, or `opponents` + 1) where player `first` moves first and every question is answered with its default. */
+export function fresh(seed = 'scenario', { ages, opponents = 1, first = 0 } = {}) {
+  const seats = Array.from({ length: opponents + 1 }, () => true);
+  const g = Game.create({ seed, humans: seats, ages, opponents });
+  g.s.first = first;
+  g.s.current = first;
+  g.policy = seats.map(() => auto);
   g.begin();
   return g;
 }
@@ -56,11 +57,11 @@ export function addCityAt(g, p, hex, mood = 'neutral') {
   return city;
 }
 
-/** Two computer players play a whole game; invariants are checked after every action. */
-export function playAIGame(seed, { maxTurns = 400, ages } = {}) {
-  const g = Game.create({ seed: String(seed), humans: [false, false], ages });
-  attachAI(g, 0);
-  attachAI(g, 1);
+/** Computer players play a whole game (two of them, or `opponents` + 1); invariants are checked after every action. */
+export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1 } = {}) {
+  const seats = opponents + 1;
+  const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents });
+  for (let p = 0; p < seats; p++) attachAI(g, p);
   g.begin();
   const problems = [];
   for (let turns = 0; g.s.phase !== 'over' && turns < maxTurns; turns++) {

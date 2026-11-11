@@ -5,7 +5,9 @@ import { BARBARIAN } from '../engine/data/constants.js';
 import { cityAt, citySize, unitsAt } from '../engine/queries.js';
 import { BUILDING_NAME, MOOD_NAME, RES, TERRAIN, TERRAIN_HELP } from './theme.js';
 
-export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === 0 ? 'Your' : 'Enemy');
+/** What a tooltip calls the owner of something: "Your", "Enemy" (when there is only one computer), "Red"... or "Barbarian". */
+export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === 0 ? 'Your' : g.s.players.length > 2 ? g.s.players[o].name : 'Enemy');
+export const ownedBy = (g, o) => (o === 0 ? 'yours' : o === BARBARIAN ? 'barbarian' : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's");
 export const UNIT_NAME = { infantry: 'Infantry', settler: 'Settler', ship: 'Ship' };
 
 export function unitCounts(s, k, owner) {
@@ -21,9 +23,8 @@ export const countText = (c) =>
     .join(', ');
 
 export function cityText(g, city) {
-  const who = city.owner === BARBARIAN ? 'Barbarian' : city.owner === 0 ? 'Your' : "Enemy";
-  const parts = [`${who} city, size ${citySize(city)}, ${MOOD_NAME[city.mood]}`];
-  const blds = Object.entries(city.buildings).map(([b, o]) => `${BUILDING_NAME[b]}${o !== city.owner ? ` (${o === 0 ? 'yours' : o === 1 ? "enemy's" : 'barbarian'})` : ''}`);
+  const parts = [`${ownerName(g, city.owner)} city, size ${citySize(city)}, ${MOOD_NAME[city.mood]}`];
+  const blds = Object.entries(city.buildings).map(([b, o]) => `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(g, o)})` : ''}`);
   if (blds.length) parts.push(blds.join(', '));
   if (city.wonders.length) parts.push(city.wonders.map((w) => WONDERS[w.id].name).join(', '));
   return parts.join('\n');
@@ -45,7 +46,7 @@ export function hexLines(g, k) {
   if (h.exhausted) lines.push('Exhausted land gives nothing and cannot hold a city.');
   const city = cityAt(s, k);
   if (city) lines.push('', cityText(g, city));
-  for (const owner of [0, 1, BARBARIAN]) {
+  for (const owner of [...s.players.map((p) => p.idx), BARBARIAN]) {
     const c = unitCounts(s, k, owner);
     const t = countText(c);
     if (t) lines.push(`${ownerName(g, owner)} units: ${t}`);

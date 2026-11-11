@@ -4,7 +4,7 @@ import { OBJECTIVES } from '../engine/data/cards.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { citiesOf, terrainOf, totalAges } from '../engine/queries.js';
 import { finalResult, scoreOf } from '../engine/scoring.js';
-import { C, PLAYER_COLORS, TERRAIN, TXT } from './theme.js';
+import { C, LOG_HEX, PLAYER_COLORS, TERRAIN, TXT, cap, joinNames, logColor, seatLabel, seatName, seatOwner } from './theme.js';
 import { placeWords } from './info.js';
 import { Flow, confirmModal, optionModal } from './modals.js';
 import { Button, Modal, txt } from './widgets.js';
@@ -15,12 +15,11 @@ import { helpDialog } from './help.js';
 
 const SUB_DEPTH = 1100;
 const SPEEDS = [['normal', 'Normal'], ['fast', 'Fast'], ['instant', 'Instant']];
-const LOG_COLOR = (line) => (line.startsWith('Blue') ? '#9cc3ff' : line.startsWith('Red') ? '#ff9f98' : line.startsWith('—') ? TXT.gold : TXT.text);
 
 export const fmtVP = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-// A restart or follow-up game keeps the length of the game just played; the title screen is where it is changed.
-const startGame = (ctl) => ctl.scene.scene.start('Game', { fresh: true, ages: totalAges(ctl.g.s) });
+// A restart or follow-up game keeps the length of the game and the number of opponents; the title screen is where they are changed.
+const startGame = (ctl) => ctl.scene.scene.start('Game', { fresh: true, ages: totalAges(ctl.g.s), opponents: ctl.g.s.players.length - 1 });
 const toTitle = (ctl) => ctl.scene.scene.start('Menu');
 
 // ------------------------------------------------------------------- menu
@@ -112,7 +111,7 @@ function logDialog(ctl) {
     let y = top;
     if (!lines.length) body.add(txt(scene, 28, y, 'Nothing has happened yet.', { size: 14, color: TXT.muted }));
     for (const line of pages[page]) {
-      const t = txt(scene, 28, y, line, { size: 13, wrap: w - 60, color: LOG_COLOR(line) });
+      const t = txt(scene, 28, y, line, { size: 13, wrap: w - 60, color: logColor(line) });
       body.add(t);
       y += t.height + 3;
     }
@@ -145,7 +144,7 @@ function overviewDialog(ctl, p) {
   const h = 640;
   const gov = pl.government ? ADVANCE_GROUPS.find((x) => x.id === pl.government).name : 'none yet';
   const modal = new Modal(scene, {
-    title: p === 0 ? 'Your civilization' : 'The computer\'s civilization',
+    title: p === 0 ? 'Your civilization' : `${cap(seatOwner(s, p))} civilization`,
     subtitle: `${g.name(p)} · Government: ${gov} · ${pl.advances.length} Advance${pl.advances.length === 1 ? '' : 's'}`,
     w,
     h,
@@ -222,8 +221,7 @@ function overviewDialog(ctl, p) {
   const done = pl.completed.map((c) => `${OBJECTIVES[c.id] ? OBJECTIVES[c.id].name : 'Objective'} (${c.side === 'mil' ? 'Military' : 'Development'})`);
   section('Completed Objectives', done, 'None yet.');
   const hand = pl.hand;
-  section('Cards in hand', [`Action ${hand.action.length} · Objective ${hand.objective.length} · Wonder ${hand.wonder.length}${p === 1 ? ' (hidden)' : ''}`], '');
-
+  section('Cards in hand', [`Action ${hand.action.length} · Objective ${hand.objective.length} · Wonder ${hand.wonder.length}  ${p !== 0 ? ' (hidden)' : ''}`], '');
   modal.add(new Button(scene, w / 2 - 70, h - 52, 140, 34, 'Close', () => modal.close(), { size: 14 }));
   return modal;
 }
@@ -261,28 +259,42 @@ async function pickVariant(ctl, k, options) {
 }
 
 // -------------------------------------------------------------- game over
+function resultLine(s, res) {
+  const vp = (i) => fmtVP(res.scores[i].total);
+  const { winner, winners } = res;
+  if (s.players.length === 2) {
+    return winner === 0 ? `You beat the computer, ${vp(0)} to ${vp(1)}.`
+      : winner === 1 ? `The computer wins, ${vp(1)} to ${vp(0)}.`
+        : `Both players finished on ${vp(0)} points.`;
+  }
+  if (winner === 0) return `You win with ${vp(0)} points. The best computer scored ${fmtVP(Math.max(...res.scores.slice(1).map((x) => x.total)))}.`;
+  if (winner !== 'shared') return `${cap(seatName(s, winner))} wins with ${vp(winner)} points. You finished on ${vp(0)}.`;
+  if (winners.includes(0)) return `You share the victory with ${joinNames(winners.filter((i) => i !== 0).map((i) => seatName(s, i)))}, all on ${vp(0)} points.`;
+  return `${joinNames(winners.map((i) => seatName(s, i)))} share the victory on ${vp(winners[0])} points. You finished on ${vp(0)}.`;
+}
+
 function gameOverDialog(ctl) {
   return new Promise((resolve) => {
     const s = ctl.g.s;
     const res = s.final || finalResult(s);
-    const [me, foe] = res.scores;
+    const n = res.scores.length;
     const won = res.winner === 0;
-    const lost = res.winner === 1;
+    const shared = res.winner === 'shared';
+    const lost = !won && !(shared && res.winners.includes(0));
     const w = 620;
     const f = new Flow(ctl.scene, w, { top: 62 });
     const headline = won ? 'Victory!' : lost ? 'Defeat' : 'A shared victory';
     f.text(headline, { center: true, size: 30, bold: true, serif: true, color: won ? TXT.gold : lost ? TXT.bad : TXT.text, gap: 6 });
-    let line = won ? `You beat the computer, ${fmtVP(me.total)} to ${fmtVP(foe.total)}.`
-      : lost ? `The computer wins, ${fmtVP(foe.total)} to ${fmtVP(me.total)}.`
-        : `Both players finished on ${fmtVP(me.total)} points.`;
-    if (me.total === foe.total && res.winner !== 'shared') line += ' The tiebreak decided it.';
+    let line = resultLine(s, res);
+    const best = Math.max(...res.scores.map((x) => x.total));
+    if (res.scores.filter((x) => x.total === best).length > 1 && !shared) line += ' The tiebreak decided it.';
     f.text(line, { center: true, size: 15, color: TXT.muted, gap: 14 });
 
-    const colYou = w - f.pad - 150;
-    const colFoe = w - f.pad;
-    const head = (x, label, color) => f.add(txt(ctl.scene, x, f.y, label, { size: 14, bold: true, origin: [1, 0], color }));
-    head(colYou, 'You', '#9cc3ff');
-    head(colFoe, 'Computer', '#ff9f98');
+    // One column per player, the human first and the last computer on the right edge.
+    const step = n === 2 ? 150 : 100;
+    const colX = (i) => w - f.pad - (n - 1 - i) * step;
+    const head = (i) => f.add(txt(ctl.scene, colX(i), f.y, seatLabel(s, i), { size: 14, bold: true, origin: [1, 0], color: LOG_HEX[i] }));
+    for (let i = 0; i < n; i++) head(i);
     f.y += 26;
     f.rule(2);
     const rows = [
@@ -294,14 +306,12 @@ function gameOverDialog(ctl) {
     ];
     for (const [name, key] of rows) {
       f.add(txt(ctl.scene, f.pad, f.y, name, { size: 14, color: TXT.muted }));
-      f.add(txt(ctl.scene, colYou, f.y, fmtVP(me.parts[key]), { size: 14, origin: [1, 0] }));
-      f.add(txt(ctl.scene, colFoe, f.y, fmtVP(foe.parts[key]), { size: 14, origin: [1, 0] }));
+      for (let i = 0; i < n; i++) f.add(txt(ctl.scene, colX(i), f.y, fmtVP(res.scores[i].parts[key]), { size: 14, origin: [1, 0] }));
       f.y += 24;
     }
     f.rule(2);
     f.add(txt(ctl.scene, f.pad, f.y, 'Total', { size: 16, bold: true, color: TXT.gold }));
-    f.add(txt(ctl.scene, colYou, f.y, fmtVP(me.total), { size: 16, bold: true, origin: [1, 0], color: TXT.gold }));
-    f.add(txt(ctl.scene, colFoe, f.y, fmtVP(foe.total), { size: 16, bold: true, origin: [1, 0], color: TXT.gold }));
+    for (let i = 0; i < n; i++) f.add(txt(ctl.scene, colX(i), f.y, fmtVP(res.scores[i].total), { size: 16, bold: true, origin: [1, 0], color: TXT.gold }));
     f.y += 36;
 
     let modal = null;

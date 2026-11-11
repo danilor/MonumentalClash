@@ -1,4 +1,4 @@
-import { normalizeAges } from '../engine/queries.js';
+import { normalizeAges, normalizeOpponents } from '../engine/queries.js';
 
 // Browser storage that never throws (private windows and file:// pages may refuse it).
 export const store = {
@@ -30,9 +30,13 @@ export const SAVE_KEY = 'coc.save';
 export const SPEED_KEY = 'coc.speed';
 export const SEEN_HELP_KEY = 'coc.seenHelp';
 export const AGES_KEY = 'coc.ages';
+export const OPPONENTS_KEY = 'coc.opponents';
 
 /** The game length chosen last time on the title screen (the default when nothing usable is stored). */
 export const readAges = () => normalizeAges(store.get(AGES_KEY));
+
+/** The number of computer opponents chosen last time on the title screen (the default when nothing usable is stored). */
+export const readOpponents = () => normalizeOpponents(store.get(OPPONENTS_KEY));
 
 export function readSave() {
   const text = store.get(SAVE_KEY);

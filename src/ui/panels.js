@@ -3,13 +3,16 @@ import { GROUPS } from '../engine/data/advances.js';
 import { citiesOf, resLimit, totalAges, unitsOf } from '../engine/queries.js';
 import { scoreOf } from '../engine/scoring.js';
 import { roman } from '../engine/game.js';
-import { C, H, PLAYER_COLORS, RES_ORDER, TXT, W, LAYOUT } from './theme.js';
+import { C, H, PLAYER_COLORS, PLAYER_HEX, RES_ORDER, TXT, W, LAYOUT, logColor, seatLabel, turnLabel } from './theme.js';
 import { placeWords } from './info.js';
 import { Button, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
 
 const CARD_W = LAYOUT.left - 16;
 const CARD_H = 306;
 const CARD_Y = [46, 360];
+const CARD_GAP = 6;
+const CARD_H_MIN = 99; // the smaller cards of a table of four
+const CARD_H_MAX = 150;
 export const RIGHT_X = W - LAYOUT.right;
 export const LOG_Y = 478;
 
@@ -103,12 +106,11 @@ export class Hud {
     // turn indicator
     const t = s.turn;
     const cur = g.cur;
-    const human = cur === 0;
     let label;
     if (s.phase === 'over') label = 'Game over';
     else if (s.phase === 'status') label = 'Status Phase';
-    else label = human ? 'Your turn' : "Computer's turn";
-    const color = s.phase === 'main' ? (human ? '#7fb2ff' : '#ff8f87') : TXT.gold;
+    else label = turnLabel(s, cur);
+    const color = s.phase === 'main' ? PLAYER_HEX[cur] : TXT.gold;
     c.add(txt(sc, 520, 20, label, { size: 18, bold: true, origin: [0, 0.5], color }));
     if (s.phase === 'main' && t) {
       const n = Math.max(3, t.actionsLeft);
@@ -125,14 +127,87 @@ export class Hud {
       }
     }
     const first = s.first;
-    c.add(txt(sc, 300, 20, `1st player: ${first === 0 ? 'You' : 'Computer'}`, { size: 12, origin: [0, 0.5], color: TXT.dim }));
+    c.add(txt(sc, 300, 20, `1st player: ${seatLabel(s, first)}`, { size: 12, origin: [0, 0.5], color: TXT.dim }));
   }
 
   updateCards() {
-    const sc = this.scene;
+    const { g } = this.ctl;
+    const n = g.s.players.length;
     const c = this.dynCards;
     c.removeAll(true);
-    for (const p of [0, 1]) this.drawCard(c, p, 8, CARD_Y[p]);
+    if (n === 2) {
+      for (const p of [0, 1]) this.drawCard(c, p, 8, CARD_Y[p]);
+      return;
+    }
+    // with more players you keep the full card and the others share the rest of the panel in smaller ones
+    const bottom = H - 44 - 8;
+    this.drawCard(c, 0, 8, CARD_Y[0]);
+    const top = CARD_Y[0] + CARD_H + CARD_GAP;
+    const h = Math.min(CARD_H_MAX, Math.floor((bottom - top - CARD_GAP * (n - 2)) / (n - 1)));
+    for (let p = 1; p < n; p++) this.drawCompact(c, p, 8, top + (p - 1) * (h + CARD_GAP), h);
+  }
+
+  /** The smaller card of another player at a table of three or four: the figures that matter at a glance. */
+  drawCompact(c, p, x, y, h) {
+    const sc = this.scene;
+    const { g } = this.ctl;
+    const s = g.s;
+    const pl = s.players[p];
+    const active = g.cur === p && s.phase === 'main';
+    const col = PLAYER_COLORS[p];
+    const e = (h - CARD_H_MIN) / 4; // spare height is shared between the rows
+    const box = sc.add.graphics();
+    drawPanel(box, x, y, CARD_W, h, { fill: C.panel, border: active ? col : C.border, radius: 10, line: active ? 3 : 1.5 });
+    c.add(box);
+    const open = () => this.ctl.dialogs.overview(p);
+    const score = scoreOf(s, p);
+    const gov = pl.government ? GROUPS[pl.government].name : 'none yet';
+    const cards = pl.hand;
+    const body = hitBox(sc, x, y, CARD_W, h);
+    body.on('pointerdown', open);
+    tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}\nCards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)\nNext Event in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}.\nClick for the Advances, Wonders, Objectives and score.`);
+    c.add(body);
+
+    const sw = sc.add.graphics();
+    sw.fillStyle(col, 1);
+    sw.fillCircle(x + 20, y + 17, 8);
+    sw.lineStyle(2, 0xffffff, 0.85);
+    sw.strokeCircle(x + 20, y + 17, 8);
+    c.add(sw);
+    const nameText = txt(sc, x + 36, y + 17, seatLabel(s, p), { size: 16, bold: true, origin: [0, 0.5] });
+    c.add(nameText);
+    c.add(txt(sc, x + 36 + nameText.width + 5, y + 18, '(computer)', { size: 11, origin: [0, 0.5], color: TXT.muted }));
+    const vp = sc.add.graphics();
+    drawPanel(vp, x + CARD_W - 66, y + 6, 58, 22, { fill: 0x2a2310, border: C.gold, radius: 11, line: 1.5 });
+    c.add(vp);
+    c.add(txt(sc, x + CARD_W - 37, y + 17, `${score.total} VP`, { size: 13, bold: true, origin: 0.5, color: TXT.gold }));
+    const vpHit = hitBox(sc, x + CARD_W - 66, y + 6, 58, 22);
+    vpHit.on('pointerdown', open);
+    tip(vpHit, () => {
+      const pt = scoreOf(g.s, p).parts;
+      return `Victory points so far\nSettlements and buildings: ${pt.core}\nAdvances (1 per 2): ${pt.advances}\nObjectives (2 each): ${pt.objectives}\nWonders: ${pt.wonders}\nEvents and bonuses: ${pt.events}`;
+    });
+    c.add(vpHit);
+
+    const cell = (CARD_W - 12) / 5;
+    RES_ORDER.slice(0, 5).forEach((r, i) => {
+      const cx = x + 6 + cell * i + cell / 2;
+      const val = pl.res[r];
+      const lim = resLimit(s, p, r);
+      c.add(icon(sc, `ic_${r}`, cx, y + 38 + e, 20));
+      c.add(txt(sc, cx, y + 55 + 2 * e, `${val}/${lim}`, { size: 12, bold: true, origin: 0.5, color: val >= lim ? TXT.warn : TXT.text }));
+      const hit = hitBox(sc, cx - cell / 2, y + 28 + e, cell, 38 + e);
+      hit.on('pointerdown', open);
+      tip(hit, `${r === 'ideas' ? 'Ideas' : r[0].toUpperCase() + r.slice(1)}: ${val}, storage limit ${lim}.`);
+      c.add(hit);
+    });
+
+    const cities = citiesOf(s, p).length;
+    const army = unitsOf(s, p, 'infantry').length;
+    const settlers = unitsOf(s, p, 'settler').length;
+    const ships = unitsOf(s, p, 'ship').length;
+    c.add(txt(sc, x + 14, y + 72 + 3 * e, `Mood ${pl.mood}   Culture ${pl.culture}   Cities ${cities}   Adv. ${pl.advances.length}`, { size: 11, origin: [0, 0.5], color: TXT.text }));
+    c.add(txt(sc, x + 14, y + 87 + 4 * e, `Army ${army}   Settlers ${settlers}   Ships ${ships}`, { size: 11, origin: [0, 0.5], color: TXT.muted }));
   }
 
   drawCard(c, p, x, y) {
@@ -214,7 +289,7 @@ export class Hud {
       c.add(txt(sc, hx + 15, y + 196, `${n}`, { size: 14, bold: true, origin: [0, 0.5] }));
       c.add(txt(sc, hx + 29, y + 197, name, { size: 11, origin: [0, 0.5], color: TXT.muted }));
       const hit = hitBox(sc, hx, y + 184, w, 24);
-      tip(hit, `${name} cards in hand: ${n}${p === 1 ? '\n(the opponent\'s cards are hidden)' : ''}`);
+      tip(hit, `${name} cards in hand: ${n}${p !== 0 ? '\n(the opponent\'s cards are hidden)' : ''}`);
       c.add(hit);
       hx += w;
     }
@@ -263,8 +338,7 @@ export class Hud {
     probe.destroy();
     let yy = LOG_Y + 28;
     for (const line of parts) {
-      const col = line.startsWith('Blue') ? '#9cc3ff' : line.startsWith('Red') ? '#ff9f98' : line.startsWith('—') ? TXT.gold : TXT.text;
-      const t = txt(sc, RIGHT_X + 16, yy, line, { size: 12, wrap: LAYOUT.right - 36, color: col });
+      const t = txt(sc, RIGHT_X + 16, yy, line, { size: 12, wrap: LAYOUT.right - 36, color: logColor(line) });
       c.add(t);
       yy += t.height + 3;
     }
@@ -284,8 +358,11 @@ export class Hud {
     this.btnEnd.setDisabled(!can, ctl.busy ? 'Please wait' : 'Wait for your turn');
     this.btnCards.setBadge(s.players[0].hand.action.length);
     let hint = '';
-    if (!can) hint = ctl.busy || s.turn?.player === 1 ? 'The computer is playing...' : '';
-    else if (noActions) hint = 'No actions left: end your turn.';
+    if (!can) {
+      const mover = s.turn && s.turn.player !== 0 ? s.turn.player : null;
+      if (mover !== null && s.players.length > 2) hint = `${seatLabel(s, mover)} is playing...`;
+      else if (mover !== null || ctl.busy) hint = 'The computer is playing...';
+    } else if (noActions) hint = 'No actions left: end your turn.';
     else hint = 'Click a city or units on the map to act.';
     this.hint.setText(hint);
   }

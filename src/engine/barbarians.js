@@ -2,7 +2,7 @@
 import { BARBARIAN, PIECE_LIMITS, STACK_LIMIT } from './data/constants.js';
 import { addCity } from './state.js';
 import {
-  allHexKeys, armyAt, bfs, cityAt, citiesOf, hexDistance, isLand, nbrs, settlementsLeft, unitById, unitsAt, unitsLeft,
+  allHexKeys, armyAt, bfs, cityAt, citiesOf, foesOf, hexDistance, isLand, nbrs, settlementsLeft, unitById, unitsAt, unitsLeft,
 } from './queries.js';
 import { addUnitTo } from './core.js';
 import { choose } from './prompts.js';
@@ -11,6 +11,7 @@ import { battle } from './combat.js';
 export const barbarianCities = (s) => s.cities.filter((c) => c.owner === BARBARIAN);
 const landOnly = (s) => (n) => isLand(s, n);
 const dist = (m, k) => (m.has(k) ? m.get(k) : Infinity);
+const foeCitiesOf = (s, p) => foesOf(s, p).flatMap((f) => citiesOf(s, f));
 
 /** Add one Barbarian Infantry to a hex (respects supply and the stacking limit). */
 export function addBarbarianInfantry(g, hex) {
@@ -22,7 +23,7 @@ export function addBarbarianInfantry(g, hex) {
 
 function spawnCandidates(s, p) {
   const mine = citiesOf(s, p);
-  const foe = citiesOf(s, 1 - p);
+  const foe = foeCitiesOf(s, p);
   const maps = mine.map((c) => bfs(s, c.hex, 3, landOnly(s)));
   const minDist = (k) => Math.min(...maps.map((m) => dist(m, k)));
   const free = allHexKeys(s).filter((k) => {
@@ -43,7 +44,7 @@ export function* placeBarbarianSettlement(g, p) {
   if (!citiesOf(s, p).length) return null;
   const { cands, maps } = spawnCandidates(s, p);
   if (!cands.length) return null;
-  const foeCities = citiesOf(s, 1 - p);
+  const foeCities = foeCitiesOf(s, p);
   const score = (k) => {
     const far = maps.reduce((a, m) => a + Math.min(dist(m, k), 6), 0);
     const near = foeCities.length ? Math.min(...foeCities.map((c) => hexDistance(c.hex, k))) : 9;

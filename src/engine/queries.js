@@ -2,11 +2,27 @@
 import { neighborKeys, parse, distance } from './hex.js';
 import {
   BARBARIAN, PIECE_LIMITS, FOOD_LIMIT_BASE, MAX_CITY_SIZE, MAX_RESOURCE, SHIP_CAPACITY, STACK_LIMIT,
-  DEFAULT_AGES, MIN_AGES, MAX_AGES,
+  DEFAULT_AGES, MIN_AGES, MAX_AGES, DEFAULT_OPPONENTS, MIN_OPPONENTS, MAX_OPPONENTS,
 } from './data/constants.js';
 
 export const isBarbarian = (o) => o === BARBARIAN;
-export const enemyOf = (p) => (p === BARBARIAN ? null : 1 - p);
+
+// ------------------------------------------------------------ opponents
+/** A requested number of computer opponents as a whole number from MIN_OPPONENTS to MAX_OPPONENTS. */
+export function normalizeOpponents(v) {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return DEFAULT_OPPONENTS;
+  return Math.min(MAX_OPPONENTS, Math.max(MIN_OPPONENTS, Math.round(n)));
+}
+
+/** The other players at the table (never the Barbarians). */
+export const foesOf = (s, p) => s.players.filter((x) => x.idx !== p).map((x) => x.idx);
+/** The seat clockwise of p. */
+export const nextSeat = (s, p) => (p + 1) % s.players.length;
+/** Seats in playing order for the current round: the first player, then everyone else clockwise. */
+export const turnOrder = (s) => s.players.map((_, i) => (s.first + i) % s.players.length);
+/** Every owner a piece can have: all the players, then the Barbarians. */
+export const allOwners = (s) => [...s.players.map((x) => x.idx), BARBARIAN];
 
 // ---------------------------------------------------------- game length
 /** A requested game length as a whole number of Ages from MIN_AGES to MAX_AGES; anything unusable gives the default. */

@@ -27,7 +27,7 @@ page.on('console', (m) => {
   } else if (args.includes('--verbose')) console.log(`[${m.type()}] ${text}`);
 });
 page.on('pageerror', (e) => problems.push(`[pageerror] ${e.message}\n${e.stack || ''}`));
-await page.goto(`${pathToFileURL(resolve(root, 'dist/index.html')).href}${query}`);
+await page.goto(`${pathToFileURL(resolve(root, 'docs/index.html')).href}${query}`);
 await page.waitForTimeout(wait);
 if (evalJs) {
   const r = await page.evaluate(evalJs);

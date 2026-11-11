@@ -1,7 +1,8 @@
-// AI-vs-AI (or AI-vs-random) simulations: node test/simulate.mjs [games=4] [firstSeed=1] [--vs=ai|random] [--ages=6] [--check] [-v]
+// AI-vs-AI (or AI-vs-random) simulations: node test/simulate.mjs [games=4] [firstSeed=1] [--opponents=1] [--vs=ai|random] [--ages=6] [--check] [-v]
 import { Game } from '../src/engine/game.js';
 import { attachAI, chooseAction } from '../src/ai/index.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
+import { normalizeOpponents } from '../src/engine/queries.js';
 import { scoreOf } from '../src/engine/scoring.js';
 import { checkInvariants, makeRand, randomAnswer } from './harness.mjs';
 
@@ -18,18 +19,20 @@ const vs = opt('vs', 'ai');
 const verbose = flag('-v');
 const check = flag('--check');
 const ages = opt('ages', undefined);
+const opponents = normalizeOpponents(opt('opponents', undefined));
+const seats = opponents + 1;
+const zeros = () => Array.from({ length: seats }, () => 0);
 
 function playOne(seed) {
-  const g = Game.create({ seed: String(seed), humans: [false, false], ages });
+  const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents });
   const rand = makeRand(`sim:${seed}`);
-  attachAI(g, 0);
-  attachAI(g, 1);
+  for (let p = 0; p < seats; p++) attachAI(g, p);
   if (vs === 'random') g.policy[0] = (_g, prompt) => randomAnswer(rand, prompt);
   g.begin();
-  const stats = { actions: [{}, {}], ms: [0, 0], count: [0, 0], max: [0, 0] };
+  const stats = { actions: Array.from({ length: seats }, () => ({})), ms: zeros(), count: zeros(), max: zeros() };
   const problems = [];
   let guard = 0;
-  while (g.s.phase !== 'over' && guard++ < 3000) {
+  while (g.s.phase !== 'over' && guard++ < 3000 * seats) {
     const p = g.cur;
     let acts = 0;
     while (g.s.phase !== 'over' && g.cur === p && acts++ < 40) {
@@ -66,7 +69,7 @@ function playOne(seed) {
   return { g, stats, problems };
 }
 
-let wins = [0, 0, 0];
+const wins = Array.from({ length: seats + 1 }, () => 0);
 const total = { ms: 0, n: 0, max: 0 };
 for (let i = 0; i < games; i++) {
   const seed = firstSeed + i;
@@ -75,18 +78,20 @@ for (let i = 0; i < games; i++) {
   const s = g.s;
   const sc = s.players.map((pl) => scoreOf(s, pl.idx));
   const w = s.winner;
-  wins[w === 'shared' || w === null ? 2 : w] += 1;
-  total.ms += stats.ms[0] + stats.ms[1];
-  total.n += stats.count[0] + stats.count[1];
-  total.max = Math.max(total.max, stats.max[0], stats.max[1]);
+  wins[w === 'shared' || w === null ? seats : w] += 1;
+  total.ms += stats.ms.reduce((a, b) => a + b, 0);
+  total.n += stats.count.reduce((a, b) => a + b, 0);
+  total.max = Math.max(total.max, ...stats.max);
   const line = (p) => {
     const pl = s.players[p];
     const cs = s.cities.filter((c) => c.owner === p);
     const b = Object.values(sc[p].parts).map((x) => x).join('/');
     return `P${p} ${sc[p].total.toFixed(1)}vp [${b}] cities ${cs.length} adv ${pl.advances.length} wond ${pl.builtWonders.length} obj ${pl.completed.length}`;
   };
-  console.log(`seed ${seed}: age ${s.age} phase ${s.phase} winner ${w} | ${line(0)} | ${line(1)} | ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+  const lines = s.players.map((pl) => line(pl.idx)).join(' | ');
+  console.log(`seed ${seed}: age ${s.age} phase ${s.phase} winner ${w} | ${lines} | ${((performance.now() - t0) / 1000).toFixed(1)}s`);
   if (verbose) console.log('  actions', JSON.stringify(stats.actions));
   for (const pr of problems) console.log('  PROBLEM', pr);
 }
-console.log(`wins P0 ${wins[0]} P1 ${wins[1]} shared ${wins[2]} | avg decision ${(total.ms / Math.max(1, total.n)).toFixed(1)}ms, max ${total.max.toFixed(0)}ms`);
+const tally = wins.slice(0, seats).map((n, p) => `P${p} ${n}`).join(' ');
+console.log(`wins ${tally} shared ${wins[seats]} | avg decision ${(total.ms / Math.max(1, total.n)).toFixed(1)}ms, max ${total.max.toFixed(0)}ms`);

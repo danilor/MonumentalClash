@@ -1,4 +1,6 @@
 // Shared look & feel: sizes, colours and names used across the UI.
+import { BARBARIAN } from '../engine/data/constants.js';
+
 export const W = 1280; // design resolution
 export const H = 720;
 export const Z = 2; // internal render scale (the canvas is W*Z x H*Z, so text and art stay crisp when stretched)
@@ -46,8 +48,31 @@ export const TXT = {
 export const FONT = '"Segoe UI", "Trebuchet MS", Roboto, Helvetica, Arial, sans-serif';
 export const SERIF = '"Palatino Linotype", Georgia, "Times New Roman", serif';
 
-export const PLAYER_COLORS = [0x3d8bfd, 0xe5534b, 0x7d6b91];
-export const PLAYER_HEX = ['#6aa8ff', '#ff8a82', '#b7a6c9'];
+// Blue is you; the computers are Red, Yellow and Green in that order. The last entry is the Barbarians (BARBARIAN = 4).
+export const PLAYER_COLORS = [0x3d8bfd, 0xe5534b, 0xe9c032, 0x3fbf8a, 0x7d6b91];
+export const PLAYER_HEX = ['#6aa8ff', '#ff8a82', '#f4d96a', '#72d9a8', '#b7a6c9'];
+export const PLAYER_NAMES = ['Blue', 'Red', 'Yellow', 'Green'];
+export const LOG_HEX = ['#9cc3ff', '#ff9f98', '#f4dd86', '#8fe0b8'];
+
+/** How a sentence calls a player: "you", "the computer" (when there is only one) or "Red". */
+export function seatName(s, p) {
+  if (p === BARBARIAN) return 'the Barbarians';
+  if (p === 0) return 'you';
+  return s.players.length > 2 ? s.players[p].name : 'the computer';
+}
+/** The same as the owner of something: "your", "the computer's", "Red's". */
+export const seatOwner = (s, p) => (p === 0 ? 'your' : p === BARBARIAN ? "the Barbarians'" : `${seatName(s, p)}'s`);
+/** A short name for a card, a column or a label: "You", "Computer" (when there is only one) or "Red". */
+export const seatLabel = (s, p) => (p === 0 ? 'You' : p === BARBARIAN ? 'Barbarians' : s.players.length > 2 ? s.players[p].name : 'Computer');
+/** The title of a turn: "Your turn", "Computer's turn" (when there is only one) or "Red's turn". */
+export const turnLabel = (s, p) => (p === 0 ? 'Your turn' : `${seatLabel(s, p)}'s turn`);
+
+/** Colour of a line of the game log: the colour of the player it starts with, gold for a heading. */
+export function logColor(line) {
+  const i = PLAYER_NAMES.findIndex((n) => line.startsWith(n));
+  if (i >= 0) return LOG_HEX[i];
+  return line.startsWith('—') ? TXT.gold : TXT.text;
+}
 
 export const RES = {
   food: { name: 'Food', color: '#f2c94c' },
@@ -97,3 +122,5 @@ export const costText = (cost) => {
 
 export const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many || `${one}s`}`;
+/** "Red", "Red and Yellow", "Red, Yellow and Green". */
+export const joinNames = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] || '');

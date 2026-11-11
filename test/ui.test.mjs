@@ -5,14 +5,14 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { open, browserAvailable } from './browser.mjs';
+import { open, hexPos, browserAvailable } from './browser.mjs';
 import { H, HEX_W, LAYOUT, S, W } from '../src/ui/theme.js';
 import { REVEAL } from '../src/ui/diceroll.js';
 import { BARBARIAN } from '../src/engine/data/constants.js';
 import { addUnit } from '../src/engine/state.js';
-import { nbrs } from '../src/engine/queries.js';
+import { nbrs, turnOrder } from '../src/engine/queries.js';
 import { act, capitalOf, fresh, give } from './scenario.mjs';
-const dist = resolve(dirname(fileURLToPath(import.meta.url)), '../dist/index.html');
+const dist = resolve(dirname(fileURLToPath(import.meta.url)), '../docs/index.html');
 const skip = !browserAvailable() ? 'no Chromium-family browser found (set BROWSER_PATH)' : !existsSync(dist) ? 'run "npm run build" first' : false;
 
 /** Every visible, enabled button with its label and position, found by walking the active scenes. */
@@ -61,29 +61,49 @@ const sceneTexts = (app, name) =>
   }, name);
 const hudTexts = (app) => app.eval(() => window.__ctl.hud.dynTop.list.filter((o) => typeof o.text === 'string').map((o) => o.text));
 
-// The "Game length" stepper on the title screen.
-const lengthChoice = (app) =>
-  app.eval(() => {
-    const stepper = window.__phaser.scene.getScene('Menu').ages;
+// The steppers on the title screen: 'ages' is "Game length", 'opponents' is "Opponents".
+const stepperChoice = (app, name) =>
+  app.eval((n) => {
+    const stepper = window.__phaser.scene.getScene('Menu')[n];
     return { value: stepper.value, text: stepper.num.text };
-  });
-const stepperButton = (app, which) =>
-  app.eval((w) => {
-    const b = window.__phaser.scene.getScene('Menu').ages[w];
+  }, name);
+const stepperButton = (app, which, name = 'ages') =>
+  app.eval(({ w, n }) => {
+    const b = window.__phaser.scene.getScene('Menu')[n][w];
     const p = b.getWorldTransformMatrix().transformPoint(0, 0);
     return { x: Math.round(p.x), y: Math.round(p.y), disabled: b.disabled };
-  }, which);
+  }, { w: which, n: name });
 /** Click the stepper's 'plus' or 'minus' button; clicks on a disabled button must do nothing. */
-async function pressLength(app, which, times) {
-  const { x, y } = await stepperButton(app, which);
+async function pressStepper(app, name, which, times) {
+  const { x, y } = await stepperButton(app, which, name);
   for (let i = 0; i < times; i++) await app.click(x, y, { settle: 60 });
 }
+const lengthChoice = (app) => stepperChoice(app, 'ages');
+const pressLength = (app, which, times) => pressStepper(app, 'ages', which, times);
 
 /** The game objects are replaced whenever a game starts or is resumed: mark the current one, then wait for another. */
 const markGame = (app) => app.eval(() => { window.__old = window.__game; });
 const waitNewGame = (app) =>
   app.page.waitForFunction(() => window.__game && window.__game !== window.__old && window.__ctl && window.__ctl.humanCanAct() && !window.__ctl.pumping, null, { timeout: 60000, polling: 200 });
 const gameLength = (app) => app.eval(() => ({ ages: window.__game.s.ages, age: window.__game.s.age, round: window.__game.s.round }));
+
+/** The board is scaled to the table: its outer edges must lie between the side panels and the bars, and fill the room in one direction at least. */
+async function assertBoardFits(app) {
+  const { spots, zoom } = await app.eval(() => ({
+    spots: Object.keys(window.__game.s.map.hexes).map((k) => window.__ctl.map.pos(k)),
+    zoom: window.__ctl.map.zoom,
+  }));
+  const xs = spots.map((p) => p.x);
+  const ys = spots.map((p) => p.y);
+  const edges = { left: Math.min(...xs) - (zoom * HEX_W) / 2, right: Math.max(...xs) + (zoom * HEX_W) / 2, top: Math.min(...ys) - zoom * S, bottom: Math.max(...ys) + zoom * S };
+  const room = { w: W - LAYOUT.left - LAYOUT.right, h: H - LAYOUT.top - LAYOUT.bottom };
+  assert.ok(edges.left >= LAYOUT.left, `left edge ${edges.left} reaches under the left panel`);
+  assert.ok(edges.right <= W - LAYOUT.right, `right edge ${edges.right} reaches under the right panel`);
+  assert.ok(edges.top >= LAYOUT.top, `top edge ${edges.top} reaches under the top bar`);
+  assert.ok(edges.bottom <= H - LAYOUT.bottom, `bottom edge ${edges.bottom} reaches under the bottom bar`);
+  assert.ok(Math.max((edges.right - edges.left) / room.w, (edges.bottom - edges.top) / room.h) > 0.9, 'the board makes good use of the room it is given');
+  return { hexes: spots.length, zoom };
+}
 
 // ------------------------------------------------------------ the battle window and its dice roll
 const DIE = 40; // the size of one die in the battle window
@@ -209,21 +229,41 @@ test('the game window: title, new game, dialogs and a turn against the computer'
       assert.equal(await app.eval(() => document.title), 'Monumental Clash');
     });
 
+    await t.test('the title screen lets the player choose 1 to 3 computer opponents, one to begin with', async () => {
+      assert.ok((await sceneTexts(app, 'Menu')).includes('Opponents'));
+      const summary = async () => (await sceneTexts(app, 'Menu')).find((x) => / players? on the /.test(x));
+      assert.deepEqual(await stepperChoice(app, 'opponents'), { value: 1, text: '1 computer' });
+      assert.equal(await summary(), '2 players on the standard board');
+      await pressStepper(app, 'opponents', 'plus', 1);
+      assert.deepEqual(await stepperChoice(app, 'opponents'), { value: 2, text: '2 computers' });
+      assert.equal(await summary(), '3 players on the larger board');
+
+      await pressStepper(app, 'opponents', 'plus', 3); // one more reaches the limit, the other clicks meet the disabled button
+      assert.deepEqual(await stepperChoice(app, 'opponents'), { value: 3, text: '3 computers' });
+      assert.equal(await summary(), '4 players on the largest board');
+      assert.ok((await stepperButton(app, 'plus', 'opponents')).disabled, 'no more than 3 opponents');
+      assert.equal(await app.eval(() => window.localStorage.getItem('coc.opponents')), '3', 'the choice is remembered');
+
+      await pressStepper(app, 'opponents', 'minus', 5);
+      assert.deepEqual(await stepperChoice(app, 'opponents'), { value: 1, text: '1 computer' });
+      assert.ok((await stepperButton(app, 'minus', 'opponents')).disabled, 'at least one opponent');
+      assert.equal(await app.eval(() => window.localStorage.getItem('coc.opponents')), '1');
+      assert.deepEqual(await lengthChoice(app), { value: 6, text: '6 Ages' }, 'the game length is a separate choice');
+    });
+
     await t.test('the title screen lets the player choose 4 to 12 Ages, six to begin with', async () => {
       assert.ok((await sceneTexts(app, 'Menu')).includes('Game length'));
       assert.deepEqual(await lengthChoice(app), { value: 6, text: '6 Ages' });
-      await clickLabel(app, '+');
+      await pressLength(app, 'plus', 1);
       assert.deepEqual(await lengthChoice(app), { value: 7, text: '7 Ages' });
 
       await pressLength(app, 'plus', 7); // five more reach the limit, the last two meet the disabled button
       assert.deepEqual(await lengthChoice(app), { value: 12, text: '12 Ages' });
       assert.ok((await stepperButton(app, 'plus')).disabled, 'no more than 12 Ages');
-      assert.ok(!(await buttons(app)).some((b) => b.label === '+'));
 
       await pressLength(app, 'minus', 10); // eight to the lower limit, then two clicks that change nothing
       assert.deepEqual(await lengthChoice(app), { value: 4, text: '4 Ages' });
       assert.ok((await stepperButton(app, 'minus')).disabled, 'no fewer than 4 Ages');
-      assert.ok(!(await buttons(app)).some((b) => b.label === '-'));
 
       await pressLength(app, 'plus', 4);
       assert.deepEqual(await lengthChoice(app), { value: 8, text: '8 Ages' });
@@ -251,16 +291,7 @@ test('the game window: title, new game, dialogs and a turn against the computer'
     });
 
     await t.test('the whole board fits between the side panels and the top and bottom bars', async () => {
-      const spots = await app.eval(() => Object.keys(window.__game.s.map.hexes).map((k) => window.__ctl.map.pos(k)));
-      assert.ok(spots.length >= 30, `the map has ${spots.length} spaces`);
-      const xs = spots.map((p) => p.x);
-      const ys = spots.map((p) => p.y);
-      const edges = { left: Math.min(...xs) - HEX_W / 2, right: Math.max(...xs) + HEX_W / 2, top: Math.min(...ys) - S, bottom: Math.max(...ys) + S };
-      assert.ok(edges.left >= LAYOUT.left, `left edge ${edges.left} reaches under the left panel`);
-      assert.ok(edges.right <= W - LAYOUT.right, `right edge ${edges.right} reaches under the right panel`);
-      assert.ok(edges.top >= LAYOUT.top, `top edge ${edges.top} reaches under the top bar`);
-      assert.ok(edges.bottom <= H - LAYOUT.bottom, `bottom edge ${edges.bottom} reaches under the bottom bar`);
-      assert.ok(edges.right - edges.left > 0.9 * (W - LAYOUT.left - LAYOUT.right), 'the board makes good use of the width it is given');
+      assert.deepEqual(await assertBoardFits(app), { hexes: 40, zoom: 1 }, 'two players play on the standard board, which is not scaled');
     });
 
     await t.test('the Advance, Cards and Rules windows open and close', async () => {
@@ -374,6 +405,160 @@ test('a game of 4 Ages is played to the end in the game window, and the next gam
       assert.ok((await hudTexts(app)).includes(`of ${ages}`), (await hudTexts(app)).join(' | '));
     });
 
+    assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
+  } finally {
+    await app.close();
+  }
+});
+
+// With two or three computers the board grows (rulebook p. 4) and is scaled down to fit between the panels.
+for (const { opponents, hexes } of [{ opponents: 2, hexes: 60 }, { opponents: 3, hexes: 72 }]) {
+  const names = ['Blue', 'Red', 'Yellow', 'Green'].slice(0, opponents + 1);
+  test(`a game against ${opponents} computers: a larger board that fits, a card for every player, and every computer takes its turn`, { skip, timeout: 200000 }, async (t) => {
+    const app = await open(`?seed=5&opponents=${opponents}`, { storage: { 'coc.speed': 'instant', 'coc.seenHelp': '1' } });
+    try {
+      await waitHuman(app);
+      await app.eval(() => {
+        window.__ctl.prompts.ask = async (prompt) => prompt.default;
+      });
+
+      await t.test('the table seats every player, and the board is scaled down to fit', async () => {
+        const table = await app.eval(() => ({ players: window.__game.s.players.map((p) => [p.name, p.human]), regions: window.__game.s.map.regions.length }));
+        assert.deepEqual(table.players, names.map((name, i) => [name, i === 0]));
+        assert.equal(table.regions, hexes / 4);
+        const board = await assertBoardFits(app);
+        assert.equal(board.hexes, hexes);
+        assert.ok(board.zoom < 1 && board.zoom > 0.6, `the larger board is scaled by ${board.zoom}`);
+      });
+
+      await t.test('the left panel has a card for every player, and all of it lies inside the panel', async () => {
+        const texts = await app.eval(() =>
+          window.__ctl.hud.dynCards.list
+            .filter((o) => typeof o.text === 'string')
+            .map((o) => {
+              const b = o.getBounds();
+              return { text: o.text, left: b.x, right: b.right, top: b.y, bottom: b.bottom };
+            }));
+        for (const c of texts) {
+          assert.ok(c.left >= 0 && c.right <= LAYOUT.left && c.top >= LAYOUT.top && c.bottom <= H - LAYOUT.bottom, `"${c.text}" sticks out of the left panel: ${JSON.stringify(c)}`);
+        }
+        assert.equal(texts.filter((c) => / VP$/.test(c.text)).length, names.length, 'a score for every player');
+        for (const name of names.slice(1)) assert.ok(texts.some((c) => c.text === name), `${name} has a card`);
+      });
+
+      await t.test('a click on a space of the scaled board selects that very space', async () => {
+        const selected = () => app.eval(() => window.__ctl.sel && window.__ctl.sel.hex);
+        const capital = await app.eval(() => window.__game.s.cities.find((c) => c.owner === 0).hex);
+        const home = await hexPos(app, capital);
+        await app.click(home.x, home.y);
+        assert.equal(await selected(), capital, 'a click on your capital selects it');
+        const corners = await app.eval(() => {
+          const spots = Object.keys(window.__game.s.map.hexes).map((k) => ({ k, ...window.__ctl.map.pos(k) }));
+          const extreme = (f) => spots.reduce((a, b) => (f(b) < f(a) ? b : a)).k;
+          return [extreme((p) => p.x), extreme((p) => -p.x), extreme((p) => p.y), extreme((p) => -p.y)];
+        });
+        for (const k of corners) {
+          const { x, y } = await hexPos(app, k);
+          await app.rightClick(x, y);
+          assert.equal(await selected(), k, `a click at ${Math.round(x)},${Math.round(y)} selects ${k}`);
+        }
+        await app.key('Escape');
+        assert.equal(await selected(), null);
+      });
+
+      await t.test('ending the turn hands play to every computer in turn and back to the player', async () => {
+        const { first, start } = await app.eval(() => ({ first: window.__game.s.first, start: (window.__game.s.age - 1) * 3 + window.__game.s.round }));
+        const order = turnOrder({ first, players: names });
+        const at = order.indexOf(0);
+        await app.eval(() => {
+          const ctl = window.__ctl;
+          const playEvent = ctl.playEvent.bind(ctl);
+          window.__turns = [];
+          ctl.playEvent = (ev, next) => {
+            if (ev.type === 'turn_start') window.__turns.push(ev.player);
+            return playEvent(ev, next);
+          };
+        });
+        await clickLabel(app, 'End Turn');
+        await app.wait(300);
+        if ((await buttons(app)).some((b) => b.label === 'End turn')) await clickLabel(app, 'End turn');
+        await app.page.waitForFunction((n) => window.__ctl.humanCanAct() && !window.__ctl.pumping && (window.__game.s.age - 1) * 3 + window.__game.s.round > n, start, { timeout: 120000, polling: 200 });
+        assert.deepEqual(await app.eval(() => window.__turns), [...order.slice(at + 1), ...order.slice(0, at + 1)], 'every seat plays once, clockwise, and the player comes last');
+        assert.equal(await turnsPlayed(app), start + 1);
+      });
+
+      await t.test('the game over window has a column of figures for every player', async () => {
+        const show = async (bonus) => {
+          await app.eval((v) => {
+            window.__game.s.players[v.p].vpBonus = v.n;
+            void window.__ctl.dialogs.gameOver();
+          }, bonus);
+          await app.page.waitForFunction(() => window.__ctl.scene.modals.length > 0, null, { timeout: 10000, polling: 50 });
+          const texts = await modalTexts(app);
+          const outside = await app.eval(() => {
+            const m = window.__ctl.scene.modals.at(-1);
+            return m.content.list
+              .filter((o) => typeof o.text === 'string')
+              .map((o) => ({ text: o.text, left: o.x - o.width * o.originX, right: o.x + o.width * (1 - o.originX) }))
+              .filter((o) => o.left < 0 || o.right > m.w);
+          });
+          assert.deepEqual(outside, [], 'every text lies inside the window');
+          for (const label of ['You', ...names.slice(1), 'Total']) assert.ok(texts.includes(label), `"${label}" is shown: ${texts.join(' | ')}`);
+          return texts;
+        };
+        let texts = await show({ p: 2, n: 30 });
+        assert.ok(texts.includes('Defeat'), texts.join(' | '));
+        assert.ok(texts.some((x) => /^Yellow wins with \S+ points\. You finished on \S+\.$/.test(x)), texts.join(' | '));
+        await clickLabel(app, 'Review the board');
+        assert.equal(await modals(app), 0);
+
+        texts = await show({ p: 0, n: 60 });
+        assert.ok(texts.includes('Victory!'), texts.join(' | '));
+        assert.ok(texts.some((x) => /^You win with \S+ points\. The best computer scored \S+\.$/.test(x)), texts.join(' | '));
+        await clickLabel(app, 'Review the board');
+        assert.equal(await modals(app), 0);
+      });
+
+      assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
+    } finally {
+      await app.close();
+    }
+  });
+}
+
+test('a new game from the title screen has as many computers as were chosen there, and Restart and Continue keep the table', { skip, timeout: 200000 }, async () => {
+  const app = await open('', { storage: { 'coc.speed': 'instant', 'coc.seenHelp': '1' } });
+  const table = () => app.eval(() => ({ players: window.__game.s.players.map((p) => p.name), hexes: Object.keys(window.__game.s.map.hexes).length }));
+  const largest = { players: ['Blue', 'Red', 'Yellow', 'Green'], hexes: 72 };
+  try {
+    await waitScene(app, 'Menu');
+    await pressStepper(app, 'opponents', 'plus', 2);
+    assert.deepEqual(await stepperChoice(app, 'opponents'), { value: 3, text: '3 computers' });
+    await markGame(app);
+    await clickLabel(app, 'New game');
+    await waitNewGame(app);
+    assert.deepEqual(await table(), largest, 'three computers make a table of four');
+
+    const seed = await app.eval(() => window.__game.s.seed);
+    await markGame(app);
+    await app.click(1234, 20, { settle: 400 });
+    await clickLabel(app, 'Restart game');
+    await clickLabel(app, 'Restart');
+    await waitNewGame(app);
+    assert.notEqual(await app.eval(() => window.__game.s.seed), seed, 'a different game');
+    assert.deepEqual(await table(), largest, 'Restart keeps the number of computers');
+
+    await app.click(1234, 20, { settle: 400 });
+    await clickLabel(app, 'Main menu');
+    await waitScene(app, 'Menu');
+    await app.wait(300);
+    const caption = (await sceneTexts(app, 'Menu')).find((x) => x.startsWith('Saved game'));
+    assert.match(caption, /^Saved game: Age I of 6, round [123], 4 players$/);
+    await pressStepper(app, 'opponents', 'minus', 2);
+    await markGame(app);
+    await clickLabel(app, 'Continue game');
+    await waitNewGame(app);
+    assert.deepEqual(await table(), largest, 'the saved game is resumed with its own table, whatever the title screen shows now');
     assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
   } finally {
     await app.close();

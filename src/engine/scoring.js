@@ -47,7 +47,7 @@ export function scoreOf(s, p) {
   return { total, parts, settlements, buildings };
 }
 
-/** Compare final scores. Returns { scores, winner } where winner is a player index or 'shared'. */
+/** Compare final scores. Returns { scores, winner, winners }: winner is a player index or 'shared' (then `winners` are the tied players). */
 export function finalResult(s) {
   const scores = s.players.map((pl) => scoreOf(s, pl.idx));
   const best = Math.max(...scores.map((x) => x.total));
@@ -61,5 +61,5 @@ export function finalResult(s) {
     const top = Math.max(...tied.map((i) => scores[i].parts[key]));
     tied = tied.filter((i) => scores[i].parts[key] === top);
   }
-  return { scores, winner: tied.length === 1 ? tied[0] : 'shared' };
+  return { scores, winner: tied.length === 1 ? tied[0] : 'shared', winners: tied };
 }
