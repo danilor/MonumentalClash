@@ -55,7 +55,7 @@ export const ADVANCE_GROUPS = [
   },
   {
     id: 'economy', name: 'Economy', gov: false, advances: [
-      A('bartering', 'Bartering', 'mood', 'Once per turn, discard a card to gain 1 Gold or 1 Culture (free action).'),
+      A('bartering', 'Bartering', 'mood', 'Once per turn, discard a card to gain 1 Gold or 1 Culture (free action). Allows Markets.', { building: 'market' }),
       A('trade_routes', 'Trade Routes', null, 'Start of turn: +1 Food per trade route (Settler/Ship paired with an enemy city within 2). Max 4.'),
       A('taxation', 'Taxation', null, 'Action: pay 1 Mood token, gain Food/Wood/Ore equal to your city count. Once per turn.'),
       A('currency', 'Currency', 'culture', 'Gold may replace Food for Trade Routes and Taxation.'),

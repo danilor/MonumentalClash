@@ -70,7 +70,7 @@ Restarting from the in-game Menu, or starting another game from the game-over wi
 
 Have the most **Victory Points (VP)** when the last Age ends. Hover over a player's VP badge at any time to see where the points come from.
 
-* 1 VP for every city and 1 VP for every building (Academy, Fortress, Port, Temple).
+* 1 VP for every city and 1 VP for every building (Academy, Fortress, Market, Port, Temple).
 * ½ VP for every Advance you have researched.
 * 2 VP for every Objective card you have completed.
 * 4 VP for every Wonder you have built (the Great Pyramid is worth 5). If the city of a Wonder is captured, its points are shared between the builder and the new owner; the Great Pyramid always stays with its builder.
@@ -101,8 +101,8 @@ Each of these uses one action, except where noted:
 * **Advance:** research a new Advance for 2 Food (Ideas or Gold can replace Food).
 * **Found a city:** a Settler settles the land it stands on, if that land is not Barren or exhausted and has no enemy units on it. You can own at most 7 cities.
 * **Collect:** gather resources from a city and the spaces around it. A city with a Port may also take 1 Gold or 1 Mood token from one adjacent Sea space.
-* **Construct:** build an Academy, Fortress, Port or Temple for 1 Food, 1 Wood and 1 Ore. Each needs an Advance first: Writing for the Academy, Tactics for the Fortress, Fishing for the Port and Myths for the Temple.
-* **Recruit:** train Infantry (1 Food, 1 Ore), Settlers (2 Food) or Ships (2 Wood; the city needs a Port).
+* **Construct:** build an Academy, Fortress, Market, Port or Temple for 1 Food, 1 Wood and 1 Ore. Each needs an Advance first: Writing for the Academy, Tactics for the Fortress, Bartering for the Market, Fishing for the Port and Myths for the Temple.
+* **Recruit:** train Infantry (1 Food, 1 Ore), Cavalry (1 Food, 1 Wood; the city needs a Market), Settlers (2 Food) or Ships (2 Wood; the city needs a Port).
 * **Wonder:** build a Wonder from your hand in a Happy city.
 * **Happiness:** spend Mood tokens to raise the Mood of a city.
 * **Influence:** spend Culture to win over a building in a city of another player.
@@ -114,7 +114,7 @@ Click a city or unit to see what it can do. Buttons that are not available say w
 ### Map and units
 
 * The board is made of regions of four spaces, surrounded by a ring of Sea: 10 regions (40 spaces) for 2 players, 15 (60 spaces) for 3 and 18 (72 spaces) for 4. Every player starts in a revealed region of their own, seated around the board; around a table of 3 or 4 your seat is chosen at random. Larger boards are scaled down to fit the window. Face-down regions (shown with "?") are revealed when one of your land units steps next to them or a Ship sails beside them. You choose how the new region is turned.
-* **Infantry** fight. They can only move once you have researched Tactics. At most 4 Army units may share a space.
+* **Infantry** and **Cavalry** are your Army units. They fight, and can only move once you have researched Tactics. At most 4 Army units may share a space. You have 16 Infantry and 4 Cavalry, and Cavalry can only be recruited in a city with a Market.
 * **Settlers** found cities. They cannot enter enemy spaces without Army units.
 * **Ships** sail through connected Sea spaces, carry up to 2 land units each and stop when they meet an enemy Ship. To board, select land units next to your Ship and click its space. To land, select the Ship's space, set the number of Ships to 0 and click a land space beside it.
 * **Barbarians** are armies and settlements (purple) controlled by the game. They appear through Events.
@@ -125,8 +125,8 @@ Click a city or unit to see what it can do. Buttons that are not available say w
 
 Move Army units into a space that holds enemy units or an enemy city to attack. A battle is fought in rounds until one side is wiped out or the attacker retreats. In every round:
 
-* Both sides roll one die for every unit in the battle and add up the faces. In a land battle, every die that shows an Infantry mark adds +1, up to the number of Infantry you have in the fight.
-* Every full 5 points make one hit, and each hit destroys one enemy unit.
+* Both sides roll one die for every unit in the battle and add up the faces. In a land battle, every die that shows an Infantry mark adds +1, up to the number of Infantry you have in the fight, and every die that shows a Cavalry mark adds +2, up to the number of Cavalry you have in the fight.
+* Every full 5 points make one hit, and each hit destroys one enemy unit. When a side has both Infantry and Cavalry, its owner chooses which of them are lost (Infantry first unless you pick otherwise; the Barbarians always lose Infantry first).
 * A Fortress gives its defender an extra die and cancels 1 hit in round 1. Warships cancel 1 hit in the first round of a naval battle.
 * With Tactics you may play an Action card for its combat effect before each round.
 * If both sides survive, the attacker may retreat to the space they came from.
@@ -153,7 +153,7 @@ Battles you take part in are shown round by round. Each round opens a battle win
 ### Events and Barbarians
 
 * Events come from a shared deck. Most affect only the player who drew the card; some affect every player. An icon in the corner of a card is resolved first.
-* **Barbarians** appear through Events and some Action cards. A Barbarian Settlement and an Infantry appear about two spaces from the cities of the player who drew the Event, and Barbarian armies near that player's cities step towards the nearest city and fight whatever they find there. That player chooses the order, and the route when there is a tie.
+* **Barbarians** appear through Events and some Action cards. A Barbarian Settlement and an Infantry appear about two spaces from the cities of the player who drew the Event, and Barbarian armies near that player's cities step towards the nearest city and fight whatever they find there. That player chooses the order, and the route when there is a tie. Where a Barbarian city already has an Infantry, that player may place a Barbarian Cavalry there instead of another Infantry.
 * Barbarian units and cities block Collecting in their space. Attack them by moving into them.
 * A city the Barbarians capture becomes theirs, and its owner receives a free Settler in another city.
 
@@ -182,7 +182,7 @@ After the Status Phase of the last Age the game ends. A window shows every playe
 
 * Found more cities early. Each city is worth a point, and a city can never grow past the number of cities you own.
 * Research **Storage** soon: until then you can keep only 2 Food.
-* **Tactics** lets your Infantry move and lets you build Fortresses.
+* **Tactics** lets your Infantry and Cavalry move and lets you build Fortresses.
 * Watch the Mood of your cities. Activating the same city more than once in a turn makes its people unhappy, so spread the work around or keep Mood tokens ready.
 * Every third Advance triggers an Event, and Events bring Barbarians, so do not leave your cities undefended.
 * An Objective card is worth as much as four Advances, so read your Objectives when you draw them.
@@ -201,6 +201,7 @@ The complete base game for two to four players (you and one to three computers),
 * Movement over Forest, Mountain, Roads, Ships with Navigation, carrying units, and stack limits.
 * Combat with dice, hits, Fortresses, Warships, combat cards, retreats and sieges, plus capturing cities.
 * Barbarians, Events and Event icons, Objective cards, the Great Pyramid tie-break and the final scoring.
+* From the expansion: the **Market** building (it needs Bartering) and the **Cavalry** unit that only a city with a Market can recruit.
 
 Details that are easy to get wrong are covered too, each with its own regression test:
 
@@ -210,6 +211,7 @@ Details that are easy to get wrong are covered too, each with its own regression
 * The Great Library lends one Advance for the turn (its discounts and Food limit end with the turn). The Great Mausoleum lets its owner take the top discard instead of drawing.
 * Barbarians: you choose the order in which their armies advance, a Barbarian city is worth a flat 1 Gold, and beating Barbarian units adds 1 more.
 * Fanaticism only places its free Infantry in a city with room for it, and the owner of overloaded Ships decides which unit is left behind after a naval battle.
+* Markets and Cavalry: a Market is built like any other building (1 Food, 1 Wood and 1 Ore, once you have Bartering, with 5 pieces per player) and the city may then recruit Cavalry (1 Food and 1 Wood each, 4 pieces, which count towards the limit of 4 Army units in a space). Draft only makes Infantry cheaper, and recruiting Cavalry triggers Nationalism like Infantry does. A Cavalry die face adds +2 CV, never for more Cavalry than are fighting. A mixed stack lets its owner choose the casualties (the Barbarians always lose Infantry first). A captured Market works for its new owner whatever its colour and without Bartering. When an opponent uses a trade route to a city with your Market you earn 1 Gold (at most 1 per trader's turn, however many Markets), and that player may skip the Market routes. Civil War makes Cavalry desert too, while the Epidemic still takes only Infantry.
 * With three or four players: Objectives that compare players (such as Science Lead and Large Army) need a lead over every opponent, Espionage asks which opponent to take from (only those with something to take are offered), a city can be captured from any player and its loser places a Settler, the Great Pyramid breaks a tie only if its builder is among the tied players, and the game ends at the next Status Phase when any player has no city left.
 
 ### The computer opponents
@@ -233,11 +235,12 @@ most. It uses exactly the same rules interface as you do, and each one plays for
 ### Under the hood
 
 * The rules engine has no dependency on Phaser, so the same code runs in the game, in the tests and in computer-vs-computer simulations. A game can be started from a fixed seed, at any table size.
-* Automated tests cover the rules, scoring, saving and loading, random play, computer-vs-computer games at every table size, the rule details listed above, the rules for three and four players (`test/multiplayer.test.mjs`) and a browser test that plays through the real game window.
+* Automated tests cover the rules, scoring, saving and loading, random play, computer-vs-computer games at every table size, the rule details listed above, the rules for three and four players (`test/multiplayer.test.mjs`), the Cavalry and Market rules (`test/cavalry.test.mjs`) and a browser test that plays through the real game window.
 * Development scripts for simulations, fuzzing and screenshots (see [For developers](#for-developers)).
 
 ### Recent changes
 
+* **Markets and Cavalry:** research Bartering to build a Market in a city, and recruit Cavalry there (1 Food and 1 Wood). Cavalry are Army units: they need Tactics to move, count towards the stack limit of 4 and fill 2 places on a Ship, and each Cavalry face on the combat dice adds +2 CV. You choose which of your Infantry and Cavalry a hit destroys. Opponents who trade with your Market give you 1 Gold, and Barbarians may field Cavalry too. The battle window, city windows, map symbols and the in-game Rules were extended, and the computers know how to use Cavalry.
 * **1 to 3 computer opponents:** choose the number of computers on the title screen (1 by default), for 2 to 4 players in all. The map grows with the table (10, 15 or 18 regions, from the printed game's rulebook) and is scaled to fit the window, every computer has its own colour and card, and turns, the Status Phase, Espionage, Objectives and the final scores all work for every player. Saved games from older versions still open.
 * **Selectable game length:** choose 4 to 12 Ages on the title screen (6 by default). The top bar shows "AGE V of 6", restarting keeps the length, and saved games from older versions open as 6-Age games.
 * **Bigger map and clearer symbols:** the hexes are a little larger, the side panels were re-flowed so the whole board still fits, and the symbols for units, buildings and Wonders were redrawn.
@@ -251,7 +254,7 @@ most. It uses exactly the same rules interface as you do, and each one plays for
 These parts of the printed game are not in Monumental Clash yet:
 
 - [ ] **Human opponents.** Every opponent is a computer: there is no hot-seat play with several people at one screen and no online play.
-- [ ] **The expansion content:** Civilizations, Leaders, Market, Obelisk, Observatory, Cavalry and Elephants, and the Pirates.
+- [ ] **The expansion content:** Civilizations, Leaders, Obelisk, Observatory, Elephants, and the Pirates.
 - [ ] **The exact printed cards.** The rulebook does not list every card, so the Action, Objective and Event cards and the Advance descriptions are original reconstructions
   written to match the mechanics in the rulebook. They do not match the printed cards one for one.
 - [ ] **The strict turn rules.** You may press **End Turn** before using all 3 actions (the rulebook says you must perform 3), so you are never forced into a pointless or harmful action,
@@ -285,7 +288,7 @@ source       the rulebook that the rules follow
 ```
 
 * `npm test` runs the whole suite: rules scenarios, scoring, saving and loading, random-play fuzzing, computer-vs-computer games at every table size,
-  regression tests for the rule details listed above (`test/fidelity.test.mjs`), the rules for three and four players (`test/multiplayer.test.mjs`) and a browser smoke test. The browser test needs `npm run build` first and a Chrome or Edge install (set `BROWSER_PATH` if it is in an unusual place); it is skipped otherwise.
+  regression tests for the rule details listed above (`test/fidelity.test.mjs`), the rules for three and four players (`test/multiplayer.test.mjs`), the Cavalry and Market rules (`test/cavalry.test.mjs`) and a browser smoke test. The browser test needs `npm run build` first and a Chrome or Edge install (set `BROWSER_PATH` if it is in an unusual place); it is skipped otherwise.
 * `npm run simulate -- 6 1 --check` plays 6 computer-vs-computer games from seed 1 and checks the game state after every action. Add `--ages=N` (4 to 12) to change the game length and `--opponents=N` (1 to 3) to change the number of computers at the table.
 * `node test/fuzz.mjs 1 50` plays 50 random games to look for rule violations (also accepts `--ages=N` and `--opponents=N`).
 * `node test/shot.mjs out.png "?seed=7"` takes a screenshot of the built game. A numeric `?seed=` in the address starts a game with that seed straight away; add `&opponents=N` (1 to 3) to choose the table size, as in `"?seed=7&opponents=3"`.

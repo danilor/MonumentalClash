@@ -1,12 +1,10 @@
 // The Status Phase that closes every Age, and the end of the game.
-import { ADVANCES, GROUPS, GOVERNMENT_GROUPS } from './data/advances.js';
-import { citiesOf, citySize, owns, playerOwnsWonder, totalAges, turnOrder } from './queries.js';
-import {
-  applyPayment, clampResources, drawActionCard, drawObjectiveCard, gainRes, planPayment, removeCity,
-} from './core.js';
-import { choose, chooseMany } from './prompts.js';
-import { plural } from './text.js';
+import { ADVANCES } from './data/advances.js';
+import { citiesOf, citySize, playerOwnsWonder, totalAges, turnOrder } from './queries.js';
+import { drawActionCard, drawObjectiveCard, gainRes, removeCity } from './core.js';
+import { choose } from './prompts.js';
 import { availableAdvances, gainAdvance } from './advance.js';
+import { changeGovernment } from './government.js';
 import { completeStatusObjectives } from './objectives.js';
 import { finalResult } from './scoring.js';
 
@@ -62,49 +60,6 @@ function* razeCity(g, p) {
   gainRes(g, p, { gold: 1 });
   g.emit({ type: 'raze', player: p, city: city.id, hex: city.hex });
   g.log(`${g.name(p)} razes a size 1 city for 1 Gold.`);
-}
-
-function* changeGovernment(g, p) {
-  const s = g.s;
-  const pl = s.players[p];
-  if (!pl.government) return;
-  const plan = planPayment(s, p, { culture: 1, mood: 1 });
-  if (!plan) return;
-  const targets = GOVERNMENT_GROUPS.filter((gid) => gid !== pl.government && owns(s, p, GROUPS[gid].prereq));
-  if (!targets.length) return;
-  const pick = yield* choose(g, p, {
-    kind: 'government',
-    title: 'Change Government',
-    text: 'Pay 1 Culture token and 1 Mood token to move your Government Advances to another category.',
-    options: [
-      { id: 'none', label: 'Keep my Government' },
-      ...targets.map((gid) => ({ id: gid, label: `Switch to ${GROUPS[gid].name}` })),
-    ],
-    default: 'none',
-  });
-  if (!targets.includes(pick)) return;
-  const owned = GROUPS[pl.government].advances.filter((a) => pl.advances.includes(a.id));
-  const rest = GROUPS[pick].advances.slice(1);
-  const extra = owned.length - 1;
-  const chosen = extra > 0
-    ? yield* chooseMany(g, p, {
-      kind: 'pick_advances',
-      title: 'Change Government',
-      text: `Choose ${plural(extra, 'more Advance')} in the new category. The top Advance is always included.`,
-      options: rest.map((a) => ({ id: a.id, label: a.name, desc: a.text })),
-      min: extra,
-      max: extra,
-      default: rest.slice(0, extra).map((a) => a.id),
-    })
-    : [];
-  applyPayment(g, p, plan);
-  const gone = new Set(owned.map((a) => a.id));
-  pl.advances = pl.advances.filter((id) => !gone.has(id));
-  pl.advances.push(GROUPS[pick].advances[0].id, ...chosen);
-  pl.government = pick;
-  clampResources(g, p);
-  g.emit({ type: 'government', player: p, government: pick });
-  g.log(`${g.name(p)} changes Government to ${GROUPS[pick].name}.`);
 }
 
 function* firstPlayer(g) {

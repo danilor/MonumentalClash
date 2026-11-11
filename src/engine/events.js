@@ -1,61 +1,18 @@
-// Event cards: drawn when a player's Event tracker runs out. Effects only touch the player who drew the card.
+// Event cards: drawn when a player's Event tracker runs out. The older cards only touch the player who drew them;
+// the world events (worldEvents.js) affect every player.
 import { EVENT_CARDS } from './data/cards.js';
 import {
-  allHexKeys, cityAt, citiesOf, citySize, hasAdv, hasBuilding, isLand, nbrs, playerOwnsWonder, terrainOf,
-  unitsAt, unitsLeft, unitsOf,
+  citiesOf, citySize, hasAdv, hasBuilding, isArmy, nbrs, playerOwnsWonder, terrainOf, unitsAt, unitsLeft, unitsOf,
 } from './queries.js';
-import { addUnitTo, canPay, discardCard, drawFrom, gainRes, moodDown, pay, removeCity, removeUnits } from './core.js';
-import { choose, chooseMany, confirm } from './prompts.js';
+import { addUnitTo, canPay, discardCard, drawFrom, gainRes, pay, removeCity, removeUnits } from './core.js';
+import { chooseMany, confirm } from './prompts.js';
 import { plural } from './text.js';
 import { barbarianMove, barbarianSpawn } from './barbarians.js';
+import { bySize, cityOption, eventMoodLoss, exhaustedLand, pickCity, placeSettler, victim } from './eventTools.js';
+import { WORLD_EFFECTS } from './worldEvents.js';
 
-const bySize = (a, b) => citySize(b) - citySize(a);
-const cityOption = (c) => ({ id: c.id, label: `City at ${c.hex} (size ${citySize(c)})`, hex: c.hex });
-
-/** Mood loss from an event. Myths lets the owner pay 1 Mood to prevent it. Returns true if the city was affected. */
-function* eventMoodLoss(g, p, city, { to = null } = {}) {
-  const s = g.s;
-  if (city.mood === 'angry') return false;
-  if (hasAdv(s, p, 'myths') && canPay(s, p, { mood: 1 })) {
-    const protect = yield* confirm(g, p, {
-      kind: 'myths',
-      title: 'Myths',
-      text: `Pay 1 Mood token to protect the city at ${city.hex} from losing Mood?`,
-      yes: 'Pay 1 Mood',
-      no: 'Accept the loss',
-      default: s.players[p].mood >= 2,
-    });
-    if (protect) {
-      pay(g, p, { mood: 1 });
-      g.log(`${g.name(p)} pays 1 Mood to protect a city (Myths).`);
-      return false;
-    }
-  }
-  if (to === 'angry') city.mood = 'angry';
-  else moodDown(city, 1);
-  g.emit({ type: 'mood', city: city.id });
-  return true;
-}
-
-function* pickCity(g, p, cities, { title, text, prefer = 'smallest' }) {
-  if (!cities.length) return null;
-  const sorted = cities.slice().sort(prefer === 'smallest' ? (a, b) => -bySize(a, b) : bySize);
-  const id = yield* choose(g, p, { kind: 'pick_city', title, text, options: sorted.map(cityOption), default: sorted[0].id });
-  return sorted.find((c) => c.id === id) || sorted[0];
-}
-
-function* placeSettler(g, p, cities, title) {
-  if (unitsLeft(g.s, p, 'settler') <= 0 || !cities.length) return false;
-  const city = yield* pickCity(g, p, cities, { title, text: 'Choose the city that receives a Settler.', prefer: 'largest' });
-  addUnitTo(g, p, 'settler', city.hex);
-  g.log(`${g.name(p)} receives a Settler.`);
-  return true;
-}
-
-const victim = (s, units) => {
-  const outside = units.filter((u) => !cityAt(s, u.hex));
-  return (outside.length ? outside : units)[0];
-};
+// Events whose Barbarian spawn may land on a space held by player units, which then retreat.
+const DISPLACING = new Set(['migrating_tribes']);
 
 const EFFECTS = {
   *good_year(g, p) {
@@ -168,7 +125,7 @@ const EFFECTS = {
     const s = g.s;
     for (const c of citiesOf(s, p)) {
       if (c.mood !== 'angry') continue;
-      const army = unitsAt(s, c.hex).filter((u) => u.owner === p && u.type === 'infantry');
+      const army = unitsAt(s, c.hex).filter((u) => u.owner === p && isArmy(u));
       if (army.length) {
         removeUnits(g, army.map((u) => u.id));
         g.log(`Civil war: ${plural(army.length, 'Army unit')} desert${army.length === 1 ? 's' : ''} the angry city at ${c.hex}.`);
@@ -224,32 +181,6 @@ const EFFECTS = {
   },
 };
 
-function* exhaustedLand(g, p) {
-  const s = g.s;
-  const mine = citiesOf(s, p);
-  const cands = allHexKeys(s).filter((k) => {
-    const h = s.map.hexes[k];
-    if (!isLand(s, k) || h.terrain === 'barren' || h.exhausted) return false;
-    if (cityAt(s, k) || unitsAt(s, k).length) return false;
-    return mine.some((c) => nbrs(s, c.hex).includes(k));
-  });
-  if (!cands.length) return;
-  // Default: the space that touches the fewest of the player's cities.
-  const touch = (k) => mine.filter((c) => nbrs(s, c.hex).includes(k)).length;
-  cands.sort((a, b) => touch(a) - touch(b));
-  const pick = yield* choose(g, p, {
-    kind: 'pick_hex',
-    title: 'Exhausted land',
-    text: 'Place an Exhausted Land marker next to one of your cities.',
-    options: cands.map((k) => ({ id: k, label: k, hex: k })),
-    default: cands[0],
-  });
-  const hex = cands.includes(pick) ? pick : cands[0];
-  s.map.hexes[hex].exhausted = true;
-  g.emit({ type: 'exhausted', hex });
-  g.log(`The land at ${hex} is exhausted.`);
-}
-
 export function* resolveEvent(g, p) {
   const s = g.s;
   let cardId = null;
@@ -290,7 +221,7 @@ export function* resolveEvent(g, p) {
       yield* exhaustedLand(g, p);
       break;
     case 'spawn':
-      yield* barbarianSpawn(g, p);
+      yield* barbarianSpawn(g, p, { displace: DISPLACING.has(cardId) });
       break;
     case 'move':
       yield* barbarianMove(g, p);
@@ -298,6 +229,7 @@ export function* resolveEvent(g, p) {
     default:
       break;
   }
-  yield* EFFECTS[cardId](g, p);
+  const effect = EFFECTS[cardId] || WORLD_EFFECTS[cardId];
+  if (effect) yield* effect(g, p);
   discardCard(g, p, 'event', cardId);
 }

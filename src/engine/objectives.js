@@ -2,7 +2,7 @@
 import { BARBARIAN } from './data/constants.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from './data/cards.js';
 import { GROUPS } from './data/advances.js';
-import { citiesOf, cityAt, foesOf, hasBuilding, nbrs, unitsOf, hexDistance } from './queries.js';
+import { armyOf, citiesOf, cityAt, foesOf, hasBuilding, nbrs, unitsOf, hexDistance } from './queries.js';
 import { gainRes } from './core.js';
 
 const SUPPLY_COST = { eureka: 'ideas', wealth: 'gold', ore_supplies: 'ore', wood_supplies: 'wood', food_supplies: 'food' };
@@ -10,7 +10,6 @@ const SUPPLY_COST = { eureka: 'ideas', wealth: 'gold', ore_supplies: 'ore', wood
 const owned = (s, p) => s.players[p].advances;
 const ownsGroup = (s, p, group) => GROUPS[group].advances.every((a) => owned(s, p).includes(a.id));
 const countBuilding = (s, p, type) => citiesOf(s, p).filter((c) => hasBuilding(c, type)).length;
-const armyOf = (s, p) => unitsOf(s, p, 'infantry');
 const warfareCount = (s, p) => GROUPS.warfare.advances.filter((a) => owned(s, p).includes(a.id)).length;
 const completeGroups = (s, p) => Object.keys(GROUPS).filter((gid) => ownsGroup(s, p, gid)).length;
 const foeCities = (s, p) => foesOf(s, p).flatMap((f) => citiesOf(s, f));

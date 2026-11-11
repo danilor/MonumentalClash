@@ -4,7 +4,7 @@ import { GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from '../engine/data/cards.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkStatus } from '../engine/objectives.js';
-import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isHidden, nbrs, resLimit } from '../engine/queries.js';
+import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isArmy, isHidden, nbrs, resLimit } from '../engine/queries.js';
 import { battleOdds } from './odds.js';
 
 export const DEFAULTS = {
@@ -22,7 +22,7 @@ const ADV_BONUS = {
   writing: 1.4, public_education: 0.7, free_education: 0.1, philosophy: 1.0,
   tactics: 2.0, siegecraft: 0.3, steel_weapons: 0.9, draft: 0.7,
   myths: 0.8, rituals: 0.1, priesthood: 0.3, state_religion: 0.5,
-  bartering: 0.4, trade_routes: 0.5, taxation: 1.1, currency: 0.2,
+  bartering: 0.6, trade_routes: 0.5, taxation: 1.1, currency: 0.2,
   arts: 0.7, sports: 0.4, monuments: 0.8, theaters: 0.3,
   math: 0.3, astronomy: 0.2, medicine: 0.5, metallurgy: 0.4,
   voting: 0.3, separation_of_power: 0.1, civil_liberties: 0.6, economic_liberty: 0.9,
@@ -31,7 +31,7 @@ const ADV_BONUS = {
 };
 export const advanceValue = (id) => ADV_BASE + (ADV_BONUS[id] || 0);
 
-const BUILDING_VALUE = { academy: 2.6, fortress: 2.1, port: 2.4, temple: 2.6 };
+const BUILDING_VALUE = { academy: 2.6, fortress: 2.1, market: 2.3, port: 2.4, temple: 2.6 };
 const CITY_BASE = 5;
 const WONDER_BUILT = 14;
 const WONDER_HELD = 4.4;
@@ -168,10 +168,10 @@ function objectiveProgress(s, q, id) {
     case 'expansionist': return mine.length / 8;
     case 'large_fleet': return s.units.filter((u) => u.owner === q && u.type === 'ship').length / 4;
     case 'large_army': {
-      const n = (pp) => s.units.filter((u) => u.owner === pp && u.type === 'infantry').length;
+      const n = (pp) => s.units.filter((u) => u.owner === pp && isArmy(u)).length;
       return clamp01((n(q) - Math.max(...foes.map(n))) / 4) * 0.8;
     }
-    case 'standing_army': return mine.filter((c) => s.units.some((u) => u.owner === q && u.type === 'infantry' && u.hex === c.hex)).length / 4;
+    case 'standing_army': return mine.filter((c) => s.units.some((u) => u.owner === q && isArmy(u) && u.hex === c.hex)).length / 4;
     case 'military_might': return s.units.filter((u) => u.owner === q && u.type !== 'settler').length / 12;
     case 'colony': return 0.2;
     case 'consulate': return 0.1;
@@ -233,36 +233,45 @@ function resourceValue(s, q) {
 /** Danger to q's cities and exposed armies from adjacent enemy forces, expressed as an expected loss. */
 function danger(s, q, ix) {
   let pen = 0;
-  const armyOf = (k, owner) => (ix.units.get(k) || []).filter((u) => u.owner === owner && u.type === 'infantry').length;
+  const tally = (acc, u) => {
+    acc.n += 1;
+    if (u.type === 'cavalry') acc.horse += 1;
+  };
+  /** The Army units `owner` has on a hex: how many, and how many of them are Cavalry. */
+  const armyOf = (k, owner) => {
+    const acc = { n: 0, horse: 0 };
+    for (const u of ix.units.get(k) || []) if (u.owner === owner && isArmy(u)) tally(acc, u);
+    return acc;
+  };
   for (const c of s.cities) {
     if (c.owner !== q) continue;
     const attackers = {};
     for (const n of nbrs(s, c.hex)) {
       for (const u of ix.units.get(n) || []) {
-        if (u.owner !== q && u.type === 'infantry' && canAttack(s, u.owner)) attackers[u.owner] = (attackers[u.owner] || 0) + 1;
+        if (u.owner !== q && isArmy(u) && canAttack(s, u.owner)) tally((attackers[u.owner] ||= { n: 0, horse: 0 }), u);
       }
     }
-    const worst = Math.max(0, ...Object.values(attackers));
+    const worst = Object.values(attackers).reduce((top, a) => (!top || a.n > top.n ? a : top), null);
     if (!worst) continue;
     const def = armyOf(c.hex, q);
-    const odds = battleOdds(Math.min(worst, 5), def, { fortress: hasBuilding(c, 'fortress') });
+    const odds = battleOdds(Math.min(worst.n, 5), def.n, { fortress: hasBuilding(c, 'fortress'), horseA: worst.horse, horseD: def.horse });
     const worth = CITY_BASE + 0.6 * (citySize(c) - 1) + 2.2 * Object.keys(c.buildings).length + 9 * c.wonders.length;
-    pen += odds.win * (worth + 2 * def) * 0.55;
+    pen += odds.win * (worth + 2 * def.n) * 0.55;
   }
   // Armies standing outside a city next to enemy armies
   const seen = new Set();
   for (const u of s.units) {
-    if (u.owner !== q || u.type !== 'infantry' || seen.has(u.hex)) continue;
+    if (u.owner !== q || !isArmy(u) || seen.has(u.hex)) continue;
     seen.add(u.hex);
     if (s.cities.some((c) => c.hex === u.hex && c.owner === q)) continue;
-    let foes = 0;
+    const foes = { n: 0, horse: 0 };
     for (const n of nbrs(s, u.hex)) {
-      for (const e of ix.units.get(n) || []) if (e.owner !== q && e.type === 'infantry' && canAttack(s, e.owner)) foes += 1;
+      for (const e of ix.units.get(n) || []) if (e.owner !== q && isArmy(e) && canAttack(s, e.owner)) tally(foes, e);
     }
-    if (!foes) continue;
+    if (!foes.n) continue;
     const mine = armyOf(u.hex, q);
-    const odds = battleOdds(Math.min(foes, 5), mine);
-    pen += odds.win * mine * 1.4 * 0.5;
+    const odds = battleOdds(Math.min(foes.n, 5), mine.n, { horseA: foes.horse, horseD: mine.horse });
+    pen += odds.win * mine.n * 1.4 * 0.5;
   }
   return pen;
 }
@@ -302,8 +311,8 @@ export function sideValue(s, q, cfg = DEFAULTS, ix = null) {
   let settlerValue = 0;
   for (const u of s.units) {
     if (u.owner !== q) continue;
-    if (u.type === 'infantry') {
-      v += tactics ? 1.4 : 1.1;
+    if (isArmy(u)) {
+      v += (tactics ? 1.4 : 1.1) + (u.type === 'cavalry' ? 0.25 : 0);
       const home = mine.some((c) => c.hex === u.hex);
       if (!home && tactics && cfg.aggression > 0 && enemyCities.length) {
         const d = Math.min(...enemyCities.map((c) => hexDistance(c.hex, u.hex)));

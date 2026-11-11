@@ -1,9 +1,9 @@
 // Candidate actions for the AI and for random-play tests. Candidates are plausible rather than guaranteed
 // legal: callers simulate them (or apply them and accept the rejection).
-import { BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
+import { ARMY_TYPES, BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
 import { ACTION_CARDS, TOP_EFFECTS } from './data/cards.js';
 import {
-  armyAt, citiesOf, citySize, hasAdv, isPortCity, owns, playerOwnsWonder, resLimit,
+  armyAt, citiesOf, citySize, hasAdv, hasBuilding, isArmy, isPortCity, owns, playerOwnsWonder, resLimit,
 } from './queries.js';
 import { canPay, planPayment } from './core.js';
 import { advanceCost, availableAdvances } from './advance.js';
@@ -20,10 +20,10 @@ const uniform = () => Object.fromEntries(RESOURCES.map((r) => [r, 1]));
  * Good Collect picks for a city, steered by per-resource weights. Several "focus" variants are returned so
  * callers can compare them.
  */
-export function collectPlans(s, p, city, weights = uniform()) {
+export function collectPlans(s, p, city, weights = uniform(), extra = 0) {
   const cands = collectCandidates(s, p, city);
   if (!cands.length) return [];
-  const cap = cityCapacity(s, city);
+  const cap = cityCapacity(s, city) + extra;
   const farMax = farCollectLimit(s, p);
   const have = s.players[p].res;
   const plans = new Map();
@@ -61,20 +61,31 @@ export function moveGroups(s, p, hex) {
   };
   const here = s.units.filter((u) => u.owner === p && u.hex === hex && free(u));
   const ships = here.filter((u) => u.type === 'ship');
-  const army = here.filter((u) => u.type === 'infantry');
+  const army = here.filter(isArmy);
   const settlers = here.filter((u) => u.type === 'settler');
   const groups = [];
+  const seen = new Set();
   const ids = (list) => list.map((u) => u.id);
+  const add = (group) => {
+    const key = [...group].sort().join(',');
+    if (seen.has(key)) return;
+    seen.add(key);
+    groups.push(group);
+  };
   if (ships.length) {
-    groups.push(ids(ships));
-    if (ships.length > 1) for (const sh of ships) groups.push([sh.id]);
+    add(ids(ships));
+    if (ships.length > 1) for (const sh of ships) add([sh.id]);
   }
-  for (let k = 1; k <= army.length; k++) groups.push(ids(army.slice(0, k)));
+  // A mixed Army is offered both Cavalry first and Infantry first, so either kind can lead the attack.
+  for (const lead of ARMY_TYPES) {
+    const ordered = [...army.filter((u) => u.type === lead), ...army.filter((u) => u.type !== lead)];
+    for (let k = 1; k <= ordered.length; k++) add(ids(ordered.slice(0, k)));
+  }
   if (settlers.length) {
-    groups.push([settlers[0].id]);
-    if (settlers.length > 1) groups.push(ids(settlers));
+    add([settlers[0].id]);
+    if (settlers.length > 1) add(ids(settlers));
   }
-  if (army.length && settlers.length) groups.push([...ids(army), settlers[0].id]);
+  if (army.length && settlers.length) add([...ids(army), settlers[0].id]);
   return groups;
 }
 
@@ -84,6 +95,7 @@ function recruitVariants(g, p, city) {
   const cap = cityCapacity(s, city);
   const room = STACK_LIMIT - armyAt(s, city.hex, p).length;
   const port = isPortCity(city);
+  const market = hasBuilding(city, 'market');
   const seen = new Set();
   const push = (units, extra = {}) => {
     const a = { type: 'recruit', city: city.id, units, ...extra };
@@ -93,12 +105,15 @@ function recruitVariants(g, p, city) {
     if (!recruitBlocked(g, p, city, a).why) out.push(a);
   };
   for (let inf = 0; inf <= Math.min(cap, room); inf++) {
-    for (let st = 0; st + inf <= cap && st <= 2; st++) {
-      for (let sh = 0; sh + st + inf <= cap && sh <= (port ? 2 : 0); sh++) {
-        if (inf + st + sh === 0) continue;
-        push({ infantry: inf, settler: st, ship: sh });
-        if (inf && hasAdv(s, p, 'draft')) push({ infantry: inf, settler: st, ship: sh }, { draft: true });
-        if (st && hasAdv(s, p, 'sanitation')) push({ infantry: inf, settler: st, ship: sh }, { sanitation: true });
+    for (let cav = 0; inf + cav <= Math.min(cap, room) && cav <= (market ? 2 : 0); cav++) {
+      for (let st = 0; st + inf + cav <= cap && st <= 2; st++) {
+        for (let sh = 0; sh + st + inf + cav <= cap && sh <= (port ? 2 : 0); sh++) {
+          if (inf + cav + st + sh === 0) continue;
+          const units = { infantry: inf, cavalry: cav, settler: st, ship: sh };
+          push(units);
+          if (inf && hasAdv(s, p, 'draft')) push(units, { draft: true });
+          if (st && hasAdv(s, p, 'sanitation')) push(units, { sanitation: true });
+        }
       }
     }
   }
@@ -230,6 +245,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
     if (seenCard.has(id)) continue;
     seenCard.add(id);
     const top = TOP_EFFECTS[ACTION_CARDS[id].top];
+    if (top.timing === 'with') continue;
     if (top.timing === 'action' && left <= 0) continue;
     add('card', { type: 'play_card', card: id }, { card: id, top: ACTION_CARDS[id].top });
   }

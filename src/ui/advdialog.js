@@ -244,6 +244,8 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
     const researchControls = (id) => {
       const { cost, via } = advanceCost(s, 0, id);
       const n = cost.food || 0;
+      // The Dark Age event adds 1 Idea to every paid Advance; Gold can stand in for it.
+      const extra = cost.ideas || 0;
       let choice = null;
       let freeEdu = null;
       const research = new Button(scene, rightW - 206, STRIP_H - 44, 200, 34, 'Research', () => go(), { style: 'primary', size: 16 });
@@ -251,11 +253,11 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
 
       const can = ctl.humanCanAct();
       const left = s.turn ? s.turn.actionsLeft : 0;
-      const options = n ? paymentOptions(pl.res, n) : [];
+      const options = n ? paymentOptions(pl.res, n).filter((o) => pl.res.ideas - o.ideas + (pl.res.gold - o.gold) >= extra) : [];
       let why = '';
       if (!can) why = 'You can only research during your own turn.';
       else if (left <= 0) why = 'You have no actions left this turn.';
-      else if (n && !options.length) why = `You need ${n} Food. Ideas or Gold can replace Food.`;
+      else if (n && !options.length) why = extra ? `You need ${n} Food and ${extra} Idea (Dark Age). Ideas or Gold can replace Food; Gold can replace the Idea.` : `You need ${n} Food. Ideas or Gold can replace Food.`;
       research.setDisabled(!!why, why);
 
       const info = txt(scene, 0, 8, '', { size: 13, color: TXT.muted, wrap: rightW });
@@ -263,8 +265,10 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       if (!n) {
         info.setText(`Cost: 1 action. ${via ? FREE_VIA[via] : 'No resources needed.'}`);
       } else {
-        info.setText(`Cost: 1 action and ${n} Food. Ideas or Gold can replace Food. Choose how to pay:`);
-        const base = planPayment(s, 0, cost, { ideasAsFood: true, ideasFirst: true });
+        info.setText(extra
+          ? `Cost: 1 action, ${n} Food and ${extra} Idea (Dark Age; Gold can replace the Idea). Ideas or Gold can replace Food. Choose how to pay the Food:`
+          : `Cost: 1 action and ${n} Food. Ideas or Gold can replace Food. Choose how to pay:`);
+        const base = planPayment(s, 0, { food: n }, { ideasAsFood: true, ideasFirst: true });
         const def = base ? options.find((o) => o.food === base.food && o.ideas === base.ideas && o.gold === base.gold) : null;
         choice = def || options[0] || null;
         const btns = [];
@@ -303,8 +307,8 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       }
       function syncEdu() {
         if (!freeEdu) return;
-        const used = choice ? choice.gold > 0 || choice.ideas > 0 : false;
-        const spare = choice ? pl.res.ideas - choice.ideas >= 1 : false;
+        const used = choice ? extra > 0 || choice.gold > 0 || choice.ideas > 0 : false;
+        const spare = choice ? pl.res.ideas - choice.ideas - extra >= 1 : false;
         const ok = used && spare;
         if (!ok) freeEdu.set(false);
         freeEdu.lock(!ok);
@@ -330,7 +334,7 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       title: pick ? pick.title : 'Advances',
       subtitle: pick
         ? pick.text
-        : `Research costs 1 action and 2 Food (Ideas or Gold can replace Food). Your next Event comes after ${pl.cubes} more Advance${pl.cubes === 1 ? '' : 's'}.`,
+        : `Research costs 1 action and 2 Food${s.flags.darkAge ? ' plus 1 Idea (Dark Age)' : ''} (Ideas or Gold can replace Food). Your next Event comes after ${pl.cubes} more Advance${pl.cubes === 1 ? '' : 's'}.`,
       w: MODAL_W,
       h: MODAL_H,
       closable: !pick,

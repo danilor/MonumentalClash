@@ -2,7 +2,7 @@
 // The player confirms it; the first click (or Space or Enter) while the dice are still rolling only finishes the roll.
 import { ACTION_CARDS } from '../engine/data/cards.js';
 import { BARBARIAN, COMBAT_DIE } from '../engine/data/constants.js';
-import { C, PLAYER_COLORS, PLAYER_HEX, TERRAIN, TXT, cap, seatName } from './theme.js';
+import { C, PLAYER_COLORS, PLAYER_HEX, TERRAIN, TXT, cap, seatLabel, seatName } from './theme.js';
 import { Button, Modal, drawPanel, icon, txt } from './widgets.js';
 import { ownerName } from './info.js';
 import { terrainOf } from '../engine/queries.js';
@@ -12,6 +12,7 @@ const DIE = 40;
 const GAP = 6;
 const DICE_Y = 124; // top of the dice area
 const FACES = COMBAT_DIE.map(([v, ic]) => ({ v, icon: ic }));
+const MARKS = { infantry: 'u_infantry', cavalry: 'u_cavalry' }; // die icons that add to the combat value
 const STAGES = 3; // 1: dice total and combat value, 2: the hits, 3: who loses what
 
 /** One die, drawn around its own centre so that it can spin and swell. `final` is the face the engine rolled. */
@@ -30,8 +31,8 @@ function makeDie(scene, x, y, color, final) {
     plan: null,
     face: null, // what it shows now
     show(f, glow = 0) {
-      const inf = f.icon === 'infantry';
-      const key = `${f.v}${inf ? 'i' : ''}${Math.round(glow * 10)}`;
+      const tex = MARKS[f.icon];
+      const key = `${f.v}${tex || ''}${Math.round(glow * 10)}`;
       if (key === drawn) return;
       drawn = key;
       die.face = f;
@@ -40,9 +41,10 @@ function makeDie(scene, x, y, color, final) {
         g.fillStyle(C.gold, 0.3 * glow);
         g.fillRoundedRect(-DIE / 2 - 4, -DIE / 2 - 4, DIE + 8, DIE + 8, 10);
       }
-      drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 0x10171f, border: inf ? C.gold : color, radius: 7, line: 2 });
-      value.setText(String(f.v)).setY(inf ? -5 : 0);
-      mark.setVisible(inf);
+      drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 0x10171f, border: tex ? C.gold : color, radius: 7, line: 2 });
+      value.setText(String(f.v)).setY(tex ? -5 : 0);
+      if (tex) mark.setTexture(tex);
+      mark.setVisible(!!tex);
     },
   };
   return die;
@@ -78,9 +80,11 @@ function sideColumn(modal, ctl, ev, key, x, w, stages) {
   let y = DICE_Y + area * (DIE + GAP) + 6;
 
   const sum = side.dice.reduce((n, d) => n + d.v, 0);
-  const other = side.cv - sum - side.bonus - side.mod;
+  const horse = side.cavalry || 0; // older events and hand-made ones carry no Cavalry bonus
+  const other = side.cv - sum - side.bonus - horse - side.mod;
   const lines = [['Dice total', sum]];
   if (side.bonus) lines.push(['Infantry bonus', `+${side.bonus}`]);
+  if (horse) lines.push(['Cavalry bonus', `+${horse}`]);
   if (side.mod) lines.push(['Cards and weapons', side.mod > 0 ? `+${side.mod}` : `${side.mod}`]);
   if (other) lines.push(['Other effects', other > 0 ? `+${other}` : `${other}`]);
   const total = stages[0];
@@ -100,6 +104,11 @@ function sideColumn(modal, ctl, ev, key, x, w, stages) {
   const hits = stages[1];
   hits.add(txt(scene, x + 14, y, `${side.cv} ÷ 5 = ${plural(side.hits, 'hit', 'hits')} on the enemy`, { size: 13, color: TXT.text }));
   y += 18;
+  const extra = (key === 'a' ? ev.extraA : ev.extraD) || 0;
+  if (extra) {
+    hits.add(txt(scene, x + 14, y, `+${extra} hit: Boarding Party (cannot be cancelled)`, { size: 12, color: '#ffe9a8', wrap: w - 28 }));
+    y += 16;
+  }
   if (cancel) {
     hits.add(txt(scene, x + 14, y, `${plural(cancel, 'hit', 'hits')} against this side cancelled (Fortress, Warships or card)`, { size: 12, color: TXT.good, wrap: w - 28 }));
     y += 30;
@@ -119,6 +128,43 @@ function cardTitle(card) {
   return ACTION_CARDS[card].name;
 }
 
+/** Feigned Retreat: nobody rolls, so there is no table to show. The window only says what happened. */
+function disengageRound(ctl, ev) {
+  const scene = ctl.scene;
+  const s = ctl.g.s;
+  return new Promise((resolve) => {
+    const w = 560;
+    const h = 250;
+    const modal = new Modal(scene, {
+      title: ev.domain === 'sea' ? 'Sea battle' : 'Battle',
+      subtitle: `Round ${ev.round} · ${TERRAIN[terrainOf(s, ev.hex)] || 'Sea'}`,
+      w,
+      h,
+      closable: false,
+      depth: 1500,
+      shade: 0.45,
+      onClose: () => {
+        scene.input.keyboard.off('keydown-SPACE', onKey);
+        scene.input.keyboard.off('keydown-ENTER', onKey);
+        resolve();
+      },
+    });
+    let y = 96;
+    for (const side of [ev.a, ev.d].filter((x) => x.card)) {
+      const who = side.owner === 0 ? 'You play' : `${seatLabel(s, side.owner)} plays`;
+      modal.add(txt(scene, w / 2, y, `${who} ${cardTitle(side.card)}.`, { size: 16, bold: true, color: '#ffe9a8', origin: [0.5, 0] }));
+      y += 26;
+    }
+    modal.add(txt(scene, w / 2, y + 6, (ev.notes && ev.notes[0]) || 'Both armies step back: the battle ends with no further casualties.', { size: 14, color: TXT.text, origin: [0.5, 0], wrap: w - 60, align: 'center' }));
+    const onKey = (e) => {
+      if (!e || !e.repeat) modal.close();
+    };
+    modal.add(new Button(scene, w / 2 - 70, h - 50, 140, 30, 'Continue', () => modal.close(), { style: 'primary', size: 14 }));
+    scene.input.keyboard.on('keydown-SPACE', onKey);
+    scene.input.keyboard.on('keydown-ENTER', onKey);
+  });
+}
+
 /** Show one round of a battle. Resolves when the player has seen it. */
 export function playBattleRound(ctl, ev) {
   const g = ctl.g;
@@ -126,7 +172,8 @@ export function playBattleRound(ctl, ev) {
   const involved = ev.a.owner === 0 || ev.d.owner === 0;
   if (!involved || ctl.speed === 'instant') {
     let text;
-    if (involved) {
+    if (ev.disengage) text = `Battle, round ${ev.round}: both armies step back (Feigned Retreat). The battle ends.`;
+    else if (involved) {
       const you = ev.a.owner === 0 ? ev.a : ev.d;
       const them = ev.a.owner === 0 ? ev.d : ev.a;
       text = `Battle, round ${ev.round}: you lose ${plural(you.lost, 'unit', 'units')}, the enemy loses ${plural(them.lost, 'unit', 'units')}.`;
@@ -137,9 +184,11 @@ export function playBattleRound(ctl, ev) {
     ctl.hud.toast(text, 'info', 1500);
     return ctl.sleep(700);
   }
+  if (ev.disengage) return disengageRound(ctl, ev);
   return new Promise((resolve) => {
     const w = 740;
-    const h = 470;
+    const notes = ev.notes || [];
+    const h = 490 + (ev.extraA || ev.extraD ? 16 : 0) + notes.length * 18; // room for every optional line of both columns, the Cavalry bonus and Boarding Party included, and the card notes
     const sea = ev.domain === 'sea';
     const terr = TERRAIN[terrainOf(g.s, ev.hex)] || 'Sea';
     let live = true; // false once the window is gone: nothing may touch its objects then
@@ -171,14 +220,18 @@ export function playBattleRound(ctl, ev) {
     mid.lineBetween(w / 2, 84, w / 2, bottom + 4);
     modal.add(mid);
     modal.add(txt(scene, w / 2, DICE_Y + DIE + GAP / 2, 'VS', { size: 14, bold: true, color: TXT.dim, origin: 0.5 }));
-    const yb = bottom + 10;
+    let yb = bottom + 10;
+    for (const line of notes) {
+      stages[1].add(txt(scene, w / 2, yb, line, { size: 12, color: '#ffe9a8', origin: [0.5, 0], wrap: w - 40, align: 'center' }));
+      yb += 18;
+    }
 
     const you = ev.a.owner === 0 ? ev.a : ev.d;
     const them = ev.a.owner === 0 ? ev.d : ev.a;
     const yourLoss = you.lost ? `You lose ${plural(you.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'You lose nothing.';
     const theirLoss = them.lost ? `The enemy loses ${plural(them.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'The enemy loses nothing.';
     stages[2].add(txt(scene, w / 2, yb, `${yourLoss}  ${theirLoss}`, { size: 15, bold: true, color: you.lost > them.lost ? TXT.bad : you.lost < them.lost ? TXT.good : TXT.text, origin: [0.5, 0] }));
-    modal.add(txt(scene, w / 2, h - 66, 'Dice with an Infantry mark add +1 CV for each Infantry unit you have in the fight (up to the number of marked dice). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: 'center' }));
+    modal.add(txt(scene, w / 2, h - 66, 'A die with an Infantry mark adds +1 CV and one with a Cavalry mark adds +2 CV, for each such unit you have in the fight (up to the number of marked dice). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: 'center' }));
 
     // Both sides throw together: the dice are launched alternately, the attacker's from the left and the defender's from the right.
     const order = [];

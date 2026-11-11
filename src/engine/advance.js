@@ -42,7 +42,8 @@ export function advanceCost(s, p, id) {
   if (hasAdv(s, p, 'priesthood') && SCIENCE_ADVANCES.includes(id) && !(t && t.used.priesthood)) {
     return { cost: {}, via: 'priesthood' };
   }
-  return { cost: { food: 2 }, via: null };
+  // Dark Age event: every paid Advance costs 1 more Idea until the end of the round.
+  return { cost: s.flags.darkAge ? { food: 2, ideas: 1 } : { food: 2 }, via: null };
 }
 
 export function* gainAdvance(g, p, id, { quiet = false } = {}) {
@@ -70,8 +71,9 @@ export function* gainAdvance(g, p, id, { quiet = false } = {}) {
   if (id === 'dogma') clampResources(g, p);
 
   if (pl.cubes <= 0) {
-    yield* resolveEvent(g, p);
+    // Reset the tracker first: an event can hand this player another Advance (Cultural Breakthrough).
     pl.cubes = 3;
+    yield* resolveEvent(g, p);
   }
 }
 
@@ -93,8 +95,19 @@ export function* advanceAction(g, a) {
       if ((a.pay[k] || 0) > s.players[p].res[k]) fail('You cannot afford that.');
       paid[k] = a.pay[k] || 0;
     }
+    // The Dark Age surcharge comes on top of the chosen payment: Ideas first, then Gold.
+    if (cost.ideas) {
+      const have = s.players[p].res;
+      const useIdeas = Math.min(have.ideas - paid.ideas, cost.ideas);
+      const useGold = cost.ideas - useIdeas;
+      if (useGold > have.gold - paid.gold) fail('You cannot afford the Dark Age surcharge of 1 Idea.');
+      paid.ideas += useIdeas;
+      paid.gold += useGold;
+    }
   }
-  if (!paid) fail('An Advance costs 2 Food (Ideas or Gold can replace Food).');
+  if (!paid) fail(s.flags.darkAge && !via
+    ? 'During the Dark Age an Advance costs 2 Food and 1 Idea (Ideas or Gold can replace Food; Gold can replace the Idea).'
+    : 'An Advance costs 2 Food (Ideas or Gold can replace Food).');
   const useFreeEdu = !!a.freeEducation && hasAdv(s, p, 'free_education') && id !== 'free_education' && (paid.gold > 0 || paid.ideas > 0);
   if (useFreeEdu) {
     const ideasLeft = s.players[p].res.ideas - paid.ideas;

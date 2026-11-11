@@ -2,13 +2,21 @@
 // (with the hidden information reshuffled) and keeps the one that improves the evaluation most.
 import { RESOURCES } from '../engine/data/constants.js';
 import { enumerateActions } from '../engine/enumerate.js';
-import { cityAt, resLimit } from '../engine/queries.js';
+import { cityAt, isArmy, resLimit } from '../engine/queries.js';
 import { battleOdds } from './odds.js';
 import { advanceValue, DEFAULTS, evaluate, wonderPlan } from './eval.js';
 import { GROUPS, ADVANCES } from '../engine/data/advances.js';
 
-const CARD_RANK = ['stand_firm', 'wedge', 'high_ground', 'ambush', 'extra_die', 'phalanx', 'naval_ram', 'siege_engines', 'rally'];
-const BUILDING_ORDER = { temple: 0.4, academy: 0.5, port: 0.2, fortress: 0.3 };
+// Best first: cards that cancel hits or add a lot of CV come before the situational and the small ones.
+const CARD_RANK = [
+  'stand_firm', 'desperate', 'wedge', 'routing', 'high_ground', 'wall_defense', 'ambush', 'sabotaged', 'confusion', 'extra_die',
+  'supply_lines', 'phalanx', 'clash_block', 'naval_ram', 'boarding', 'siege_engines', 'rally', 'flanking', 'incentive', 'defection',
+];
+const cardRank = (effect) => {
+  const i = CARD_RANK.indexOf(effect);
+  return i < 0 ? CARD_RANK.length : i;
+};
+const BUILDING_ORDER = { temple: 0.4, academy: 0.5, port: 0.2, fortress: 0.3, market: 0.25 };
 
 /** Per-resource preference used when choosing what to Collect. */
 export function resourceWeights(s, p) {
@@ -63,20 +71,28 @@ export function answerPrompt(g, prompt) {
 
     case 'combat_card': {
       const info = prompt.info || {};
-      const cards = prompt.options.filter((o) => o.id !== 'none');
+      const gold = s.players[p].res.gold;
+      // A Feigned Retreat only helps the weaker side, and Gold is not spent on a single point of CV when it is scarce.
+      const cards = prompt.options.filter((o) => o.id !== 'none'
+        && !(o.effect === 'feigned_retreat' && !(info.units < info.foe))
+        && !(o.effect === 'incentive' && gold < 3));
       if (!cards.length) return 'none';
       const foe = info.foe ?? info.units;
       const behind = foe >= info.units;
       const mustWin = info.round > 1 && info.units < foe;
       if (!behind && !mustWin) return 'none';
-      cards.sort((a, b) => CARD_RANK.indexOf(a.effect) - CARD_RANK.indexOf(b.effect));
+      cards.sort((a, b) => cardRank(a.effect) - cardRank(b.effect));
       return cards[0].id;
     }
 
     case 'retreat': {
       const info = prompt.info || {};
       const city = info.hex ? cityAt(s, info.hex) : null;
-      const odds = battleOdds(info.atk, info.def, { fortress: !!(city && city.buildings.fortress !== undefined && city.owner !== p) });
+      const odds = battleOdds(info.atk, info.def, {
+        fortress: !!(city && city.buildings.fortress !== undefined && city.owner !== p),
+        horseA: info.atkCav || 0,
+        horseD: info.defCav || 0,
+      });
       return odds.win < 0.3;
     }
 
@@ -89,6 +105,8 @@ export function answerPrompt(g, prompt) {
       return s.players[p].res.food >= resLimit(s, p, 'food') ? 'gold' : 'food';
 
     case 'pick_resource': {
+      // Events that ask for a resource to give or get already work out a sensible default.
+      if (prompt.role) return prompt.default;
       const have = s.players[p].res;
       const want = { ideas: 0.75, gold: 0.7, food: 0.55, wood: 0.5, ore: 0.5 };
       return best(prompt, (o) => (have[o.id] >= resLimit(s, p, o.id) ? -1 : want[o.id] || 0));
@@ -104,7 +122,7 @@ export function answerPrompt(g, prompt) {
         const strength = (o) => {
           const c = s.cities.find((x) => x.hex === o.hex);
           if (!c) return 0;
-          return s.units.filter((u) => u.hex === c.hex && u.owner === p && u.type === 'infantry').length + (c.buildings.fortress !== undefined ? 1.5 : 0);
+          return s.units.filter((u) => u.hex === c.hex && u.owner === p && isArmy(u)).length + (c.buildings.fortress !== undefined ? 1.5 : 0);
         };
         return best(prompt, strength);
       }

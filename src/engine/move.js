@@ -139,7 +139,7 @@ function planShips(g, p, a, units, from, to) {
   };
 }
 
-function planLand(g, p, a, units, from, to) {
+function planLand(g, p, a, units, from, to, { scout = false } = {}) {
   const s = g.s;
   const t = s.turn;
   const army = units.filter(isArmy);
@@ -152,7 +152,9 @@ function planLand(g, p, a, units, from, to) {
     const c = cityAt(s, k);
     return !!c && c.owner === p;
   };
-  const plan = { kind: 'land', roads: false, cost: null, battle: null, explore: null, carry: [] };
+  // Scouting Report: a free step of up to 2 spaces that ignores the Mountain and Forest penalties.
+  const scouting = scout && army.length > 0 && !fromSea && !a.roads;
+  const plan = { kind: 'land', roads: false, scout: scouting, cost: null, battle: null, explore: null, carry: [] };
 
   if (toTerr === 'sea') {
     if (fromSea) fail('Land units cannot move from Sea to Sea.');
@@ -175,12 +177,13 @@ function planLand(g, p, a, units, from, to) {
     plan.roads = true;
     plan.cost = cost;
   }
-  if (d < 1 || d > (plan.roads ? 2 : 1)) fail('That space is too far away.');
+  if (d < 1 || d > (plan.roads || scouting ? 2 : 1)) fail('That space is too far away.');
   if (d === 2) {
+    if (scouting && toTerr === null) fail('Scouting cannot explore a new Region.');
     // The space passed through must be clear, and its stacking limit still applies.
     const vias = nbrs(s, from).filter((m) => hexDistance(m, to) === 1 && isLand(s, m) && !hostile(s, p, m)
       && (!army.length || armyAt(s, m, p).length + army.length <= STACK_LIMIT));
-    if (!vias.length) fail('There is no clear road to that space.');
+    if (!vias.length) fail(scouting ? 'There is no clear path to that space.' : 'There is no clear road to that space.');
     plan.via = vias.includes(a.via) ? a.via : vias[0];
   }
 
@@ -197,6 +200,9 @@ function planLand(g, p, a, units, from, to) {
   const foeCity = city && city.owner !== p ? city : null;
   if (foeUnits.length || foeCity) {
     if (!army.length) fail('Settlers cannot enter enemy spaces without Army units.');
+    const sworn = (s.flags.protect || []).find((e) => e.foe === p && (foeUnits.some((u) => u.owner === e.by) || (foeCity && foeCity.owner === e.by)));
+    if (sworn) fail(`${g.name(sworn.by)} has played Non-Aggression: you cannot enter their spaces this round.`);
+    if (d === 2 && scouting) fail('Scouting cannot attack: the enemy is two spaces away.');
     if (d === 2 && !mine(from)) fail('Roads can only be used to attack when leaving one of your cities.');
     for (const u of units) {
       const f = t.unitFlags[u.id] || {};
@@ -233,8 +239,13 @@ export function planMove(g, p, a) {
   }
   const ships = units.filter((u) => u.type === 'ship');
   if (ships.length && ships.length !== units.length) fail('Ships move separately from land units.');
-  const fresh = !t.move || t.move.credits <= 0 || ids.some((id) => t.move.moved[id]);
-  const plan = ships.length ? planShips(g, p, a, units, from, to) : planLand(g, p, a, units, from, to);
+  // A free Move from a card may be limited to one kind of group; any other group starts a Move action of its own.
+  const group = ships.length ? 'ships' : units.some(isArmy) ? 'army' : 'settlers';
+  const open = t.move && t.move.credits > 0 ? t.move : null;
+  const fits = !open || !open.only || open.only === group;
+  const fresh = !open || ids.some((id) => t.move.moved[id]) || !fits;
+  const scout = !fresh && !!open.scout;
+  const plan = ships.length ? planShips(g, p, a, units, from, to) : planLand(g, p, a, units, from, to, { scout });
   return { ...plan, ids, from, to, fresh };
 }
 
@@ -248,7 +259,7 @@ export function moveOptions(g, p, ids) {
   const attempt = (a) => {
     try {
       const plan = planMove(g, p, { units: ids, ...a });
-      out.push({ to: a.to, roads: !!a.roads, nav: a.nav || null, kind: plan.kind, battle: plan.battle, explore: plan.explore, fresh: plan.fresh });
+      out.push({ to: a.to, roads: !!a.roads, nav: a.nav || null, kind: plan.kind, battle: plan.battle, explore: plan.explore, fresh: plan.fresh, scout: !!plan.scout });
     } catch (e) {
       if (!(e instanceof RuleError)) throw e;
     }
@@ -259,17 +270,19 @@ export function moveOptions(g, p, ids) {
     return out;
   }
   const roads = hasAdv(s, p, 'roads');
+  const scouting = !!(s.turn && s.turn.move && s.turn.move.credits > 0 && s.turn.move.scout);
   for (const n of nbrs(s, from)) {
     attempt({ to: n });
     if (roads) attempt({ to: n, roads: true });
   }
-  if (roads) {
+  if (roads || scouting) {
     const seen = new Set(nbrs(s, from));
     for (const n of nbrs(s, from)) {
       for (const m of nbrs(s, n)) {
         if (m === from || seen.has(m)) continue;
         seen.add(m);
-        attempt({ to: m, roads: true });
+        if (scouting) attempt({ to: m });
+        if (roads) attempt({ to: m, roads: true });
       }
     }
   }
@@ -281,7 +294,7 @@ function terrainFlags(g, plan, units, landTerrain) {
   for (const u of units) {
     const f = unitFlags(g, u.id);
     if (landTerrain === 'plains') f.plains = true;
-    if (plan.roads) continue;
+    if (plan.roads || plan.scout) continue;
     if (landTerrain === 'mountain') f.stopped = true;
     if (landTerrain === 'forest') f.noBattle = true;
   }
@@ -392,7 +405,10 @@ export function* moveAction(g, a) {
   terrainFlags(g, plan, units, terrainOf(s, to));
 }
 
-/** Free Move action granted by a card: opens a Move action without spending an action. */
-export function openFreeMove(g) {
-  g.s.turn.move = { credits: 3, moved: {}, shipMoved: false, navUsed: false };
+/**
+ * Free Move granted by a card: opens a Move action without spending an action. `only` limits it to one kind of group
+ * ('army' | 'ships'); `scout` lets Army groups step 2 spaces without the Mountain and Forest penalties.
+ */
+export function openFreeMove(g, { credits = 3, only = null, scout = false } = {}) {
+  g.s.turn.move = { credits, moved: {}, shipMoved: false, navUsed: false, only, scout, free: true };
 }

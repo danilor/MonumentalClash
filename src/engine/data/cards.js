@@ -23,6 +23,20 @@ export const TOP_EFFECTS = {
   forced_march: { timing: 'free', text: 'Take a Move Units action without spending an action.' },
   grand_festival: { timing: 'action', text: 'As an Action: raise the Mood of up to 2 of your cities by 1 step each.' },
   trade_caravan: { timing: 'action', text: 'As an Action: gain Gold equal to the number of your cities.' },
+
+  // timing 'with': played together with the named action (it is a parameter of that action, not a Play Card action).
+  resource_surge: { name: 'Resource Surge', timing: 'with', with: 'collect', text: 'Play it with a Collect action: collect from 2 more spaces than normal (still 1 resource per space).' },
+  rapid_construction: { name: 'Rapid Construction', timing: 'with', with: 'construct', text: 'Play it with a Construct action: the Building costs 1 resource less.' },
+  soft_power: { name: 'Soft Power', timing: 'with', with: 'influence', text: 'Play it with an Influence action: its range is 1 larger, for free.' },
+  free_swap: { name: 'Free Swap', timing: 'free', text: 'Exchange up to 3 resources of one type for another type, 1 for 1.' },
+  tax_harvest: { name: 'Tax Harvest', timing: 'free', text: 'Gain 1 Gold for every 2 Buildings in your color on the board.' },
+  scouting: { name: 'Scouting Report', timing: 'free', text: 'Free Move of 1 group of Army units: up to 2 spaces, ignoring Forest and Mountain penalties.' },
+  blitz: { name: 'Blitz Move', timing: 'free', text: 'Free Move of 1 group of Army units, outside your 3 actions.' },
+  sailing_fleet: { name: 'Sailing Fleet', timing: 'free', text: 'Free Move of up to 2 groups of Ships.' },
+  reinforce: { name: 'Reinforce', timing: 'free', text: 'Place 1 free Infantry in one of your cities that has an enemy Army unit next to it.' },
+  denial: { name: 'Denial of Progress', timing: 'free', text: 'Pay 1 Culture token: an opponent has 1 action fewer on their next turn.' },
+  spy_network: { name: 'Spy Network', timing: 'free', text: "Look at an opponent's Action or Objective cards and make them discard one." },
+  non_aggression: { name: 'Non-Aggression', timing: 'free', text: 'Choose an opponent: until the end of the round their Army units cannot enter spaces holding your units or cities.' },
 };
 
 export const COMBAT_EFFECTS = {
@@ -35,11 +49,23 @@ export const COMBAT_EFFECTS = {
   siege_engines: { name: 'Siege Engines', side: 'attacker', domain: 'land', text: 'Attacker: enemy Fortress bonuses do not apply this round.' },
   phalanx: { name: 'Phalanx', side: 'any', domain: 'land', text: '+1 CV per Infantry you have in the battle (max +4).' },
   naval_ram: { name: 'Ramming Speed', side: 'any', domain: 'sea', text: 'Naval battle: +3 CV this round.' },
+  routing: { name: 'Routing Army', side: 'any', domain: 'any', text: '+3 CV this round if you have destroyed at least as many enemy units as you have lost in this battle.' },
+  desperate: { name: 'Desperate Defense', side: 'any', domain: 'any', text: 'Cancel 1 hit against you this round if the battle is in or next to one of your cities.' },
+  supply_lines: { name: 'Supply Lines', side: 'any', domain: 'land', text: 'Roll 1 extra die this round if your army is in or next to one of your cities.' },
+  incentive: { name: 'Financial Incentive', side: 'any', domain: 'any', text: 'Pay 1 Gold: +1 CV this round.' },
+  clash_block: { name: 'High Ground Combat', side: 'any', domain: 'land', text: 'The enemy gets no Infantry or Cavalry clash bonus this round.' },
+  flanking: { name: 'Flanking Maneuver', side: 'attacker', domain: 'land', text: 'Attacker: +1 CV this round if you attacked from an adjacent land space.' },
+  boarding: { name: 'Boarding Party', side: 'any', domain: 'sea', text: 'Naval battle: if your CV is at least the enemy CV, 1 more enemy Ship is destroyed.' },
+  wall_defense: { name: 'Wall Defense', side: 'defender', domain: 'land', text: 'Defender: +2 CV this round if you defend a city with a Fortress.' },
+  confusion: { name: 'Confusion', side: 'any', domain: 'any', text: 'The enemy rerolls their highest die this round, before modifiers.' },
+  sabotaged: { name: 'Sabotaged Supplies', side: 'any', domain: 'any', text: 'The enemy subtracts 1 from each die they rolled this round.' },
+  defection: { name: 'Ideological Defection', side: 'any', domain: 'land', text: 'If you win this battle after destroying an enemy Infantry, a free Infantry of yours joins you there.' },
+  feigned_retreat: { name: 'Feigned Retreat', side: 'any', domain: 'land', text: 'End the battle at once with no further casualties (not when fighting in place).' },
 };
 
 const A = (id, name, top, combat) => ({ id, name, top, combat });
 
-// 21 distinct cards, two copies each = 42 cards.
+// 33 distinct cards, two copies each = 66 cards.
 export const ACTION_CARD_TYPES = [
   A('windfall', "Scholars' Windfall", 'ideas2', 'wedge'),
   A('harvest', 'Bountiful Harvest', 'food2', 'high_ground'),
@@ -62,6 +88,18 @@ export const ACTION_CARD_TYPES = [
   A('caravan', 'Trade Caravan', 'trade_caravan', 'stand_firm'),
   A('prosper', 'Prosperity', 'prosperity', 'wedge'),
   A('reform', 'Reforms', 'reforms', 'high_ground'),
+  A('mass_collect', 'Mass Collection', 'resource_surge', 'routing'),
+  A('labor', 'Forced Labor', 'rapid_construction', 'desperate'),
+  A('supply', 'Bountiful Supply', 'free_swap', 'supply_lines'),
+  A('bureaucracy', 'Bureaucracy', 'tax_harvest', 'incentive'),
+  A('high_ground_card', 'High Ground', 'scouting', 'clash_block'),
+  A('surprise', 'Surprise March', 'blitz', 'flanking'),
+  A('escort', 'Naval Escort', 'sailing_fleet', 'boarding'),
+  A('garrison', 'Garrison Command', 'reinforce', 'wall_defense'),
+  A('sabotage', 'Political Sabotage', 'denial', 'confusion'),
+  A('infiltration', 'Infiltration', 'spy_network', 'sabotaged'),
+  A('assimilation', 'Cultural Assimilation', 'soft_power', 'defection'),
+  A('immunity', 'Diplomatic Immunity', 'non_aggression', 'feigned_retreat'),
 ];
 
 export const ACTION_CARDS = {};
@@ -161,5 +199,45 @@ export const EVENT_CARD_LIST = [
   E('scientific_trade', 'Scientific Trade', null, 'Gain 1 Idea, plus 1 for each of your Academies.'),
   E('reformation', 'Reformation', null, 'Gain 1 Mood token, plus 1 more if you have a Temple.'),
   E('solar_eclipse', 'Solar Eclipse', null, 'The next land battle ends after one round; its winner scores 1 VP.'),
+
+  // World events: they affect every player, not only the one who drew the card (engine/worldEvents.js).
+  E('barbarian_incursion', 'Barbarian Incursion', 'spawn', 'Every Barbarian army moves 1 space toward the nearest city.'),
+  E('severe_famine', 'Severe Famine', 'exhausted', 'Every player pays 1 Food per city, or each unpaid city becomes Angry.'),
+  E('epidemic_city', 'Epidemic', null, 'The player with the largest city (size 2+) loses 1 Building there, shrinking it by 1.'),
+  E('social_unrest', 'Social Unrest', null, 'Every player with an Angry city loses 1 Culture token and 1 Mood token.'),
+  E('economic_boom', 'Economic Boom', 'gold_mine', 'You gain 3 Gold. Every other player gains 1 Gold.'),
+  E('cultural_breakthrough', 'Cultural Breakthrough', null, 'The player with the fewest Advances gains 1 Advance for free.'),
+  E('pirate_raids', 'Pirate Raids', 'spawn', 'Every player with a Port loses 1 resource of their choice.'),
+  E('scientific_discovery', 'Scientific Discovery', null, 'Every player with an Academy gains 1 Idea.'),
+  E('civil_revolt', 'Civil Revolt', null, 'The player with the most Angry cities loses a Building there, and a Barbarian Infantry rises next to it.'),
+  E('golden_age', 'Golden Age', null, 'Every player whose cities are all Happy gains 2 Culture tokens.'),
+  E('earthquake_city', 'Earthquake', 'exhausted', 'A random city on the board loses one of its Buildings.'),
+  E('corrupt_officials', 'Corrupt Officials', null, 'Every player pays 1 Gold per city; each unpaid city cannot Collect until it is next activated.'),
+  E('great_philosopher', 'Great Philosopher', 'gold_mine', 'You gain 1 extra Idea the first time you Collect each turn, from now on.'),
+  E('border_dispute', 'Border Dispute', 'spawn', 'Where two players have cities close together, the one with fewer Army units cedes 1 resource to the other.'),
+  E('bountiful_harvest', 'Bountiful Harvest', null, 'Every player gains 1 Food for each Plains space they occupy (up to 2).'),
+  E('religious_revival', 'Religious Revival', null, 'Every player who has built a Temple may change their Government for free.'),
+  E('drought', 'Drought', 'exhausted', 'Until the end of the round, Forest and Mountain spaces yield nothing when collecting.'),
+  E('treasure_fleet', 'Treasure Fleet', 'gold_mine', 'The player with the most Ports and Ships gains 3 Gold. Every other player gains 1 Gold.'),
+  E('migrating_tribes', 'Migrating Tribes', 'spawn', 'A new Barbarian settlement appears; player units on that space retreat to a neighboring space.'),
+  E('monuments', 'Monuments of Antiquity', null, 'The player with the most Wonders and different Building types gains 2 Culture tokens.'),
+  E('slave_revolt', 'Slave Revolt', null, 'Every player under Autocracy pays 1 Gold per city, or each unpaid city becomes Angry.'),
+  E('local_hero', 'Local Hero', null, 'The player with the fewest Army units gains a free Infantry in their capital.'),
+  E('tax_grievances', 'Tax Grievances', null, 'Players who collected Gold on their last turn lose 2 Gold or turn one of their cities Angry.'),
+  E('dark_age', 'Dark Age', 'exhausted', 'Until the end of the round, every Advance costs 1 more Idea.'),
+  E('philosophical_debate', 'Philosophical Debate', null, 'The player with the most Ideas gains 1 Culture token; the player with the fewest loses 1 Idea.'),
+  E('locusts', 'Plague of Locusts', 'exhausted', 'Until the end of the round, Plains yield no Food when collecting.'),
+  E('iconoclasm', 'Iconoclasm', null, 'Every player with a Temple pays 1 Culture token, or one of their Temple cities becomes Angry.'),
+  E('maritime_expansion', 'Maritime Expansion', 'gold_mine', 'Every player with a Ship may move it up to 2 sea spaces for free.'),
+  E('mercenary_influx', 'Mercenary Influx', null, 'Every player may hire up to 2 Infantry for 2 Gold each at the front. They leave at the end of the round.'),
+  E('feuding_warlords', 'Feuding Warlords', 'spawn', 'Barbarian armies next to player Army units attack them.'),
+  E('typhoon', 'Typhoon', null, 'Ships on deep-sea spaces are destroyed unless they are next to a Port.'),
+  E('currency_reform', 'Currency Reform', 'gold_mine', 'Every player may trade up to 3 Food, Wood or Ore for Gold, 1 for 1.'),
+  E('steppe_scourge', 'Scourge of the Steppes', 'spawn', 'Barbarian Cavalry appears far away and rides toward the largest city.'),
+  E('sanitation_crisis', 'Sanitation Crisis', null, 'Cities of size 3+ become Angry, unless their owner has Sanitation or Medicine.'),
+  E('great_fair', 'Great Fair', null, 'Every player may make up to 2 trades with the bank; whoever trades most gains 1 Mood token.'),
+  E('intellectual_renaissance', 'Intellectual Renaissance', null, 'The player who gained the most Ideas this round gets 1 extra End-Game VP.'),
+  E('vassal_demand', 'Vassal State Demand', null, 'The player with the highest score gives 1 resource of their choice to the player with the lowest score.'),
+  E('provincial_rebellion', 'Provincial Rebellion', null, 'Your city farthest from your capital becomes Angry (Myths may prevent it).'),
 ];
 export const EVENT_CARDS = Object.fromEntries(EVENT_CARD_LIST.map((e) => [e.id, e]));

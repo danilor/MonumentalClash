@@ -9,12 +9,18 @@ import { Button, Modal, drawPanel, resRow, txt } from './widgets.js';
 import { Flow, optionModal } from './modals.js';
 import { haveLine, stepRow, submit } from './citydialogs.js';
 import { advancesDialog } from './advdialog.js';
+import { freeMoveText } from './info.js';
 
 const TILE_W = 442;
-const TILE_H = 104;
+const TILE_H = 128;
 const TILE_GAP = 8;
-const PER_PAGE = 8;
+const PER_PAGE = 6;
 const SUB_DEPTH = 1100;
+
+/** The action a "played with" card belongs to, as the player knows it. */
+const WITH_NAME = { collect: 'Collect', construct: 'Construct', influence: 'Influence' };
+/** Cards whose top effect opens a free Move. */
+const MOVE_CARDS = ['forced_march', 'scouting', 'blitz', 'sailing_fleet'];
 
 const TABS = [
   { id: 'action', name: 'Action', empty: 'You have no Action cards.\nYou draw one at the end of every Age and when you learn Writing.' },
@@ -23,7 +29,7 @@ const TABS = [
 ];
 
 const HINTS = {
-  action: 'Free cards can be played at any moment of your turn. Combat cards are offered to you when a battle starts.',
+  action: 'Free cards can be played at any moment of your turn. "Played with" cards are ticked inside a Collect, Construct or Influence action. Combat cards are offered to you when a battle starts.',
   objective: 'Status objectives are checked when an Age ends, Event objectives the moment they happen. A card scores 2 VP for one of its two sides only.',
   wonder: 'To build a Wonder, select a Happy city that has the required Advance and use its Wonder button.',
 };
@@ -52,11 +58,14 @@ function actionTile(ctl, modal, id, n, x, y) {
   const c = tileBase(scene, x, y);
   const name = txt(scene, 12, 8, def.name, { size: 16, bold: true, serif: true, color: TXT.gold });
   const free = top.timing === 'free';
+  const together = top.timing === 'with';
+  const tag = free ? 'Free' : together ? `Played with ${WITH_NAME[top.with]}` : 'Costs 1 action';
+  const topText = txt(scene, 12, 32, top.text, { size: 13, wrap: TILE_W - 24 - 100 });
   c.add([
     name,
-    txt(scene, 12 + name.width + 10, 11, free ? 'Free' : 'Costs 1 action', { size: 12, bold: true, color: free ? TXT.good : TXT.warn }),
-    txt(scene, 12, 32, top.text, { size: 13, wrap: TILE_W - 24 - 100 }),
-    txt(scene, 12, 68, `In battle (needs Tactics): ${combat.name}. ${combat.text}`, { size: 12, color: TXT.muted, wrap: TILE_W - 24 }),
+    txt(scene, 12 + name.width + 10, 11, tag, { size: 12, bold: true, color: free ? TXT.good : together ? TXT.link : TXT.warn }),
+    topText,
+    txt(scene, 12, Math.max(68, 32 + topText.height + 6), `In battle (needs Tactics): ${combat.name}. ${combat.text}`, { size: 12, color: TXT.muted, wrap: TILE_W - 24 }),
   ]);
   if (n > 1) c.add(txt(scene, TILE_W - 12, 10, `x${n}`, { size: 15, bold: true, origin: [1, 0], color: TXT.muted }));
   const play = new Button(scene, TILE_W - 100, 34, 88, 30, 'Play', () => {
@@ -67,10 +76,16 @@ function actionTile(ctl, modal, id, n, x, y) {
       return;
     }
     modal.close();
-    ctl.act(action);
+    ctl.act(action).then((res) => {
+      const mv = ctl.g.s.turn && ctl.g.s.turn.move;
+      if (!res.ok || !MOVE_CARDS.includes(def.top) || !mv || !mv.free || mv.credits <= 0) return;
+      const who = mv.only === 'army' ? 'Army units' : mv.only === 'ships' ? 'Ships' : 'units';
+      ctl.toast(`${def.name}: select your ${who}, then click a highlighted space (${freeMoveText(mv)}).`, 'info', 3600);
+    });
   }, { style: 'primary', size: 14 });
   let why = '';
-  if (!ctl.humanCanAct()) why = 'You can only play cards during your own turn.';
+  if (together) why = `Not played on its own: tick it when you start a ${WITH_NAME[top.with]} action.`;
+  else if (!ctl.humanCanAct()) why = 'You can only play cards during your own turn.';
   else if (!free && s.turn.actionsLeft <= 0) why = 'This card costs an action and you have none left.';
   if (why) play.setDisabled(true, why);
   c.add(play);

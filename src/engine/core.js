@@ -1,6 +1,6 @@
 // Mutation helpers shared by every rules module. `g` is the Game facade, `g.s` its plain state.
 import { BARBARIAN, BASE_RESOURCES, RESOURCES } from './data/constants.js';
-import { ACTION_CARDS } from './data/cards.js';
+import { ACTION_CARDS, TOP_EFFECTS } from './data/cards.js';
 import { resLimit, owns, cityAt, citiesOf, playerOwnsWonder, unitById } from './queries.js';
 import { confirm } from './prompts.js';
 import { shuffle } from './rng.js';
@@ -23,6 +23,7 @@ export function gainRes(g, p, gain) {
     pl.res[r] += add;
     got[r] = add;
   }
+  if (got.ideas) pl.ideasRound = (pl.ideasRound || 0) + got.ideas;
   if (gain.mood) pl.mood += gain.mood;
   if (gain.culture) pl.culture += gain.culture;
   return got;
@@ -44,7 +45,8 @@ export function planPayment(s, p, cost, opts = {}) {
   const pl = s.players[p];
   const have = { ...pl.res };
   const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0 };
-  for (const r of ['food', 'wood', 'ore', 'ideas']) {
+  // Ideas first: an explicit Idea cost (Dark Age) must not lose its Ideas to Food that Ideas could stand in for.
+  for (const r of ['ideas', 'food', 'wood', 'ore']) {
     let need = cost[r] || 0;
     if (!need) continue;
     const order = [r];
@@ -183,6 +185,33 @@ export function discardCard(g, p, deck, id) {
   // Great Mausoleum: discards go to the bottom of the pile (so top draws are not the card just played)
   if (p !== null && p !== BARBARIAN && playerOwnsWonder(g.s, p, 'great_mausoleum')) d.unshift(id);
   else d.push(id);
+}
+
+/**
+ * The Action card named by an action's `card` parameter (Resource Surge, Rapid Construction, Soft Power): null when the
+ * action has none. Fails when the card is not in hand or is meant for another action.
+ */
+export function modifierCard(s, p, a, action) {
+  if (!a.card) return null;
+  const def = ACTION_CARDS[a.card];
+  if (!def || !s.players[p].hand.action.includes(a.card)) fail('You do not hold that card.');
+  if (TOP_EFFECTS[def.top].with !== action) fail(`${def.name} cannot be played with this action.`);
+  return def;
+}
+
+/** The Action card in a player's hand that is played together with `action` ('collect' | 'construct' | 'influence'), or null. */
+export function heldModifier(s, p, action) {
+  const id = s.players[p].hand.action.find((c) => TOP_EFFECTS[ACTION_CARDS[c].top].with === action);
+  return id ? ACTION_CARDS[id] : null;
+}
+
+/** Spend a modifier card (after `modifierCard` approved it): it goes to the discard pile. */
+export function useCard(g, p, def) {
+  const hand = g.s.players[p].hand.action;
+  hand.splice(hand.indexOf(def.id), 1);
+  discardCard(g, p, 'action', def.id);
+  g.emit({ type: 'card', player: p, card: def.id });
+  g.log(`${g.name(p)} plays ${def.name}.`);
 }
 
 /** Draw an Action card. The owner of the Great Mausoleum may take the top of the discard pile instead. */

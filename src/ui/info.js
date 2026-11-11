@@ -3,15 +3,17 @@ import { ADVANCES, GROUPS } from '../engine/data/advances.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { BARBARIAN } from '../engine/data/constants.js';
 import { cityAt, citySize, unitsAt } from '../engine/queries.js';
-import { BUILDING_NAME, MOOD_NAME, RES, TERRAIN, TERRAIN_HELP } from './theme.js';
+import { BUILDING_NAME, MOOD_NAME, RES, TERRAIN, TERRAIN_HELP, cap, seatName, seatOwner } from './theme.js';
 
 /** What a tooltip calls the owner of something: "Your", "Enemy" (when there is only one computer), "Red"... or "Barbarian". */
 export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === 0 ? 'Your' : g.s.players.length > 2 ? g.s.players[o].name : 'Enemy');
 export const ownedBy = (g, o) => (o === 0 ? 'yours' : o === BARBARIAN ? 'barbarian' : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's");
-export const UNIT_NAME = { infantry: 'Infantry', settler: 'Settler', ship: 'Ship' };
+export const UNIT_NAME = { infantry: 'Infantry', cavalry: 'Cavalry', settler: 'Settler', ship: 'Ship' };
+/** "Infantry", "Cavalry", "Settlers", "Ships": the army units keep one form for one and for many. */
+export const unitPlural = (type, n = 2) => `${UNIT_NAME[type]}${n > 1 && type !== 'infantry' && type !== 'cavalry' ? 's' : ''}`;
 
 export function unitCounts(s, k, owner) {
-  const out = { infantry: 0, settler: 0, ship: 0 };
+  const out = { infantry: 0, cavalry: 0, settler: 0, ship: 0 };
   for (const u of unitsAt(s, k)) if (owner === undefined || u.owner === owner) out[u.type] += 1;
   return out;
 }
@@ -19,14 +21,36 @@ export function unitCounts(s, k, owner) {
 export const countText = (c) =>
   Object.entries(c)
     .filter(([, n]) => n)
-    .map(([t, n]) => `${n} ${UNIT_NAME[t]}${n > 1 && t !== 'infantry' ? 's' : ''}`)
+    .map(([t, n]) => `${n} ${unitPlural(t, n)}`)
     .join(', ');
+
+/** What is left of a free Move, e.g. "2 group moves", "1 Army group move" (a card may limit it to Army units or Ships). */
+export function freeMoveText(mv) {
+  const kind = mv.only === 'army' ? 'Army ' : mv.only === 'ships' ? 'Ship ' : '';
+  return `${mv.credits} ${kind}group move${mv.credits === 1 ? '' : 's'}`;
+}
+
+/** Events and cards whose effect lasts until the end of the round: a name for the badge and the explanation for its tooltip. */
+export function worldEffects(s) {
+  const f = s.flags || {};
+  const out = [];
+  if (f.darkAge) out.push({ name: 'Dark Age', tip: 'Dark Age: every Advance that is paid for costs 1 more Idea (Gold can replace it).\nEnds with the round.' });
+  if (f.drought) out.push({ name: 'Drought', tip: 'Drought: Forest and Mountain spaces yield nothing.\nEnds with the round.' });
+  if (f.locusts) out.push({ name: 'Locusts', tip: 'Locusts: Plains yield no Food.\nEnds with the round.' });
+  if ((f.protect || []).length) {
+    const pacts = f.protect.map((e) => `${cap(seatName(s, e.foe))} cannot enter ${seatOwner(s, e.by)} spaces with Army units.`);
+    out.push({ name: 'Non-Aggression', tip: `${pacts.join('\n')}\nEnds with the round.` });
+  }
+  if (s.units.some((u) => u.mercenary)) out.push({ name: 'Mercenaries', tip: 'Hired Infantry fight for their employer.\nThey leave when the round ends.' });
+  return out;
+}
 
 export function cityText(g, city) {
   const parts = [`${ownerName(g, city.owner)} city, size ${citySize(city)}, ${MOOD_NAME[city.mood]}`];
   const blds = Object.entries(city.buildings).map(([b, o]) => `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(g, o)})` : ''}`);
   if (blds.length) parts.push(blds.join(', '));
   if (city.wonders.length) parts.push(city.wonders.map((w) => WONDERS[w.id].name).join(', '));
+  if (city.corrupt) parts.push('Corrupt: cannot Collect until another action has activated it');
   return parts.join('\n');
 }
 

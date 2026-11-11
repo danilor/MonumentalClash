@@ -240,6 +240,9 @@ async function pickVariant(ctl, k, options) {
     } else if (o.roads) {
       label = 'Use Roads';
       desc = `Pay 1 Food and 1 Ore. Go up to 2 spaces and ignore terrain penalties${terr === 'forest' ? ' (units may still attack)' : terr === 'mountain' ? ' (units need not stop)' : ''}.`;
+    } else if (o.scout) {
+      label = 'Scout';
+      desc = 'Free (Scouting Report): up to 2 spaces, ignoring the Forest and Mountain penalties.';
     } else {
       label = ship ? 'Sail normally' : 'Move normally';
       desc = terr === 'forest' ? 'Free. Units that enter a Forest cannot attack this turn.'

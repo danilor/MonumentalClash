@@ -1,27 +1,65 @@
-// Barbarians: spawning, moving and defending. Barbarian armies are controlled by the game itself.
+// Barbarian spawning, moving and defending. Barbarian armies are controlled by the game itself.
 import { BARBARIAN, PIECE_LIMITS, STACK_LIMIT } from './data/constants.js';
 import { addCity } from './state.js';
 import {
-  allHexKeys, armyAt, bfs, cityAt, citiesOf, foesOf, hexDistance, isLand, nbrs, settlementsLeft, unitById, unitsAt, unitsLeft,
+  allHexKeys, armyAt, bfs, cityAt, citiesOf, citySize, foesOf, hexDistance, isArmy, isLand, nbrs, settlementsLeft, unitById,
+  unitsAt, unitsLeft,
 } from './queries.js';
 import { addUnitTo } from './core.js';
-import { choose } from './prompts.js';
+import { choose, chooseMany, confirm } from './prompts.js';
 import { battle } from './combat.js';
 
 export const barbarianCities = (s) => s.cities.filter((c) => c.owner === BARBARIAN);
 const landOnly = (s) => (n) => isLand(s, n);
 const dist = (m, k) => (m.has(k) ? m.get(k) : Infinity);
 const foeCitiesOf = (s, p) => foesOf(s, p).flatMap((f) => citiesOf(s, f));
+const cityOption = (c) => ({ id: c.id, label: `City at ${c.hex}`, hex: c.hex });
 
-/** Add one Barbarian Infantry to a hex (respects supply and the stacking limit). */
-export function addBarbarianInfantry(g, hex) {
-  const s = g.s;
-  if (unitsLeft(s, BARBARIAN, 'infantry') <= 0) return null;
-  if (armyAt(s, hex, BARBARIAN).length >= STACK_LIMIT) return null;
-  return addUnitTo(g, BARBARIAN, 'infantry', hex);
+/** Is there supply, and room under the stacking limit, for one more Barbarian Unit of this type on a hex? */
+const hasRoom = (s, hex, type) => unitsLeft(s, BARBARIAN, type) > 0 && armyAt(s, hex, BARBARIAN).length < STACK_LIMIT;
+
+/** Add one Barbarian Unit to a hex (respects supply and the stacking limit). */
+export function addBarbarianUnit(g, hex, type = 'infantry') {
+  if (!hasRoom(g.s, hex, type)) return null;
+  return addUnitTo(g, BARBARIAN, type, hex);
 }
 
-function spawnCandidates(s, p) {
+/** A Barbarian city that already has an Infantry may receive a Cavalry in place of another Infantry. */
+const cavalryAllowed = (s, hex) => hasRoom(s, hex, 'cavalry')
+  && unitsAt(s, hex).some((u) => u.owner === BARBARIAN && u.type === 'infantry');
+
+/** Which of these Barbarian cities get a Cavalry instead of an Infantry? The player may choose none, some or all. */
+function* chooseCavalryCities(g, p, cities) {
+  const s = g.s;
+  const eligible = cities.filter((c) => cavalryAllowed(s, c.hex));
+  const max = Math.min(eligible.length, unitsLeft(s, BARBARIAN, 'cavalry'));
+  if (max <= 0) return new Set();
+  const ids = yield* chooseMany(g, p, {
+    kind: 'pick_cities',
+    title: 'Barbarian Cavalry',
+    text: 'These Barbarian cities already have an Infantry, so each may get a Cavalry instead of another Infantry. Choose which ones do, or none.',
+    options: eligible.map(cityOption),
+    min: 0,
+    max,
+    default: [],
+  });
+  return new Set(ids);
+}
+
+/** Land spaces the player units standing on `hex` may retreat to: no other owner's units or city, and room in the stack. */
+function retreatHexes(s, hex) {
+  const group = unitsAt(s, hex);
+  if (!group.length) return [];
+  const owner = group[0].owner;
+  const armySize = group.filter(isArmy).length;
+  return nbrs(s, hex).filter((n) => {
+    if (!isLand(s, n) || unitsAt(s, n).some((u) => u.owner !== owner)) return false;
+    const city = cityAt(s, n);
+    return !(city && city.owner !== owner) && armyAt(s, n, owner).length + armySize <= STACK_LIMIT;
+  });
+}
+
+function spawnCandidates(s, p, displace = false) {
   const mine = citiesOf(s, p);
   const foe = foeCitiesOf(s, p);
   const maps = mine.map((c) => bfs(s, c.hex, 3, landOnly(s)));
@@ -29,7 +67,9 @@ function spawnCandidates(s, p) {
   const free = allHexKeys(s).filter((k) => {
     const h = s.map.hexes[k];
     if (!isLand(s, k) || h.terrain === 'barren' || h.exhausted) return false;
-    if (cityAt(s, k) || unitsAt(s, k).length) return false;
+    if (cityAt(s, k)) return false;
+    const there = unitsAt(s, k);
+    if (there.length && !(displace && there.every((u) => u.owner !== BARBARIAN) && retreatHexes(s, k).length)) return false;
     return !foe.some((c) => hexDistance(c.hex, k) < 2);
   });
   let cands = free.filter((k) => minDist(k) === 2);
@@ -37,28 +77,55 @@ function spawnCandidates(s, p) {
   return { cands, minDist, maps };
 }
 
+/** The player units on a space that is about to become Barbarian land retreat to an adjacent space of their owner's choice. */
+function* retreatUnits(g, hex) {
+  const s = g.s;
+  const group = unitsAt(s, hex);
+  const options = retreatHexes(s, hex);
+  if (!group.length || !options.length) return;
+  const owner = group[0].owner;
+  const pick = yield* choose(g, owner, {
+    kind: 'pick_hex',
+    title: 'Retreat!',
+    text: 'Barbarians settle on the space your units hold. Choose the adjacent space they retreat to.',
+    options: options.map((k) => ({ id: k, label: k, hex: k })),
+    default: options[0],
+  });
+  const to = options.includes(pick) ? pick : options[0];
+  for (const u of group) u.hex = to;
+  g.log(`${g.name(owner)}'s units retreat to ${to}.`);
+}
+
 /** Step 1 of a Barbarian spawn: a Settlement and an Infantry near the active player's cities. */
-export function* placeBarbarianSettlement(g, p) {
+export function* placeBarbarianSettlement(g, p, { displace = false } = {}) {
   const s = g.s;
   if (settlementsLeft(s, BARBARIAN) <= 0 || unitsLeft(s, BARBARIAN, 'infantry') <= 0) return null;
   if (!citiesOf(s, p).length) return null;
-  const { cands, maps } = spawnCandidates(s, p);
+  const { cands, maps } = spawnCandidates(s, p, displace);
   if (!cands.length) return null;
   const foeCities = foeCitiesOf(s, p);
+  // A settlement that pushes a rival's army off its space is worth more than one that drives out the player's own.
+  const push = (k) => {
+    const there = unitsAt(s, k);
+    return there.length ? (there[0].owner === p ? -15 : 15) : 0;
+  };
   const score = (k) => {
     const far = maps.reduce((a, m) => a + Math.min(dist(m, k), 6), 0);
     const near = foeCities.length ? Math.min(...foeCities.map((c) => hexDistance(c.hex, k))) : 9;
-    return far * 10 - near;
+    return far * 10 - near + push(k);
   };
   const ranked = cands.slice().sort((a, b) => score(b) - score(a));
   const pick = yield* choose(g, p, {
     kind: 'pick_hex',
     title: 'Barbarians appear!',
-    text: 'Choose where the Barbarian Settlement is placed.',
+    text: displace
+      ? 'Choose where the Barbarian Settlement is placed. Any units on that space retreat to an adjacent space.'
+      : 'Choose where the Barbarian Settlement is placed.',
     options: ranked.map((k) => ({ id: k, label: k, hex: k })),
     default: ranked[0],
   });
   const hex = ranked.includes(pick) ? pick : ranked[0];
+  if (unitsAt(s, hex).length) yield* retreatUnits(g, hex);
   const city = addCity(s, BARBARIAN, hex, 'neutral');
   addUnitTo(g, BARBARIAN, 'infantry', hex);
   g.emit({ type: 'barbarians', kind: 'spawn', hex });
@@ -68,9 +135,7 @@ export function* placeBarbarianSettlement(g, p) {
 
 function* reinforceChosenCity(g, p) {
   const s = g.s;
-  const options = barbarianCities(s).filter(
-    (c) => armyAt(s, c.hex, BARBARIAN).length < STACK_LIMIT && unitsLeft(s, BARBARIAN, 'infantry') > 0,
-  );
+  const options = barbarianCities(s).filter((c) => hasRoom(s, c.hex, 'infantry') || cavalryAllowed(s, c.hex));
   if (!options.length) return;
   const maps = citiesOf(s, p).map((c) => bfs(s, c.hex, 8, landOnly(s)));
   const far = (c) => Math.min(...maps.map((m) => dist(m, c.hex)));
@@ -78,16 +143,29 @@ function* reinforceChosenCity(g, p) {
   const pick = yield* choose(g, p, {
     kind: 'pick_hex',
     title: 'Barbarians muster',
-    text: 'Choose a Barbarian city that receives another Infantry.',
+    text: 'Choose a Barbarian city that receives another Infantry. If it already has an Infantry, a Cavalry may take its place.',
     options: options.map((c) => ({ id: c.hex, label: c.hex, hex: c.hex })),
     default: options[0].hex,
   });
-  addBarbarianInfantry(g, options.find((c) => c.hex === pick) ? pick : options[0].hex);
-  g.emit({ type: 'barbarians', kind: 'reinforce', hex: pick });
+  const hex = options.some((c) => c.hex === pick) ? pick : options[0].hex;
+  let type = 'infantry';
+  if (cavalryAllowed(s, hex)) {
+    const horse = yield* confirm(g, p, {
+      kind: 'barbarian_cavalry',
+      title: 'Barbarian Cavalry',
+      text: 'This Barbarian city already has an Infantry, so it may get a Cavalry instead of another Infantry.',
+      yes: 'Place a Cavalry',
+      no: hasRoom(s, hex, 'infantry') ? 'Place an Infantry' : 'Place nothing',
+      default: false,
+    });
+    if (horse) type = 'cavalry';
+  }
+  addBarbarianUnit(g, hex, type);
+  g.emit({ type: 'barbarians', kind: 'reinforce', hex });
 }
 
-export function* barbarianSpawn(g, p) {
-  yield* placeBarbarianSettlement(g, p);
+export function* barbarianSpawn(g, p, opts = {}) {
+  yield* placeBarbarianSettlement(g, p, opts);
   yield* reinforceChosenCity(g, p);
 }
 
@@ -101,7 +179,7 @@ export function* barbarianMove(g, p) {
   const nearest = (k) => Math.min(...cityMaps.map((cm) => dist(cm.map, k)));
   refresh();
 
-  const hexes = [...new Set(s.units.filter((u) => u.owner === BARBARIAN && u.type === 'infantry').map((u) => u.hex))];
+  const hexes = [...new Set(s.units.filter((u) => u.owner === BARBARIAN && isArmy(u)).map((u) => u.hex))];
   const armies = hexes
     .filter((k) => nearest(k) <= 2)
     .map((k) => ({ from: k, d: nearest(k), ids: armyAt(s, k, BARBARIAN).map((u) => u.id) }))
@@ -129,24 +207,28 @@ export function* barbarianMove(g, p) {
     refresh();
   }
 
-  // Step 3: reinforce every Barbarian city within 2 land spaces of the active player's cities.
-  for (const c of barbarianCities(s)) {
-    if (nearest(c.hex) <= 2) addBarbarianInfantry(g, c.hex);
-  }
+  // Step 3: an Infantry (or, where one is already stationed, optionally a Cavalry instead) in every Barbarian city
+  // within 2 land spaces of the active player's cities.
+  const near = barbarianCities(s).filter((c) => nearest(c.hex) <= 2);
+  const horse = yield* chooseCavalryCities(g, p, near);
+  for (const c of near) addBarbarianUnit(g, c.hex, horse.has(c.id) && cavalryAllowed(s, c.hex) ? 'cavalry' : 'infantry');
 }
 
-/** Moves one Barbarian army a single space towards the nearest of the player's cities. */
-function* advanceBarbarianArmy(g, p, army, cityMaps) {
+/**
+ * Moves one Barbarian army a single space towards the nearest of the cities in `cityMaps`. With `auto` nobody is asked
+ * to choose a target or a space. Returns the space the army ends on, or null when it was wiped out.
+ */
+function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false } = {}) {
   const s = g.s;
   const from = army.from;
   // Units that already moved (or died) in this step are not part of the army any more.
   const group = army.ids.map((id) => unitById(s, id)).filter((u) => u && u.hex === from);
-  if (!group.length) return;
+  if (!group.length) return null;
   const dists = cityMaps.map((cm) => ({ cm, d: dist(cm.map, from) })).filter((x) => x.d < Infinity);
-  if (!dists.length) return;
+  if (!dists.length) return from;
   const best = Math.min(...dists.map((x) => x.d));
   const closest = dists.filter((x) => x.d === best);
-  const target = yield* choose(g, p, {
+  const target = auto ? closest[0].cm.city.id : yield* choose(g, p, {
     kind: 'pick_city',
     title: 'Barbarians advance',
     text: 'Several of your cities are equally close. Choose which one the Barbarians march on.',
@@ -159,8 +241,8 @@ function* advanceBarbarianArmy(g, p, army, cityMaps) {
     const enemy = unitsAt(s, n).some((u) => u.owner !== BARBARIAN) || (cityAt(s, n) && cityAt(s, n).owner !== BARBARIAN);
     return enemy || armyAt(s, n, BARBARIAN).length + group.length <= STACK_LIMIT;
   });
-  if (!open.length) return;
-  const dest = yield* choose(g, p, {
+  if (!open.length) return from;
+  const dest = auto ? open[0] : yield* choose(g, p, {
     kind: 'pick_hex',
     title: 'Barbarians advance',
     text: 'Choose which space the Barbarian army enters.',
@@ -180,6 +262,90 @@ function* advanceBarbarianArmy(g, p, army, cityMaps) {
     });
   } else {
     for (const u of group) u.hex = to;
+  }
+  const alive = group.find((u) => unitById(s, u.id));
+  return alive ? alive.hex : null;
+}
+
+const barbarianArmyHexes = (s) => [...new Set(s.units.filter((u) => u.owner === BARBARIAN && isArmy(u)).map((u) => u.hex))];
+
+/** Barbarian Incursion: every Barbarian army marches one space towards the nearest city of any player. */
+export function* barbarianIncursion(g, p) {
+  const s = g.s;
+  let cityMaps = [];
+  const refresh = () => {
+    cityMaps = s.cities.filter((c) => c.owner !== BARBARIAN).map((c) => ({ city: c, map: bfs(s, c.hex, 12, landOnly(s)) }));
+  };
+  const nearest = (k) => Math.min(...cityMaps.map((cm) => dist(cm.map, k)));
+  refresh();
+  const armies = barbarianArmyHexes(s)
+    .map((k) => ({ from: k, d: nearest(k), ids: armyAt(s, k, BARBARIAN).map((u) => u.id) }))
+    .filter((a) => a.d < Infinity)
+    .sort((a, b) => a.d - b.d);
+  if (!armies.length) g.log('No Barbarian army is in reach of a city.');
+  for (const army of armies) {
+    yield* advanceBarbarianArmy(g, p, army, cityMaps, { auto: true });
+    refresh();
+  }
+}
+
+/** Feuding Warlords: every Barbarian army next to a player's army attacks the weakest one it borders. */
+export function* barbarianFeud(g) {
+  const s = g.s;
+  const fought = new Set();
+  for (;;) {
+    let strike = null;
+    for (const from of barbarianArmyHexes(s).sort()) {
+      const group = armyAt(s, from, BARBARIAN).filter((u) => !fought.has(u.id));
+      if (!group.length) continue;
+      const targets = nbrs(s, from)
+        .filter((n) => isLand(s, n))
+        .map((n) => ({ to: n, defenders: unitsAt(s, n).filter((u) => u.owner !== BARBARIAN && isArmy(u)) }))
+        .filter((t) => t.defenders.length)
+        .sort((a, b) => a.defenders.length - b.defenders.length || (a.to < b.to ? -1 : 1));
+      if (targets.length) {
+        strike = { from, group, ...targets[0] };
+        break;
+      }
+    }
+    if (!strike) return;
+    for (const u of strike.group) fought.add(u.id);
+    const defender = strike.defenders[0].owner;
+    g.emit({ type: 'barbarians', kind: 'move', from: strike.from, hex: strike.to });
+    g.log(`Barbarian warlords strike ${g.name(defender)} at ${strike.to}.`);
+    yield* battle(g, {
+      domain: 'land', attacker: BARBARIAN, defender, hex: strike.to, from: strike.from,
+      units: strike.group.map((u) => u.id), settlers: [], carried: [], landed: false, inPlace: false,
+    });
+  }
+}
+
+/**
+ * Scourge of the Steppes: Barbarian Cavalry appears on the known land farthest from the largest city and rides on it.
+ * They start at least 3 spaces from every city, so they cannot take one on the turn they appear.
+ */
+export function* steppeScourge(g, p) {
+  const s = g.s;
+  const seat = (c) => (c.owner - p + s.players.length) % s.players.length;
+  const cities = s.cities.filter((c) => c.owner !== BARBARIAN);
+  const target = cities.slice().sort((a, b) => citySize(b) - citySize(a) || seat(a) - seat(b))[0];
+  const horsemen = Math.min(2, unitsLeft(s, BARBARIAN, 'cavalry'));
+  if (!target || horsemen <= 0) return;
+  const map = bfs(s, target.hex, 99, landOnly(s));
+  const reach = (k) => Math.min(...cities.map((c) => hexDistance(c.hex, k)));
+  const free = allHexKeys(s).filter((k) => isLand(s, k) && !cityAt(s, k) && !unitsAt(s, k).length && dist(map, k) < Infinity);
+  const safe = free.filter((k) => reach(k) >= 3);
+  const origin = (safe.length ? safe : free).sort((a, b) => dist(map, b) - dist(map, a) || (a < b ? -1 : 1))[0];
+  if (!origin) return;
+  for (let i = 0; i < horsemen; i++) addBarbarianUnit(g, origin, 'cavalry');
+  g.emit({ type: 'barbarians', kind: 'spawn', hex: origin });
+  g.log('Barbarian horsemen ride in from the steppes!');
+  if (!safe.length) return;
+  let army = { from: origin, ids: armyAt(s, origin, BARBARIAN).map((u) => u.id) };
+  for (let step = 0; step < 2; step++) {
+    const at = yield* advanceBarbarianArmy(g, p, army, [{ city: target, map }], { auto: true });
+    if (!at || at === army.from) break;
+    army = { from: at, ids: army.ids };
   }
 }
 

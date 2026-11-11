@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import { HEX_H, HEX_SCALE as K, HEX_TEX_W, HEX_W, H, LAYOUT, PLAYER_COLORS, S, W } from './theme.js';
 import { icon, tip, txt } from './widgets.js';
-import { textureForTerrain } from './textures.js';
+import { textureForTerrain, unitTexture } from './textures.js';
 import { cityAt, citySize } from '../engine/queries.js';
 import { BARBARIAN } from '../engine/data/constants.js';
 import { DIRS } from '../engine/hex.js';
@@ -217,12 +217,12 @@ export class MapView {
       const units = s.units.filter((u) => u.hex === h.k && !hide.has(u.id));
       const groups = [];
       for (const owner of OWNERS) {
-        for (const type of ['ship', 'infantry', 'settler']) {
+        for (const type of ['ship', 'infantry', 'cavalry', 'settler']) {
           const n = units.filter((u) => u.owner === owner && u.type === type).length;
           if (n) groups.push({ owner, type, n });
         }
       }
-      const unitKey = (gp) => (gp.type === 'infantry' ? (gp.owner === BARB ? 'u_barb' : 'u_infantry') : gp.type === 'settler' ? 'u_settler' : 'u_ship');
+      const unitKey = (gp) => unitTexture(gp.type, gp.owner);
       if (city) {
         const owner = city.owner;
         c.add(icon(this.scene, 'b_city', 0, -12 * K, 46 * K).setTint(PLAYER_COLORS[owner]));
@@ -235,14 +235,18 @@ export class MapView {
           c.add(icon(this.scene, `b_${type}`, bx, 20.5 * K, 18 * K).setTint(PLAYER_COLORS[who]));
         });
         city.wonders.forEach((w, i) => c.add(icon(this.scene, 'ic_wonder', (26 + i * 2) * K, (-31 + i * 12) * K, 17 * K)));
+        const crowded = groups.length > 2; // Infantry, Cavalry and Settlers in one city
         groups.forEach((gp, i) => {
-          const gx = (i - (groups.length - 1) / 2) * 26 * K;
-          this.piece(c, unitKey(gp), gx, 38 * K, 22 * K, gp.owner, gp.n);
+          const gx = (i - (groups.length - 1) / 2) * (crowded ? 22 : 26) * K;
+          this.piece(c, unitKey(gp), gx, 38 * K, (crowded ? 20 : 22) * K, gp.owner, gp.n);
         });
       } else {
         const cargo = groups.filter((gp) => gp.type !== 'ship');
         const ships = groups.filter((gp) => gp.type === 'ship');
-        const row = (list, yy, w) => list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * (w + 6), yy, w, gp.owner, gp.n));
+        const row = (list, yy, w) => {
+          const size = list.length > 2 ? w * 0.8 : w;
+          list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * (size + 6), yy, size, gp.owner, gp.n));
+        };
         if (ships.length && cargo.length) {
           row(ships, -8 * K, 27 * K);
           row(cargo, 20 * K, 23 * K);
@@ -395,8 +399,7 @@ export class MapView {
       kinds.set(key, { ...u, n: (kinds.get(key)?.n || 0) + 1 });
     }
     [...kinds.values()].forEach((u, i, list) => {
-      const key = u.type === 'infantry' ? (u.owner === BARB ? 'u_barb' : 'u_infantry') : u.type === 'settler' ? 'u_settler' : 'u_ship';
-      this.piece(c, key, (i - (list.length - 1) / 2) * 25 * K, 0, 28 * K, u.owner, u.n);
+      this.piece(c, unitTexture(u.type, u.owner), (i - (list.length - 1) / 2) * 25 * K, 0, 28 * K, u.owner, u.n);
     });
     this.fxLayer.add(c);
     return new Promise((resolve) => {

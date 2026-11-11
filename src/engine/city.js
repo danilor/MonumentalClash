@@ -1,5 +1,5 @@
 // City actions: found, collect, construct, wonders, recruit, happiness, influence, taxation and friends.
-import { BARBARIAN, BUILDINGS, BUILDING_ADVANCE, BUILDING_COST, STACK_LIMIT, UNIT_COST } from './data/constants.js';
+import { BARBARIAN, BUILDINGS, BUILDING_ADVANCE, BUILDING_COST, RECRUIT_TYPES, STACK_LIMIT, UNIT_COST } from './data/constants.js';
 import { ADVANCES, GROUPS } from './data/advances.js';
 import { WONDERS } from './data/wonders.js';
 import { roll } from './rng.js';
@@ -10,7 +10,7 @@ import {
 } from './queries.js';
 import { addCity } from './state.js';
 import {
-  addUnitTo, applyPayment, canPay, drawObjectiveCard, fail, gainRes, moodUp, planPayment, removeUnits,
+  addUnitTo, applyPayment, canPay, drawObjectiveCard, fail, gainRes, modifierCard, moodUp, planPayment, removeUnits, useCard,
 } from './core.js';
 import { choose, confirm } from './prompts.js';
 import { advanceBlocked, gainAdvance } from './advance.js';
@@ -68,6 +68,7 @@ function* lighthouseShip(g, city) {
 export function* finishActivation(g, city) {
   const t = g.s.turn;
   const n = t.activated[city.id] || 0;
+  delete city.corrupt; // Corrupt Officials: the city is clean again once it has been activated
   if (n >= 1) {
     if (effMood(g.s, city) === 'angry') t.angryExtra[city.id] = true;
     else {
@@ -110,14 +111,17 @@ export function* foundCity(g, a) {
 // ----------------------------------------------------------------- collect
 function resourcesFrom(s, p, city, terrain) {
   const gardens = cityHasWonder(city, 'great_gardens');
+  const { drought, locusts } = s.flags;
   switch (terrain) {
-    case 'plains':
+    case 'plains': {
       if (!hasAdv(s, p, 'farming')) return [];
-      return gardens ? ['food', 'wood', 'ore', 'ideas', 'gold'] : ['food'];
+      const all = gardens ? ['food', 'wood', 'ore', 'ideas', 'gold'] : ['food'];
+      return locusts ? all.filter((r) => r !== 'food') : all;
+    }
     case 'forest':
-      return hasAdv(s, p, 'farming') ? ['wood'] : [];
+      return drought || !hasAdv(s, p, 'farming') ? [] : ['wood'];
     case 'mountain':
-      return hasAdv(s, p, 'mining') ? ['ore'] : [];
+      return drought || !hasAdv(s, p, 'mining') ? [] : ['ore'];
     case 'barren':
       return hasAdv(s, p, 'irrigation') ? ['food'] : [];
     case 'sea': {
@@ -134,6 +138,7 @@ function resourcesFrom(s, p, city, terrain) {
 
 /** Every space a city may collect from: [{ hex, opts:[resource], sea, far }]. */
 export function collectCandidates(s, p, city) {
+  if (city.corrupt) return [];
   const out = new Map();
   const consider = (k, far) => {
     if (out.has(k)) return;
@@ -164,6 +169,8 @@ export function* collectAction(g, a) {
   const t = s.turn;
   const city = ownCity(g, a.city, p);
   checkActivatable(g, city);
+  if (city.corrupt) fail('This city is corrupt: it cannot Collect until another action has activated it.');
+  const surge = modifierCard(s, p, a, 'collect');
   const free = !!a.free;
   if (free) {
     if (!hasAdv(s, p, 'economic_liberty')) fail('You need Economic Liberty.');
@@ -172,7 +179,7 @@ export function* collectAction(g, a) {
   } else if (t.econLib) {
     fail('You used Economic Liberty: no other Collect this turn.');
   }
-  const cap = cityCapacity(s, city);
+  const cap = cityCapacity(s, city) + (surge ? 2 : 0);
   const byHex = new Map(collectCandidates(s, p, city).map((c) => [c.hex, c]));
   const picks = a.picks || [];
   if (!picks.length) fail('Choose at least one space to collect from.');
@@ -197,6 +204,7 @@ export function* collectAction(g, a) {
   if (seas > 1) fail('You can only collect from one Sea space.');
   if (far > farCollectLimit(s, p)) fail('Husbandry cannot reach that far.');
 
+  if (surge) useCard(g, p, surge);
   if (free) {
     applyPayment(g, p, planPayment(s, p, { mood: 1 }));
     t.econLib = true;
@@ -213,7 +221,13 @@ export function* collectAction(g, a) {
     t.used.publicEducation = true;
     gain.ideas = (gain.ideas || 0) + 1;
   }
+  const philosopher = s.players[p].philosopher || 0;
+  if (philosopher && !t.used.philosopher) {
+    t.used.philosopher = true;
+    gain.ideas = (gain.ideas || 0) + philosopher;
+  }
   const got = gainRes(g, p, gain);
+  if (got.gold) t.goldCollected = true;
   if (gain.mood) got.mood = gain.mood;
   g.emit({ type: 'collect', player: p, city: city.id, picks: resolved, gain: got });
   const word = ([r, n]) => (r === 'mood' ? plural(n, 'Mood token') : `${n} ${r === 'ideas' && n === 1 ? 'idea' : r}`);
@@ -259,8 +273,15 @@ function* dogmaAdvance(g, p) {
   yield* gainAdvance(g, p, id);
 }
 
-/** Shared by the Construct action and the City Boom card. */
-export function* performConstruct(g, p, city, building, { portHex = null, templeBonus = 'mood', cost = null, spendAction = true } = {}) {
+/** Rapid Construction: `price` with 1 resource waived (the one asked for, else the one the player holds least of). */
+export function rapidPrice(s, p, price, waive) {
+  const owed = Object.keys(price).filter((r) => price[r] > 0).sort((x, y) => s.players[p].res[x] - s.players[p].res[y]);
+  const waived = owed.includes(waive) ? waive : owed[0];
+  return { price: { ...price, [waived]: price[waived] - 1 }, waived };
+}
+
+/** Shared by the Construct action and the City Boom card. `rapid` (Rapid Construction): { card, waive } for 1 less resource. */
+export function* performConstruct(g, p, city, building, { portHex = null, templeBonus = 'mood', cost = null, spendAction = true, rapid = null } = {}) {
   const s = g.s;
   const t = s.turn;
   const why = constructBlocked(s, p, city, building);
@@ -276,8 +297,10 @@ export function* performConstruct(g, p, city, building, { portHex = null, temple
     price = { ...price, food: 0 };
     stateReligion = true;
   }
+  if (rapid) price = rapidPrice(s, p, price, rapid.waive).price;
   const plan = planPayment(s, p, price);
-  if (!plan) fail('A building costs 1 Food, 1 Wood and 1 Ore.');
+  if (!plan) fail(rapid ? 'You cannot afford that, even with Rapid Construction.' : 'A building costs 1 Food, 1 Wood and 1 Ore.');
+  if (rapid) useCard(g, p, rapid.card);
   if (spendAction) g.spendAction();
   applyPayment(g, p, plan);
   if (stateReligion) t.used.stateReligion = true;
@@ -293,10 +316,13 @@ export function* performConstruct(g, p, city, building, { portHex = null, temple
 }
 
 export function* constructAction(g, a) {
+  const s = g.s;
   const p = g.cur;
   const city = ownCity(g, a.city, p);
   checkActivatable(g, city);
-  yield* performConstruct(g, p, city, a.building, { portHex: a.port, templeBonus: a.templeBonus });
+  const card = modifierCard(s, p, a, 'construct');
+  const rapid = card ? { card, waive: a.waive } : null;
+  yield* performConstruct(g, p, city, a.building, { portHex: a.port, templeBonus: a.templeBonus, rapid });
   yield* finishActivation(g, city);
 }
 
@@ -335,7 +361,7 @@ export function* wonderAction(g, a) {
 // ----------------------------------------------------------------- recruit
 export function recruitCost(s, p, units, { draft = 0, sanitation = 0 } = {}) {
   const cost = { food: 0, wood: 0, ore: 0, mood: 0 };
-  for (const type of ['infantry', 'settler', 'ship']) {
+  for (const type of RECRUIT_TYPES) {
     let n = units[type] || 0;
     if (type === 'infantry') n -= draft;
     if (type === 'settler') n -= sanitation;
@@ -363,12 +389,13 @@ export function takeUnit(g, p, type, hex, reserved) {
 
 export function recruitBlocked(g, p, city, a) {
   const s = g.s;
-  const units = { infantry: a.units?.infantry | 0, settler: a.units?.settler | 0, ship: a.units?.ship | 0 };
-  const total = units.infantry + units.settler + units.ship;
+  const units = Object.fromEntries(RECRUIT_TYPES.map((type) => [type, Math.max(0, a.units?.[type] | 0)]));
+  const total = units.infantry + units.cavalry + units.settler + units.ship;
   if (total <= 0) return { why: 'Choose at least one unit to recruit.' };
   const cap = cityCapacity(s, city);
   if (total > cap) return { why: `This city can recruit at most ${plural(cap, 'unit')}.` };
   if (units.ship && !isPortCity(city)) return { why: 'Ships need a city with a Port.' };
+  if (units.cavalry && !hasBuilding(city, 'market')) return { why: 'Cavalry need a city with a Market.' };
   const draft = a.draft ? 1 : 0;
   const sanitation = a.sanitation ? 1 : 0;
   if (draft && (!hasAdv(s, p, 'draft') || units.infantry < 1)) return { why: 'Draft needs the Draft Advance and an Infantry to recruit.' };
@@ -376,9 +403,9 @@ export function recruitBlocked(g, p, city, a) {
   const cost = recruitCost(s, p, units, { draft, sanitation });
   const plan = planPayment(s, p, cost);
   if (!plan) return { why: 'You cannot afford that.' };
-  const placed = units.infantry;
+  const placed = units.infantry + units.cavalry;
   if (armyAt(s, city.hex, p).length + placed > STACK_LIMIT) return { why: 'A space holds at most 4 Army units.' };
-  for (const type of ['infantry', 'settler', 'ship']) {
+  for (const type of RECRUIT_TYPES) {
     const over = units[type] - Math.max(0, unitsLeft(s, p, type));
     if (over <= 0) continue;
     const there = type === 'ship' ? city.port : city.hex;
@@ -401,7 +428,7 @@ export function* recruitAction(g, a) {
   applyPayment(g, p, plan);
   const reserved = new Set();
   const newShips = [];
-  for (const type of ['settler', 'infantry', 'ship']) {
+  for (const type of ['settler', 'infantry', 'cavalry', 'ship']) {
     for (let i = 0; i < units[type]; i++) {
       const u = takeUnit(g, p, type, type === 'ship' ? city.port : city.hex, reserved);
       reserved.add(u.id);
@@ -409,7 +436,7 @@ export function* recruitAction(g, a) {
     }
   }
   g.emit({ type: 'recruit', player: p, city: city.id, units });
-  g.log(`${g.name(p)} recruits ${countList(units, { infantry: ['Infantry', 'Infantry'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] })}.`);
+  g.log(`${g.name(p)} recruits ${countList(units, { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] })}.`);
 
   if (draft) {
     t.draftUses += 1;
@@ -423,7 +450,7 @@ export function* recruitAction(g, a) {
       g.log(`${g.name(p)} regains 1 ${pickRes} (Medicine).`);
     }
   }
-  if (hasAdv(s, p, 'nationalism') && units.infantry + units.ship > 0) {
+  if (hasAdv(s, p, 'nationalism') && units.infantry + units.cavalry + units.ship > 0) {
     gainRes(g, p, a.nationalism === 'culture' ? { culture: 1 } : { mood: 1 });
   }
 
@@ -555,6 +582,7 @@ export function* taxationAction(g, a) {
   applyPayment(g, p, plan);
   t.used.taxation = true;
   gainRes(g, p, gain);
+  if (gain.gold) t.goldCollected = true;
   g.log(`${g.name(p)} collects taxes.`);
   yield* [];
 }
@@ -591,13 +619,14 @@ export function canBoostInfluence(s, p, acting, target) {
   return !isInfluenced(acting) && !blocksBoost(s, p, target);
 }
 
-export function influenceBlocked(s, p, acting, target, rangeBoost = 0) {
+/** `rangeBoost` is the paid range (Culture); `extraRange` is the free +1 of Soft Power, which no defense can block. */
+export function influenceBlocked(s, p, acting, target, rangeBoost = 0, extraRange = 0) {
   const t = s.turn;
   if (t && t.influenceSuccess) return 'Only one Influence Culture success is possible per turn.';
   if (isInfluenced(acting) && target.id !== acting.id) return 'An influenced city can only target itself.';
   if (!influenceTypes(s, p, target).length) return 'That city has no Building you can influence.';
   if (rangeBoost > 0 && !canBoostInfluence(s, p, acting, target)) return 'You cannot boost this attempt.';
-  const range = citySize(acting) + rangeBoost;
+  const range = citySize(acting) + rangeBoost + extraRange;
   const d = revealedDistances(s, acting.hex, range);
   if (!d.has(target.hex)) return 'That city is out of range.';
   return null;
@@ -613,13 +642,15 @@ export function* influenceAction(g, a) {
   const free = !!a.free;
   if (free && (!hasAdv(s, p, 'arts') || t.used.arts)) fail('Arts can be used once per turn.');
   const rangeBoost = a.rangeBoost | 0;
-  const why = influenceBlocked(s, p, acting, target, rangeBoost);
+  const soft = modifierCard(s, p, a, 'influence');
+  const why = influenceBlocked(s, p, acting, target, rangeBoost, soft ? 1 : 0);
   if (why) fail(why);
   const types = influenceTypes(s, p, target);
   const building = types.includes(a.building) ? a.building : types[0];
   const upfront = (free ? 1 : 0) + rangeBoost;
   const plan = upfront ? planPayment(s, p, { culture: upfront }) : {};
   if (!plan) fail(`You need ${plural(upfront, 'Culture token')}.`);
+  if (soft) useCard(g, p, soft);
   if (free) t.used.arts = true;
   else g.spendAction();
   applyPayment(g, p, plan);

@@ -1,34 +1,43 @@
 // City dialogs: Construct, Recruit, Wonder, Happiness and Influence Culture.
-import { STACK_LIMIT } from '../engine/data/constants.js';
+import { BUILDINGS, STACK_LIMIT } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { ADVANCES } from '../engine/data/advances.js';
-import { cityCapacity, constructBlocked, happinessRoom, influenceBlocked, influenceTypes, recruitBlocked, recruitCost, wonderBlocked } from '../engine/city.js';
-import { canPay, planPayment } from '../engine/core.js';
-import { armyAt, citiesOf, citySize, hasAdv, isPortCity, seaNbrs, terrainOf } from '../engine/queries.js';
-import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, TERRAIN, TXT, costText } from './theme.js';
+import { cityCapacity, constructBlocked, happinessRoom, influenceBlocked, influenceTypes, rapidPrice, recruitBlocked, recruitCost, wonderBlocked } from '../engine/city.js';
+import { canPay, heldModifier, planPayment } from '../engine/core.js';
+import { TOP_EFFECTS } from '../engine/data/cards.js';
+import { armyAt, citiesOf, citySize, hasAdv, hasBuilding, isPortCity, seaNbrs, terrainOf } from '../engine/queries.js';
+import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TXT, costText } from './theme.js';
 import { Choice, Flow, confirmModal, optionModal } from './modals.js';
-import { Checkbox, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
+import { Button, Checkbox, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
 import { UNIT_NAME, ownerName } from './info.js';
 
-const BUILD_ORDER = ['academy', 'fortress', 'port', 'temple'];
-const BUILD_ICON = { academy: 'b_academy', fortress: 'b_fortress', port: 'b_port', temple: 'b_temple' };
+const BUILD_ICON = Object.fromEntries(BUILDINGS.map((b) => [b, `b_${b}`]));
 const STACK_DEPTH = 1100;
 
 const cityLine = (s, c) => `${TERRAIN[terrainOf(s, c.hex)]} city · size ${citySize(c)} · ${MOOD_NAME[c.mood]}`;
 
-/** Cities in range of `city` for Influence Culture: [{ target, types, boost }] with the least extra Culture needed. */
-export function influenceTargets(s, city, { free = false } = {}) {
+/**
+ * Cities in range of `city` for Influence Culture. `plain` is the fewest extra Culture tokens it takes on its own (null:
+ * out of reach); `soft` is the same with the free +1 range of the Soft Power `card` (null: no card, or still out of reach).
+ * `boost` is the cheaper of the two and `useCard` says whether that one needs the card.
+ */
+export function influenceTargets(s, city, { free = false, card = null } = {}) {
   const out = [];
+  const cheapest = (target, extra) => {
+    for (let boost = 0; boost <= 6; boost++) {
+      if (!canPay(s, 0, { culture: boost + (free ? 1 : 0) })) break;
+      if (influenceBlocked(s, 0, city, target, boost, extra) === null) return boost;
+    }
+    return null;
+  };
   for (const target of s.cities) {
     const types = influenceTypes(s, 0, target);
     if (!types.length) continue;
-    for (let boost = 0; boost <= 6; boost++) {
-      if (!canPay(s, 0, { culture: boost + (free ? 1 : 0) })) break;
-      if (influenceBlocked(s, 0, city, target, boost) === null) {
-        out.push({ target, types, boost });
-        break;
-      }
-    }
+    const plain = cheapest(target, 0);
+    const soft = card ? cheapest(target, 1) : null;
+    if (plain === null && soft === null) continue;
+    const useCard = soft !== null && (plain === null || soft < plain);
+    out.push({ target, types, plain, soft, boost: useCard ? soft : plain, useCard });
   }
   return out;
 }
@@ -76,16 +85,40 @@ export function stepRow(f, { img, tint, label, caption, value, min, max, onChang
 }
 
 // ---------------------------------------------------------------- construct
-function constructDialog(ctl, city) {
+/** `opts.rapid` / `opts.waive` carry the Rapid Construction choices across the reloads of this dialog. */
+function constructDialog(ctl, city, opts = {}) {
   const s = ctl.g.s;
+  const card = heldModifier(s, 0, 'construct');
+  const rapid = !!card && !!opts.rapid;
   const f = new Flow(ctl.scene, 580, { top: 80 });
   f.text('A building costs 1 Food, 1 Wood and 1 Ore and uses one action. It makes the city one size larger.', { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
   let modal = null;
   let err = null;
-  const price = (b) => ({ food: b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
+  const base = (b) => ({ food: b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
+  const price = (b) => (rapid ? rapidPrice(s, 0, base(b), opts.waive).price : base(b));
+  if (card) {
+    const again = (extra) => {
+      modal.close();
+      constructDialog(ctl, city, { ...opts, ...extra });
+    };
+    f.add(new Checkbox(ctl.scene, f.pad, f.y, `${card.name}: the building costs 1 resource less`, rapid, (v) => again({ rapid: v }), { w: f.inner, size: 13, tip: TOP_EFFECTS[card.top].text }));
+    f.y += 28;
+    if (rapid) {
+      const waived = rapidPrice(s, 0, base('academy'), opts.waive).waived;
+      f.add(txt(ctl.scene, f.pad + 28, f.y + 13, 'Free resource:', { size: 13, color: TXT.muted, origin: [0, 0.5] }));
+      ['food', 'wood', 'ore'].forEach((r, i) => {
+        f.add(new Button(ctl.scene, f.pad + 136 + i * 86, f.y, 78, 26, RES[r].name, () => again({ waive: r }), { size: 13, style: r === waived ? 'primary' : 'normal' }));
+      });
+      f.y += 34;
+    }
+  }
   const pick = async (b) => {
     const action = { type: 'construct', city: city.id, building: b };
+    if (rapid) {
+      action.card = card.id;
+      if (opts.waive) action.waive = opts.waive;
+    }
     if (b === 'temple') {
       const bonus = await optionModal(ctl, {
         title: 'Temple blessing',
@@ -111,7 +144,7 @@ function constructDialog(ctl, city) {
           options: [...seas.map((hex) => ({ id: hex, label: 'Sea space', hex, tag: 'Port here' })), { id: '__cancel', label: 'Cancel' }],
         });
         if (k === '__cancel' || k == null) {
-          constructDialog(ctl, city);
+          constructDialog(ctl, city, opts);
           return;
         }
         ctl.act({ ...action, port: k });
@@ -120,7 +153,7 @@ function constructDialog(ctl, city) {
     }
     submit(ctl, modal, action, err);
   };
-  const rows = BUILD_ORDER.map((b) => {
+  const rows = BUILDINGS.map((b) => {
     const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b)) ? null : `You need ${costText(price(b))}.`);
     const note = b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? ' State Religion: the Food is free this turn.' : '';
     const row = new Choice(ctl.scene, f.pad, f.y, f.inner, {
@@ -153,10 +186,13 @@ function recruitDialog(ctl, city) {
   const f = new Flow(ctl.scene, 580, { top: 80 });
   f.text(`This city can recruit up to ${cap} unit${cap === 1 ? '' : 's'} in one action.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
-  const count = { infantry: 0, settler: 0, ship: 0 };
+  const count = { infantry: 0, cavalry: 0, settler: 0, ship: 0 };
   let update = () => {};
+  const army = Math.max(0, Math.min(cap, STACK_LIMIT - armyAt(s, city.hex, 0).length));
+  const market = hasBuilding(city, 'market');
   const kinds = [
-    ['infantry', 'u_infantry', '1 Food + 1 Ore', Math.max(0, Math.min(cap, STACK_LIMIT - armyAt(s, city.hex, 0).length))],
+    ['infantry', 'u_infantry', '1 Food + 1 Ore', army],
+    ['cavalry', 'u_cavalry', market ? '1 Food + 1 Wood' : '1 Food + 1 Wood (this city needs a Market)', market ? army : 0],
     ['settler', 'u_settler', '2 Food', cap],
     ['ship', 'u_ship', port ? '2 Wood, appears on the Port\'s sea space' : '2 Wood (this city needs a Port)', port ? cap : 0],
   ];
@@ -178,7 +214,7 @@ function recruitDialog(ctl, city) {
   };
   if (hasAdv(s, 0, 'draft')) addOption('draft', `Draft: pay ${hasAdv(s, 0, 'civil_liberties') ? 2 : 1} Mood instead of the resources for one Infantry`, 'Draft lets you pay Mood tokens in place of the Food and Ore of one Infantry.');
   if (hasAdv(s, 0, 'sanitation')) addOption('sanitation', 'Sanitation: pay 1 Mood instead of the Food for one Settler', 'Sanitation lets you pay a Mood token in place of the 2 Food of one Settler.');
-  if (hasAdv(s, 0, 'nationalism')) addOption('nationalism', 'Nationalism: take the bonus as Culture instead of Mood', 'Recruiting Infantry or Ships earns a token. Pick which one.');
+  if (hasAdv(s, 0, 'nationalism')) addOption('nationalism', 'Nationalism: take the bonus as Culture instead of Mood', 'Recruiting Infantry, Cavalry or Ships earns a token. Pick which one.');
   f.gap(2);
   const costLabel = txt(ctl.scene, f.pad, f.y + 11, 'Cost', { size: 13, color: TXT.muted, origin: [0, 0.5] });
   f.add(costLabel);
@@ -191,7 +227,8 @@ function recruitDialog(ctl, city) {
   let action = null;
   update = () => {
     const units = { ...count };
-    const total = units.infantry + units.settler + units.ship;
+    const total = units.infantry + units.cavalry + units.settler + units.ship;
+    const fighters = units.infantry + units.cavalry + units.ship;
     if (opt.draft) {
       opt.draft.lock(units.infantry < 1);
       if (units.infantry < 1) opt.draft.set(false);
@@ -200,11 +237,11 @@ function recruitDialog(ctl, city) {
       opt.sanitation.lock(units.settler < 1);
       if (units.settler < 1) opt.sanitation.set(false);
     }
-    if (opt.nationalism) opt.nationalism.lock(units.infantry + units.ship < 1);
+    if (opt.nationalism) opt.nationalism.lock(fighters < 1);
     action = { type: 'recruit', city: city.id, units };
     if (opt.draft && opt.draft.checked) action.draft = true;
     if (opt.sanitation && opt.sanitation.checked) action.sanitation = true;
-    if (opt.nationalism && opt.nationalism.checked && units.infantry + units.ship > 0) action.nationalism = 'culture';
+    if (opt.nationalism && opt.nationalism.checked && fighters > 0) action.nationalism = 'culture';
     const chk = recruitBlocked(g, 0, city, action);
     const cost = chk.plan ? chk.plan : recruitCost(s, 0, units, { draft: action.draft ? 1 : 0, sanitation: action.sanitation ? 1 : 0 });
     if (costRow) costRow.destroy();
@@ -335,25 +372,29 @@ function happinessDialog(ctl, city) {
 // ---------------------------------------------------------------- influence
 async function influenceDialog(ctl, city) {
   const s = ctl.g.s;
-  const targets = influenceTargets(s, city);
+  const card = heldModifier(s, 0, 'influence');
+  const targets = influenceTargets(s, city, { card });
   if (!targets.length) {
     ctl.toast(s.turn.influenceSuccess ? 'Only one Influence success is possible per turn.' : 'No city in range has a building you can influence.', 'error');
     return;
   }
   const byId = new Map(targets.map((x) => [x.target.id, x]));
   const range = citySize(city);
+  const tagOf = ({ boost, useCard }) => (useCard ? (boost ? `Card, +${boost} Culture` : 'With card') : boost ? `+${boost} Culture` : 'In range');
   const id = await ctl.mapPick({
     title: 'Influence Culture',
-    text: `Click the city you want to influence. This city reaches ${range} space${range === 1 ? '' : 's'}; the tag on each city shows how many extra Culture tokens it takes to reach it.`,
+    text: `Click the city you want to influence. This city reaches ${range} space${range === 1 ? '' : 's'}${card ? `, or ${range + 1} if you play ${card.name}` : ''}; the tag on each city shows how many extra Culture tokens it takes to reach it.`,
     options: [
-      ...targets.map(({ target, boost }) => ({ id: target.id, label: `${ownerName(ctl.g, target.owner)} city`, hex: target.hex, tag: boost ? `+${boost} Culture` : 'In range' })),
+      ...targets.map((e) => ({ id: e.target.id, label: `${ownerName(ctl.g, e.target.owner)} city`, hex: e.target.hex, tag: tagOf(e) })),
       { id: '__cancel', label: 'Cancel' },
     ],
   });
   if (id == null || id === '__cancel') return;
   const entry = byId.get(id);
   if (!entry) return;
-  const { target, types, boost } = entry;
+  const { target, types } = entry;
+  let useCard = entry.useCard;
+  const boostNow = () => (useCard ? entry.soft : entry.plain);
   const f = new Flow(ctl.scene, 580, { top: 80 });
   f.text('Roll one die: a 5 or 6 wins over a building in that city. If the roll falls short you may spend Culture tokens to make up the difference. Only one success per turn.', { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
@@ -380,10 +421,19 @@ async function influenceDialog(ctl, city) {
       f.y += row.h + 6;
     }
   } else f.text(`Target: ${BUILDING_NAME[building]} in the ${ownerName(ctl.g, target.owner).toLowerCase()} city.`, { bold: true, gap: 6 });
-  let arts = null;
-  const artsOk = hasAdv(s, 0, 'arts') && !s.turn.used.arts && canPay(s, 0, { culture: 1 + boost });
   let update = () => {};
-  if (artsOk) {
+  let softBox = null;
+  if (card && entry.soft !== null && entry.soft !== entry.plain) {
+    softBox = new Checkbox(ctl.scene, f.pad, f.y, `${card.name}: reach 1 space farther, for free (the card is used up)`, useCard, (v) => {
+      useCard = v;
+      update();
+    }, { w: f.inner, size: 13, tip: TOP_EFFECTS[card.top].text });
+    softBox.lock(entry.plain === null);
+    f.add(softBox);
+    f.y += 28;
+  }
+  let arts = null;
+  if (hasAdv(s, 0, 'arts') && !s.turn.used.arts && canPay(s, 0, { culture: 1 + entry.boost })) {
     arts = new Checkbox(ctl.scene, f.pad, f.y, 'Arts: make it a free action, for 1 Culture token', false, () => update(), { w: f.inner, size: 13, tip: 'Arts lets you try Influence Culture without using an action, once per turn.' });
     f.add(arts);
     f.y += 28;
@@ -392,15 +442,23 @@ async function influenceDialog(ctl, city) {
   const err = f.text(' ', { size: 13, color: TXT.bad, center: true, gap: 4 });
   let modal = null;
   update = () => {
+    const boost = boostNow();
+    if (arts) {
+      const room = canPay(s, 0, { culture: 1 + boost });
+      arts.lock(!room);
+      if (!room) arts.set(false);
+    }
     const upfront = boost + (arts && arts.checked ? 1 : 0);
-    costNote.setText(`Cost: ${arts && arts.checked ? 'no action' : '1 action'}${upfront ? `, ${upfront} Culture token${upfront === 1 ? '' : 's'}` : ''}.`);
+    costNote.setText(`Cost: ${arts && arts.checked ? 'no action' : '1 action'}${upfront ? `, ${upfront} Culture token${upfront === 1 ? '' : 's'}` : ''}${useCard ? `, ${card.name}` : ''}.`);
   };
   f.buttons([
     {
       label: 'Roll the die', style: 'primary', w: 170,
       fn: () => {
         const action = { type: 'influence', city: city.id, target: target.id, building };
+        const boost = boostNow();
         if (boost) action.rangeBoost = boost;
+        if (useCard) action.card = card.id;
         if (arts && arts.checked) action.free = true;
         submit(ctl, modal, action, err);
       },

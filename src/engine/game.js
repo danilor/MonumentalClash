@@ -2,8 +2,8 @@
 import { BARBARIAN, MAIN_ACTIONS_PER_TURN, ROUNDS_PER_AGE } from './data/constants.js';
 import { createState, upgradeState } from './state.js';
 import { RuleError, clampResources, fail, gainRes } from './core.js';
-import { hasAdv, nextSeat, revealedDistances, turnOrder } from './queries.js';
-import { choose } from './prompts.js';
+import { cityById, hasAdv, hasBuilding, nextSeat, revealedDistances, turnOrder } from './queries.js';
+import { choose, confirm } from './prompts.js';
 import { plural } from './text.js';
 import { advanceAction } from './advance.js';
 import {
@@ -16,6 +16,7 @@ import {
   absolutePowerAbility, barteringAbility, forcedLaborAbility, greatLibraryAbility, greatStatueAbility, theatersAbility,
 } from './abilities.js';
 import { statusPhase } from './status.js';
+import { endRound } from './worldEvents.js';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 export const roman = (n) => ROMAN[n] || String(n);
@@ -36,39 +37,68 @@ export function newTurn(player) {
     influenceSuccess: false,
     draftUses: 0,
     forcedLabor: false,
+    goldCollected: false,
   };
 }
 
-/** Trade routes: each Settler/Ship pairs with a different enemy city (not Angry) within 2 revealed spaces. Max 4. */
+/**
+ * Trade routes: each Settler/Ship pairs with a different enemy city (not Angry) within 2 revealed spaces. Max 4.
+ * Cities without a Market come first, so a route that pays an opponent's Market is only used when it adds to the count.
+ */
 export function tradeRoutes(s, p) {
   if (!hasAdv(s, p, 'trade_routes')) return [];
-  const foes = s.cities.filter((c) => c.owner !== p && c.owner !== BARBARIAN && c.mood !== 'angry');
+  const foes = s.cities
+    .filter((c) => c.owner !== p && c.owner !== BARBARIAN && c.mood !== 'angry')
+    .sort((a, b) => hasBuilding(a, 'market') - hasBuilding(b, 'market'));
   const mine = s.units.filter((u) => u.owner === p && (u.type === 'settler' || u.type === 'ship'));
   const near = new Map(mine.map((u) => [u.id, revealedDistances(s, u.hex, 2)]));
+  // Pairs are built city by city: a city that gets a partner keeps one, so earlier cities are never given up.
   const holder = new Map();
-  const attempt = (u, seen) => {
-    for (const c of foes) {
-      if (seen.has(c.id) || !near.get(u.id).has(c.hex)) continue;
-      seen.add(c.id);
-      const prev = holder.get(c.id);
-      if (!prev || attempt(mine.find((x) => x.id === prev), seen)) {
-        holder.set(c.id, u.id);
+  const attempt = (c, seen) => {
+    for (const u of mine) {
+      if (seen.has(u.id) || !near.get(u.id).has(c.hex)) continue;
+      seen.add(u.id);
+      const prev = holder.get(u.id);
+      if (!prev || attempt(prev, seen)) {
+        holder.set(u.id, c);
         return true;
       }
     }
     return false;
   };
-  for (const u of mine) attempt(u, new Set());
-  return [...holder].map(([city, unit]) => ({ city, unit })).slice(0, 4);
+  for (const c of foes) attempt(c, new Set());
+  const unitOf = new Map([...holder].map(([unit, c]) => [c.id, unit]));
+  return foes.filter((c) => unitOf.has(c.id)).map((c) => ({ city: c.id, unit: unitOf.get(c.id) })).slice(0, 4);
 }
 
 function* startTurn(g, p) {
   const s = g.s;
   s.turn = newTurn(p);
   s.current = p;
+  const denied = Math.min(s.players[p].denied || 0, MAIN_ACTIONS_PER_TURN - 1);
+  if (denied) {
+    s.turn.actionsLeft -= denied;
+    g.log(`${g.name(p)} has ${plural(denied, 'action')} fewer this turn (Denial of Progress).`);
+  }
+  s.players[p].denied = 0;
   g.emit({ type: 'turn_start', player: p, age: s.age, round: s.round });
   g.log(`— Age ${roman(s.age)}, round ${s.round}: ${g.name(p)} —`);
-  const routes = tradeRoutes(s, p);
+  let routes = tradeRoutes(s, p);
+  // A Market pays 1 Gold to its owner when an opponent trades with it, so those routes are optional.
+  const toMarket = (list) => list.filter((r) => hasBuilding(cityById(s, r.city), 'market'));
+  const exposed = toMarket(routes);
+  if (exposed.length) {
+    const payees = [...new Set(exposed.map((r) => cityById(s, r.city).owner))];
+    const use = yield* confirm(g, p, {
+      kind: 'trade_market',
+      title: 'Trade Routes',
+      text: `${plural(exposed.length, 'trade route ends', 'trade routes end')} in a city with a Market. Using ${exposed.length === 1 ? 'it' : 'them'} gives ${payees.map((o) => g.name(o)).join(' and ')} 1 Gold. Use ${exposed.length === 1 ? 'it' : 'them'}?`,
+      yes: 'Use all trade routes',
+      no: 'Skip the Market routes',
+      default: true,
+    });
+    if (!use) routes = routes.filter((r) => !exposed.includes(r));
+  }
   if (!routes.length) return;
   let kind = 'food';
   if (hasAdv(s, p, 'currency')) {
@@ -84,8 +114,11 @@ function* startTurn(g, p) {
     });
   }
   gainRes(g, p, { [kind]: routes.length });
-  g.emit({ type: 'trade', player: p, routes });
+  const marketGold = [...new Set(toMarket(routes).map((r) => cityById(s, r.city).owner))];
+  for (const o of marketGold) gainRes(g, o, { gold: 1 });
+  g.emit({ type: 'trade', player: p, routes, marketGold });
   g.log(`${g.name(p)} earns ${routes.length} ${kind} from trade routes.`);
+  for (const o of marketGold) g.log(`${g.name(o)} earns 1 Gold from a Market on ${g.name(p)}'s trade route.`);
 }
 
 function* endTurn(g) {
@@ -97,11 +130,13 @@ function* endTurn(g) {
     clampResources(g, p);
   }
   g.emit({ type: 'turn_end', player: p });
+  s.players[p].goldLast = !!s.turn.goldCollected;
   // Play passes clockwise from the first player; the round ends after the last seat has played.
   if (p !== turnOrder(s)[s.players.length - 1]) {
     yield* startTurn(g, nextSeat(s, p));
     return;
   }
+  endRound(g);
   if (s.round >= ROUNDS_PER_AGE) {
     s.turn = null;
     yield* statusPhase(g);

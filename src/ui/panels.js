@@ -1,10 +1,10 @@
 // The heads-up display: top bar, player cards, bottom bar, message log, toasts and banners.
 import { GROUPS } from '../engine/data/advances.js';
-import { citiesOf, resLimit, totalAges, unitsOf } from '../engine/queries.js';
+import { armyOf, citiesOf, resLimit, totalAges, unitsOf } from '../engine/queries.js';
 import { scoreOf } from '../engine/scoring.js';
 import { roman } from '../engine/game.js';
 import { C, H, PLAYER_COLORS, PLAYER_HEX, RES_ORDER, TXT, W, LAYOUT, logColor, seatLabel, turnLabel } from './theme.js';
-import { placeWords } from './info.js';
+import { freeMoveText, placeWords, worldEffects } from './info.js';
 import { Button, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
 
 const CARD_W = LAYOUT.left - 16;
@@ -123,11 +123,23 @@ export class Hud {
       tip(pips, `Actions left this turn: ${t.actionsLeft}.\nEach main action (Advance, Collect, Move...) uses one.`);
       c.add(pips);
       if (t.move && t.move.credits > 0) {
-        c.add(txt(sc, 676 + n * 26 + 14, 20, `Move: ${t.move.credits} group move${t.move.credits === 1 ? '' : 's'} left`, { size: 13, origin: [0, 0.5], color: TXT.good }));
+        c.add(txt(sc, 676 + n * 26 + 14, 20, `${t.move.free ? 'Free Move' : 'Move'}: ${freeMoveText(t.move)} left`, { size: 13, origin: [0, 0.5], color: TXT.good }));
       }
     }
     const first = s.first;
     c.add(txt(sc, 300, 20, `1st player: ${seatLabel(s, first)}`, { size: 12, origin: [0, 0.5], color: TXT.dim }));
+    // badges for what lasts until the end of the round
+    let bx = LAYOUT.left + 10;
+    for (const e of worldEffects(s)) {
+      const label = txt(sc, bx + 8, 59, e.name, { size: 12, bold: true, origin: [0, 0.5], color: TXT.warn });
+      const bw = label.width + 16;
+      const bg = sc.add.graphics();
+      drawPanel(bg, bx, 50, bw, 18, { fill: 0x2a1f12, border: C.gold, radius: 6, line: 1.5 });
+      const area = hitBox(sc, bx, 50, bw, 18);
+      tip(area, e.tip);
+      c.add([bg, label, area]);
+      bx += bw + 6;
+    }
   }
 
   updateCards() {
@@ -203,7 +215,7 @@ export class Hud {
     });
 
     const cities = citiesOf(s, p).length;
-    const army = unitsOf(s, p, 'infantry').length;
+    const army = armyOf(s, p).length;
     const settlers = unitsOf(s, p, 'settler').length;
     const ships = unitsOf(s, p, 'ship').length;
     c.add(txt(sc, x + 14, y + 72 + 3 * e, `Mood ${pl.mood}   Culture ${pl.culture}   Cities ${cities}   Adv. ${pl.advances.length}`, { size: 11, origin: [0, 0.5], color: TXT.text }));
@@ -271,7 +283,7 @@ export class Hud {
 
     // stats
     const cities = citiesOf(s, p).length;
-    const army = unitsOf(s, p, 'infantry').length;
+    const army = armyOf(s, p).length;
     const settlers = unitsOf(s, p, 'settler').length;
     const ships = unitsOf(s, p, 'ship').length;
     c.add(txt(sc, x + 14, y + 148, `Cities ${cities}    Advances ${pl.advances.length}`, { size: 13, origin: [0, 0.5], color: TXT.text }));

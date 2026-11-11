@@ -1,13 +1,14 @@
 // The context panel (top right): explains what is selected and offers the actions that apply to it.
-import { BARBARIAN } from '../engine/data/constants.js';
+import { BARBARIAN, BUILDINGS, RECRUIT_TYPES } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, wonderBlocked } from '../engine/city.js';
-import { canPay } from '../engine/core.js';
+import { canPay, heldModifier } from '../engine/core.js';
 import { cityAt, citySize, foesOf, hasAdv, terrainOf } from '../engine/queries.js';
 import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, seatLabel, turnLabel } from './theme.js';
 import { RIGHT_X, LOG_Y } from './panels.js';
 import { Button, Checkbox, Stepper, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
-import { countText, ownedBy, ownerName, unitCounts, UNIT_NAME } from './info.js';
+import { countText, freeMoveText, ownedBy, ownerName, unitCounts, unitPlural, UNIT_NAME } from './info.js';
+import { unitTexture } from './textures.js';
 import { influenceTargets } from './citydialogs.js';
 
 const X = RIGHT_X + 8;
@@ -15,7 +16,7 @@ const WIDTH = LAYOUT.right - 16;
 const TOP = 48;
 const BOTTOM = LOG_Y - 6;
 const PAD = 12;
-const BUILDING_ORDER = ['academy', 'fortress', 'port', 'temple'];
+const UNIT_ROWS = ['ship', 'infantry', 'cavalry', 'settler'];
 
 export class Context {
   constructor(scene, ctl) {
@@ -155,7 +156,7 @@ export class Context {
     tip(hit, 'Size = 1 + the number of buildings.\nHappy: +1 capacity. Angry: capacity 1, can act only once, no building.\nMood also changes when a city is activated more than once per turn.');
     this.box.add(hit);
     this.y += 22;
-    const blds = BUILDING_ORDER.filter((b) => city.buildings[b] !== undefined).map((b) => {
+    const blds = BUILDINGS.filter((b) => city.buildings[b] !== undefined).map((b) => {
       const o = city.buildings[b];
       return `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(ctl.g, o)})` : ''}`;
     });
@@ -166,6 +167,7 @@ export class Context {
     const used = t ? t.activated[city.id] || 0 : 0;
     this.text(`Can collect or recruit up to ${cityCapacity(s, city)}.`, { size: 12, color: TXT.muted, gap: 2 });
     if (used > 0) this.text(`Activated ${used}× this turn: another action here lowers its Mood.`, { size: 12, color: TXT.warn, gap: 2 });
+    if (city.corrupt) this.text('Corrupt: it cannot Collect until another action has activated it.', { size: 12, color: TXT.bad, gap: 2 });
     this.gap(2);
     this.cityButtons(city, can);
   }
@@ -191,14 +193,15 @@ export class Context {
     }
     switch (key) {
       case 'collect':
+        if (city.corrupt) return 'This city is corrupt: it cannot Collect until another action has activated it.';
         return collectCandidates(s, 0, city).length ? '' : 'Nothing to collect here yet.\nResearch Farming, Mining or Fishing to gather from the land around this city.';
       case 'construct': {
-        const why = BUILDING_ORDER.map((b) => [b, constructBlocked(s, 0, city, b)]);
+        const why = BUILDINGS.map((b) => [b, constructBlocked(s, 0, city, b)]);
         if (why.some(([, r]) => !r)) return '';
         return `No building is possible right now:\n${why.map(([b, r]) => `${BUILDING_NAME[b]}: ${r}`).join('\n')}`;
       }
       case 'recruit': {
-        const tries = ['infantry', 'settler', 'ship'].map((u) => [u, recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
+        const tries = RECRUIT_TYPES.map((u) => [u, recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
         if (tries.some(([, r]) => !r)) return '';
         return `You cannot recruit anything here now:\n${tries.map(([u, r]) => `${UNIT_NAME[u]}: ${r}`).join('\n')}`;
       }
@@ -213,7 +216,7 @@ export class Context {
         return effMood(s, city) === 'happy' ? 'This city is already Happy.' : '';
       case 'influence':
         if (t.influenceSuccess) return 'Only one Influence Culture success is possible per turn.';
-        return influenceTargets(s, city).length ? '' : 'No city in range has a building you can influence.\nRange equals this city\'s size (Culture tokens extend it).';
+        return influenceTargets(s, city, { card: heldModifier(s, 0, 'influence') }).length ? '' : 'No city in range has a building you can influence.\nRange equals this city\'s size (Culture tokens extend it).';
       default:
         return '';
     }
@@ -224,8 +227,8 @@ export class Context {
     const d = ctl.dialogs;
     const items = [
       ['collect', 'Collect', () => ctl.startCollect(city.id), 'Gather resources from this city and the spaces around it.', 'ic_food'],
-      ['construct', 'Construct', () => d.construct(city), 'Build an Academy, Fortress, Port or Temple.', 'b_academy'],
-      ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Settlers or Ships.', 'u_infantry'],
+      ['construct', 'Construct', () => d.construct(city), 'Build an Academy, Fortress, Market, Port or Temple.', 'b_academy'],
+      ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Cavalry, Settlers or Ships.', 'u_infantry'],
       ['wonder', 'Wonder', () => d.wonder(city), 'Build a Wonder (needs a Happy city and Engineering).', 'ic_wonder'],
       ['happiness', 'Happiness', () => d.happiness(city), 'Spend Mood tokens to raise the Mood of your cities.', 'mood_happy'],
       ['influence', 'Influence', () => d.influence(city), 'Try to win over a building in another city with Culture.', 'ic_culture'],
@@ -247,35 +250,40 @@ export class Context {
     const sel = ctl.sel;
     const k = sel.hex;
     const gr = sel.groups;
-    const hasMine = ['ship', 'infantry', 'settler'].some((t) => gr[t].free.length + gr[t].locked.length > 0);
-    const foes = [...foesOf(s, 0), BARBARIAN].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => c.infantry + c.settler + c.ship > 0);
+    const hasMine = UNIT_ROWS.some((t) => gr[t].free.length + gr[t].locked.length > 0);
+    const foes = [...foesOf(s, 0), BARBARIAN].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => Object.values(c).some((n) => n > 0));
     if (!hasMine && !foes.length) return;
     this.rule();
     if (hasMine) {
       this.text(can ? 'Your units (choose who moves)' : 'Your units', { size: 14, bold: true, gap: 4 });
       const sea = terrainOf(s, k) === 'sea';
       const c = sel.counts;
-      for (const type of ['ship', 'infantry', 'settler']) {
+      const stuck = new Map(); // why units cannot move -> how many; Infantry and Cavalry often share one reason
+      for (const type of UNIT_ROWS) {
         const free = gr[type].free.length;
         const locked = gr[type].locked.length;
         if (!free && !locked) continue;
-        const label = `${UNIT_NAME[type]}${type === 'infantry' ? '' : 's'}${sea && type !== 'ship' ? ' aboard' : ''}`;
-        const img = icon(this.scene, type === 'ship' ? 'u_ship' : type === 'infantry' ? 'u_infantry' : 'u_settler', X + PAD + 11, this.y + 13, 22).setTint(PLAYER_COLORS[0]);
+        const label = `${unitPlural(type)}${sea && type !== 'ship' ? ' aboard' : ''}`;
+        const img = icon(this.scene, unitTexture(type, 0), X + PAD + 11, this.y + 13, 22).setTint(PLAYER_COLORS[0]);
         this.box.add(img);
         this.box.add(txt(this.scene, X + PAD + 28, this.y + 13, `${label}`, { size: 13, origin: [0, 0.5] }));
         const total = free + locked;
         this.box.add(txt(this.scene, X + WIDTH - 94, this.y + 13, `of ${total}`, { size: 12, color: TXT.muted, origin: [1, 0.5] }));
         if (free && can) {
           let max = free;
-          if (sea && type !== 'ship' && c.ship > 0) max = Math.min(free, c.ship * 2 - (type === 'infantry' ? c.settler : c.infantry));
+          if (sea && type !== 'ship' && c.ship > 0) {
+            const others = UNIT_ROWS.filter((t) => t !== 'ship' && t !== type).reduce((n, t) => n + c[t], 0);
+            max = Math.min(free, c.ship * 2 - others);
+          }
           const st = new Stepper(this.scene, X + WIDTH - 88, this.y, Math.min(c[type], max), 0, Math.max(0, max), (v) => ctl.setCount(type, v), { gap: 46 });
           this.box.add(st);
         } else if (free) {
           this.box.add(txt(this.scene, X + WIDTH - PAD, this.y + 13, `${free}`, { size: 14, bold: true, origin: [1, 0.5] }));
         }
         this.y += 30;
-        if (locked) this.text(`${locked} cannot move: ${gr[type].why}.`, { size: 11, color: TXT.warn, indent: 4, gap: 2 });
+        if (locked) stuck.set(gr[type].why, (stuck.get(gr[type].why) || 0) + locked);
       }
+      for (const [why, n] of stuck) this.text(`${n} cannot move: ${why}.`, { size: 11, color: TXT.warn, indent: 4, gap: 2 });
       if (can) this.moveHelp(sea);
     }
     for (const [o, cnt] of foes) {
@@ -300,8 +308,11 @@ export class Context {
       } else if (why && !cityAt(s, k)) this.text(`Cannot found a city here: ${why}`, { size: 11, color: TXT.muted, gap: 2 });
     }
     if (ctl.moveOpts.length) {
-      if (t.move && t.move.credits > 0) this.text(`Move in progress: ${t.move.credits} more group move${t.move.credits === 1 ? '' : 's'} are free.`, { size: 12, color: TXT.good, gap: 2 });
-      else this.text('Click a highlighted space. A Move costs 1 action and lets up to 3 groups move.', { size: 12, color: TXT.good, gap: 2 });
+      const mv = t.move;
+      if (mv && mv.credits > 0) {
+        const rules = [mv.only === 'army' ? 'Army units only' : mv.only === 'ships' ? 'Ships only' : '', mv.scout ? 'up to 2 spaces, ignoring Forest and Mountain penalties' : ''].filter(Boolean);
+        this.text(`Move in progress: ${freeMoveText(mv)} still free${rules.length ? ` (${rules.join('; ')})` : ''}.`, { size: 12, color: TXT.good, gap: 2 });
+      } else this.text('Click a highlighted space. A Move costs 1 action and lets up to 3 groups move.', { size: 12, color: TXT.good, gap: 2 });
     } else if (ctl.stuckWhy) this.text(ctl.stuckWhy, { size: 12, color: TXT.warn, gap: 2 });
   }
 
@@ -313,7 +324,13 @@ export class Context {
     this.text('Collect', { size: 17, bold: true, serif: true, color: TXT.gold, gap: 2 });
     this.text('Click the highlighted spaces to choose what to gather. Click again to change the resource or to remove it.', { size: 12, color: TXT.muted });
     this.gap(2);
-    this.text(`Spaces chosen: ${tk.picks.size} of ${tk.cap}`, { bold: true, color: tk.picks.size === tk.cap ? TXT.good : TXT.text });
+    if (tk.surgeCard) {
+      const cb = new Checkbox(this.scene, X + PAD, this.y, `${tk.surgeCard.name}: collect from 2 more spaces (uses the card)`, tk.surge, (v) => ctl.setSurge(v), { w: WIDTH - 2 * PAD, h: 34, size: 12 });
+      this.box.add(cb);
+      this.y += 38;
+    }
+    const cap = ctl.collectCap();
+    this.text(`Spaces chosen: ${tk.picks.size} of ${cap}`, { bold: true, color: tk.picks.size === cap ? TXT.good : TXT.text });
     const gain = {};
     for (const r of tk.picks.values()) gain[r] = (gain[r] || 0) + 1;
     let line = 0;

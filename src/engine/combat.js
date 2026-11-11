@@ -1,19 +1,23 @@
 // Land and naval battles, plus city capture.
-import { BARBARIAN, COMBAT_DIE, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
+import { BARBARIAN, CLASH_BONUS, COMBAT_DIE, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
 import { ACTION_CARDS, COMBAT_EFFECTS } from './data/cards.js';
 import { randInt } from './rng.js';
 import {
   unitById, unitsAt, armyAt, shipsAt, cityAt, citiesOf, hasAdv, hasBuilding, playerOwnsWonder,
-  citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners,
+  citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners, nbrs, isLand,
 } from './queries.js';
 import {
   gainRes, applyPayment, planPayment, canPay, removeUnits, addUnitTo, unitFlags, discardCard, removeCity,
 } from './core.js';
 import { choose, confirm } from './prompts.js';
 import { onBattleEnd } from './objectives.js';
-import { plural } from './text.js';
+import { countList, plural } from './text.js';
 
 const MAX_ROUNDS = 40;
+const ARMY_NAMES = { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'] };
+// Which cargo is left behind first when Ships are overloaded (the owner may choose otherwise).
+const LEAVE_ORDER = { settler: 0, infantry: 1, cavalry: 2 };
+const LEFT_BEHIND = { settler: 'a Settler', infantry: 'an Infantry', cavalry: 'a Cavalry' };
 
 export const effectOfCard = (cardId) => ACTION_CARDS[cardId].combat;
 
@@ -32,6 +36,15 @@ export function combatCardOptions(g, p, ctx, role, info) {
     if (eff.domain !== 'any' && eff.domain !== ctx.domain) continue;
     if (effId === 'siege_engines' && !info.enemyFortress) continue;
     if (effId === 'phalanx' && info.infantry <= 0) continue;
+    if (effId === 'routing' && info.kills < info.losses) continue;
+    if (effId === 'desperate' && !info.nearCity) continue;
+    if (effId === 'supply_lines' && !info.supplied) continue;
+    if (effId === 'incentive' && !canPay(g.s, p, { gold: 1 })) continue;
+    if (effId === 'clash_block' && !info.foeClash) continue;
+    if (effId === 'flanking' && !info.flank) continue;
+    if (effId === 'wall_defense' && !info.ownFortress) continue;
+    if (effId === 'defection' && !info.foeInfantry) continue;
+    if (effId === 'feigned_retreat' && !info.canDisengage) continue;
     out.push({ id, label: ACTION_CARDS[id].name, desc: `${eff.name}: ${eff.text}`, effect: effId });
   }
   return out;
@@ -39,28 +52,94 @@ export function combatCardOptions(g, p, ctx, role, info) {
 
 const rollDie = (s) => COMBAT_DIE[randInt(s, COMBAT_DIE.length)];
 
-function rollSide(s, count, infantry) {
+/**
+ * A Clash icon only counts while a matching Unit is left to use it, once per Unit:
+ * `army` is { infantry, cavalry }. `bonus` is the Infantry CV, `cavalry` the Cavalry CV.
+ */
+function scoreDice(dice, army) {
+  const sum = dice.reduce((a, d) => a + d.v, 0);
+  const clash = (type) => Math.min(dice.filter((d) => d.icon === type).length, army[type] || 0) * CLASH_BONUS[type];
+  return { sum, bonus: clash('infantry'), cavalry: clash('cavalry') };
+}
+
+/** Roll `count` dice and score them. */
+function rollSide(s, count, army) {
   const dice = [];
   for (let i = 0; i < count; i++) {
     const [v, icon] = rollDie(s);
     dice.push({ v, icon });
   }
-  const sum = dice.reduce((a, d) => a + d.v, 0);
-  const icons = dice.filter((d) => d.icon === 'infantry').length;
-  return { dice, sum, bonus: Math.min(icons, infantry) };
+  return { dice, ...scoreDice(dice, army) };
 }
 
-const infantryIn = (s, ids) => ids.filter((id) => {
-  const u = unitById(s, id);
-  return u && u.type === 'infantry';
-}).length;
+/**
+ * Confusion: the highest die is rolled again (a tie goes to a die whose Clash icon still counts).
+ * Returns the old and new values, or null when there was nothing to reroll.
+ */
+function rerollHighest(s, roll, army) {
+  if (!roll.dice.length) return null;
+  const counts = (d) => ((army[d.icon] || 0) > 0 ? 1 : 0);
+  let at = 0;
+  roll.dice.forEach((d, i) => {
+    const best = roll.dice[at];
+    if (d.v > best.v || (d.v === best.v && counts(d) > counts(best))) at = i;
+  });
+  const from = roll.dice[at].v;
+  const [v, icon] = rollDie(s);
+  roll.dice[at] = { v, icon };
+  Object.assign(roll, scoreDice(roll.dice, army));
+  return { from, to: v };
+}
+
+/** How many Infantry and Cavalry stand among the given unit ids. */
+function armyIn(s, ids) {
+  const n = { infantry: 0, cavalry: 0 };
+  for (const id of ids) {
+    const u = unitById(s, id);
+    if (u && u.type in n) n[u.type] += 1;
+  }
+  return n;
+}
+
+const infantryIn = (s, ids) => armyIn(s, ids).infantry;
+
+/**
+ * The units an owner loses to `hits` hits. The owner picks any Army Units, so a stack of Infantry and Cavalry
+ * asks them how to split the losses (Barbarians and the default keep the Cavalry and lose Infantry first).
+ */
+function* pickCasualties(g, owner, ids, hits) {
+  const s = g.s;
+  if (hits <= 0) return [];
+  if (hits >= ids.length) return [...ids];
+  const horse = ids.filter((id) => unitById(s, id).type === 'cavalry');
+  const foot = ids.filter((id) => unitById(s, id).type !== 'cavalry');
+  if (!horse.length || !foot.length) return ids.slice(0, hits);
+  const fewest = Math.max(0, hits - foot.length);
+  const most = Math.min(hits, horse.length);
+  let cavalry = fewest;
+  if (most > fewest && owner !== BARBARIAN) {
+    const options = [];
+    for (let n = fewest; n <= most; n++) {
+      options.push({ id: String(n), label: `Lose ${countList({ infantry: hits - n, cavalry: n }, ARMY_NAMES)}` });
+    }
+    const ans = Number(yield* choose(g, owner, {
+      kind: 'casualties',
+      title: 'Choose your casualties',
+      text: `You must remove ${plural(hits, 'Army Unit')}. Choose which ones.`,
+      options,
+      default: String(fewest),
+    }));
+    if (Number.isInteger(ans) && ans >= fewest && ans <= most) cavalry = ans;
+  }
+  return [...foot.slice(0, hits - cavalry), ...horse.slice(0, cavalry)];
+}
 
 function tally(res, owner, kind, n = 1) {
   const k = (res.kills[owner] ||= { army: 0, settlers: 0, ships: 0 });
   k[kind] += n;
 }
 
-/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship). Settlers go first. */
+/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship). Settlers go first, then Infantry, then Cavalry. */
 export function trimCargo(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return [];
@@ -70,7 +149,7 @@ export function trimCargo(g, hex) {
     if (!cargo.length) continue;
     const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
     if (cargo.length <= cap) continue;
-    cargo.sort((a, b) => (a.type === 'settler' ? -1 : 0) - (b.type === 'settler' ? -1 : 0));
+    cargo.sort((a, b) => (LEAVE_ORDER[a.type] ?? 1) - (LEAVE_ORDER[b.type] ?? 1));
     const drop = cargo.slice(0, cargo.length - cap).map((u) => u.id);
     removeUnits(g, drop);
     lost.push(...drop);
@@ -79,7 +158,7 @@ export function trimCargo(g, hex) {
   return lost;
 }
 
-/** After a naval battle the owner of overloaded Ships decides who is left behind when Settlers and Infantry are mixed. */
+/** After a naval battle the owner of overloaded Ships decides who is left behind when Settlers, Infantry and Cavalry are mixed. */
 export function* trimCargoChoice(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return;
@@ -87,19 +166,20 @@ export function* trimCargoChoice(g, hex) {
     const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
     const cargo = () => unitsAt(s, hex).filter((u) => u.owner === owner && u.type !== 'ship');
     while (cargo().length > cap && new Set(cargo().map((u) => u.type)).size > 1) {
+      const present = new Set(cargo().map((u) => u.type));
+      const options = Object.keys(LEAVE_ORDER)
+        .filter((type) => present.has(type))
+        .map((type) => ({ id: type, label: `Leave ${LEFT_BEHIND[type]} behind` }));
       const type = yield* choose(g, owner, {
         kind: 'choice',
         title: 'Too many units for the Ships',
         text: `The Ships at ${hex} can only carry ${plural(cap, 'unit')} now. Choose which unit is left behind.`,
-        options: [
-          { id: 'settler', label: 'Leave a Settler behind' },
-          { id: 'infantry', label: 'Leave an Infantry behind' },
-        ],
-        default: 'settler',
+        options,
+        default: options[0].id,
       });
       const u = cargo().find((x) => x.type === type) || cargo()[0];
       removeUnits(g, [u.id]);
-      g.log(`${g.name(owner)} leaves ${u.type === 'settler' ? 'a Settler' : 'an Infantry'} behind: it no longer fits on a Ship.`);
+      g.log(`${g.name(owner)} leaves ${LEFT_BEHIND[u.type]} behind: it no longer fits on a Ship.`);
     }
   }
   trimCargo(g, hex);
@@ -211,6 +291,7 @@ export function* battle(g, ctx) {
     kills: {}, fortress, cityId: defCity ? defCity.id : null,
     citySize: defCity ? citySize(defCity) : 0, cityWonders: defCity ? defCity.wonders.length : 0,
     defHadSettlers: defSettlers().length > 0,
+    infKilled: {}, defection: {},
   };
   g.emit({ type: 'battle_start', domain: ctx.domain, hex, from: ctx.from, attacker: A, defender: D, atk: [...atkLive()], def: defLive() });
   g.log(`Battle at ${hex}: ${g.name(A)} attacks ${g.name(D)}.`);
@@ -257,6 +338,13 @@ export function* battle(g, ctx) {
     }
   }
   const opp = (p) => (p === A ? D : A);
+  // Ideological Defection: the winner of a battle that destroyed enemy Infantry gains a free Infantry on the spot
+  if (land && winner !== null && winner !== BARBARIAN && res.defection[winner] && (res.infKilled[opp(winner)] || 0) > 0) {
+    if (unitsLeft(s, winner, 'infantry') > 0 && armyAt(s, hex, winner).length < STACK_LIMIT) {
+      addUnitTo(g, winner, 'infantry', hex);
+      g.log(`${g.name(winner)} wins over an enemy Infantry (Ideological Defection).`);
+    }
+  }
   // Only Barbarian Units count: walking into an empty Barbarian city earns just the capture Gold.
   const beatenUnits = winner === A ? res.defStart : res.atkStart;
   if (winner !== null && winner !== BARBARIAN && opp(winner) === BARBARIAN && beatenUnits > 0) {
@@ -353,6 +441,7 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
   let winner = null;
   let round = 0;
   const startDef = res.defStart;
+  const nearCity = (p, h) => !!h && [h, ...nbrs(s, h)].some((k) => cityAt(s, k)?.owner === p);
 
   while (true) {
     round += 1;
@@ -366,12 +455,24 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     for (const side of ['A', 'D']) {
       const p = owners[side];
       const ids = side === 'A' ? aIds : dIds;
+      const foeIds = side === 'A' ? dIds : aIds;
+      const foeOwner = side === 'A' ? D : A;
+      const armyHex = side === 'A' ? ctx.from || hex : hex;
       const info = {
         units: ids.length,
         infantry: infantryIn(s, ids),
         enemyFortress: side === 'A' && fortress,
-        foe: side === 'A' ? dIds.length : aIds.length,
+        foe: foeIds.length,
         round,
+        kills: side === 'A' ? res.defLost : res.atkLost,
+        losses: side === 'A' ? res.atkLost : res.defLost,
+        nearCity: nearCity(p, hex),
+        supplied: land && nearCity(p, armyHex),
+        foeClash: land && foeIds.length > 0,
+        flank: side === 'A' && land && !!ctx.from && !ctx.landed && !ctx.inPlace && isLand(s, ctx.from),
+        ownFortress: side === 'D' && fortress,
+        foeInfantry: land && (infantryIn(s, foeIds) > 0 || (res.infKilled[foeOwner] || 0) > 0),
+        canDisengage: land && !ctx.inPlace && !!ctx.from,
       };
       const opts = combatCardOptions(g, p, ctx, side === 'A' ? 'attacker' : 'defender', info);
       if (!opts.length) continue;
@@ -393,10 +494,29 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       }
     }
 
+    // Feigned Retreat: nobody rolls, the battle simply ends
+    const feint = ['A', 'D'].find((side) => played[side] && effectOfCard(played[side]) === 'feigned_retreat');
+    if (feint) {
+      for (const side of ['A', 'D']) {
+        if (!played[side]) continue;
+        g.log(`${g.name(owners[side])} plays ${ACTION_CARDS[played[side]].name}.`);
+        discardCard(g, owners[side], 'action', played[side]);
+      }
+      g.emit({
+        type: 'battle_round', hex, round, domain: ctx.domain, disengage: true,
+        a: { owner: A, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, mod: 0, card: played.A, lost: 0 },
+        d: { owner: D, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, mod: 0, card: played.D, lost: 0, fortress: false },
+        cancelA: 0, cancelD: 0, notes: ['Both armies step back: the battle ends with no further casualties.'],
+      });
+      g.log('Both armies step back: the battle ends with no further casualties.');
+      res.retreated = true;
+      break;
+    }
+
     // 2) reveal: apply effects
     const mods = {
-      A: { cv: 0, die: 0, cancel: 0 },
-      D: { cv: 0, die: 0, cancel: 0 },
+      A: { cv: 0, die: 0, cancel: 0, confuse: false, sabotage: false, noClash: false, board: false },
+      D: { cv: 0, die: 0, cancel: 0, confuse: false, sabotage: false, noClash: false, board: false },
     };
     let noFortress = false;
     for (const side of ['A', 'D']) {
@@ -405,24 +525,57 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       const foe = side === 'A' ? 'D' : 'A';
       const eff = effectOfCard(card);
       g.log(`${g.name(owners[side])} plays ${ACTION_CARDS[card].name}.`);
-      if (eff === 'wedge' || eff === 'high_ground' || eff === 'naval_ram') mods[side].cv += 3;
+      if (eff === 'wedge' || eff === 'high_ground' || eff === 'naval_ram' || eff === 'routing') mods[side].cv += 3;
       else if (eff === 'rally') mods[side].cv += 2;
-      else if (eff === 'stand_firm') mods[side].cancel += 1;
+      else if (eff === 'stand_firm' || eff === 'desperate') mods[side].cancel += 1;
       else if (eff === 'ambush') mods[foe].cv -= 3;
-      else if (eff === 'extra_die') mods[side].die += 1;
+      else if (eff === 'extra_die' || eff === 'supply_lines') mods[side].die += 1;
       else if (eff === 'siege_engines') noFortress = true;
       else if (eff === 'phalanx') mods[side].cv += Math.min(4, infantryIn(s, side === 'A' ? aIds : dIds));
+      else if (eff === 'incentive') {
+        const plan = planPayment(s, owners[side], { gold: 1 });
+        if (plan) {
+          applyPayment(g, owners[side], plan);
+          mods[side].cv += 1;
+        }
+      } else if (eff === 'flanking') mods[side].cv += 1;
+      else if (eff === 'wall_defense') mods[side].cv += 2;
+      else if (eff === 'clash_block') mods[foe].noClash = true;
+      else if (eff === 'confusion') mods[foe].confuse = true;
+      else if (eff === 'sabotaged') mods[foe].sabotage = true;
+      else if (eff === 'boarding') mods[side].board = true;
+      else if (eff === 'defection') res.defection[owners[side]] = true;
     }
 
     // 3) roll
     const fortDie = fortActive && !siege.die && !noFortress ? 1 : 0;
     const nA = aIds.length + mods.A.die;
     const nD = dIds.length + fortDie + mods.D.die;
-    const rollA = rollSide(s, nA, land ? infantryIn(s, aIds) : 0);
-    const rollD = rollSide(s, nD, land ? infantryIn(s, dIds) : 0);
+    const armies = { A: land ? armyIn(s, aIds) : {}, D: land ? armyIn(s, dIds) : {} };
+    const rolls = { A: rollSide(s, nA, armies.A), D: rollSide(s, nD, armies.D) };
+    const notes = [];
+    for (const side of ['A', 'D']) {
+      const r = rolls[side];
+      if (mods[side].confuse) {
+        const again = rerollHighest(s, r, armies[side]);
+        if (again) notes.push(`Confusion: ${g.name(owners[side])} rerolls a ${again.from} and gets a ${again.to}.`);
+      }
+      if (mods[side].noClash) {
+        r.bonus = 0;
+        r.cavalry = 0;
+        notes.push(`High Ground Combat: ${g.name(owners[side])} gets no clash bonus.`);
+      }
+      if (mods[side].sabotage) {
+        mods[side].cv -= r.dice.length;
+        notes.push(`Sabotaged Supplies: ${g.name(owners[side])} loses ${plural(r.dice.length, 'point')} (-1 per die).`);
+      }
+    }
+    for (const line of notes) g.log(line);
+    const rollA = rolls.A;
+    const rollD = rolls.D;
     const cv = {
-      A: rollA.sum + rollA.bonus + mods.A.cv + steel.A,
-      D: rollD.sum + rollD.bonus + mods.D.cv + steel.D,
+      A: rollA.sum + rollA.bonus + rollA.cavalry + mods.A.cv + steel.A,
+      D: rollD.sum + rollD.bonus + rollD.cavalry + mods.D.cv + steel.D,
     };
     if (land && round === 1 && city && hasBuilding(city, 'temple')) {
       if (A !== BARBARIAN && hasAdv(s, A, 'fanaticism')) cv.A += 2;
@@ -462,11 +615,18 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     if (!land && round === 1 && hasAdv(s, D, 'warships')) cancelD += 1;
     let cancelA = mods.A.cancel;
     if (round === 1 && hasAdv(s, A, 'warships') && (!land || ctx.landed)) cancelA += 1;
-    const hitsOnD = Math.max(0, raw.A - cancelD);
-    const hitsOnA = Math.max(0, raw.D - cancelA);
+    // Boarding Party sinks one more Ship when the CV at least matches the enemy's; nothing can cancel it
+    const boardA = mods.A.board && cv.A >= cv.D ? 1 : 0;
+    const boardD = mods.D.board && cv.D >= cv.A ? 1 : 0;
+    const hitsOnD = Math.max(0, raw.A - cancelD) + boardA;
+    const hitsOnA = Math.max(0, raw.D - cancelA) + boardD;
 
-    const killA = aIds.slice(0, hitsOnA);
-    const killD = dIds.slice(0, hitsOnD);
+    const killA = yield* pickCasualties(g, A, aIds, hitsOnA);
+    const killD = yield* pickCasualties(g, D, dIds, hitsOnD);
+    for (const [owner, ids] of [[A, killA], [D, killD]]) {
+      const n = ids.filter((id) => unitById(s, id)?.type === 'infantry').length;
+      if (n) res.infKilled[owner] = (res.infKilled[owner] || 0) + n;
+    }
     removeUnits(g, killA);
     removeUnits(g, killD);
     res.atkLost += killA.length;
@@ -498,9 +658,9 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     }
     g.emit({
       type: 'battle_round', hex, round, domain: ctx.domain,
-      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, mod: mods.A.cv + steel.A, card: played.A, lost: killA.length },
-      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, mod: mods.D.cv + steel.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
-      cancelA, cancelD,
+      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, cavalry: rollA.cavalry, mod: mods.A.cv + steel.A, card: played.A, lost: killA.length },
+      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, cavalry: rollD.cavalry, mod: mods.D.cv + steel.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
+      cancelA, cancelD, notes, extraA: boardA, extraD: boardD,
     });
     g.log(`Round ${round}: ${g.name(A)} CV ${cv.A} vs ${g.name(D)} CV ${cv.D}; losses ${killA.length} / ${killD.length}.`);
 
@@ -537,7 +697,10 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
         yes: 'Retreat',
         no: 'Keep fighting',
         default: false,
-        info: { round, atk: atkLive().length, def: defLive().length, hex, domain: ctx.domain },
+        info: {
+          round, atk: atkLive().length, def: defLive().length, hex, domain: ctx.domain,
+          atkCav: armyIn(s, atkLive()).cavalry, defCav: armyIn(s, defLive()).cavalry,
+        },
       });
     }
     if (retreat || round >= MAX_ROUNDS) {

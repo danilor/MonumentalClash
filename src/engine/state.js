@@ -56,6 +56,10 @@ export function newPlayer(idx, name, human) {
     builtWonders: [], // wonder ids originally built by this player (for VP splitting)
     homeHex: null,
     vpBonus: 0,
+    denied: 0, // actions the player will lose on their next turn (Denial of Progress)
+    goldLast: false, // collected Gold on their last turn (Tax Grievances)
+    philosopher: 0, // Great Philosopher: extra Ideas on the first Collect of each turn
+    ideasRound: 0, // Ideas gained since the start of the round (Intellectual Renaissance)
     stats: { battlesWon: 0, battlesLost: 0, citiesCaptured: 0, influenced: 0 },
   };
 }

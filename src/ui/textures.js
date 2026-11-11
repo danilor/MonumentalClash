@@ -1,5 +1,6 @@
 // Procedural art: every texture is drawn with Phaser Graphics at boot, so the game needs no image files.
 import { ART_S, HEX_SCALE, Z } from './theme.js';
+import { BARBARIAN } from '../engine/data/constants.js';
 
 /**
  * Thin wrapper over Graphics that takes design-pixel coordinates and draws at the internal render scale.
@@ -315,6 +316,29 @@ const ICONS = {
     p.fill(OUT).poly(sq([[7.6, 13.4], [24.4, 13.4], [23.4, 19], [18.8, 19], [18.8, 27.4], [13.2, 27.4], [13.2, 19], [8.6, 19]]));
     p.fill(WHITE).stroke(1.3, OUT).poly(sq([[14.5, 12.6], [17.5, 12.6], [17.5, 21.5], [16, 23.6], [14.5, 21.5]]), 'fs');
   },
+  u_cavalry(p) {
+    // horse head in profile, with a mane and a bridle
+    const crest = curve([20.8, 5.4], [26.8, 10.6], [28, 31], 8);
+    const head = [
+      ...curve([3.2, 17.4], [7.4, 10.8], [15.4, 7.2], 8),
+      [16.6, 0.8],
+      ...crest,
+      [11.2, 31],
+      ...curve([11.2, 31], [13.8, 25.4], [12.6, 21.4], 6),
+      ...curve([12.6, 21.4], [8.4, 25.6], [5.2, 23.4], 6),
+      ...curve([5.2, 23.4], [2, 21.8], [3.2, 17.4], 6),
+    ];
+    p.fill(WHITE).stroke(1.8, OUT).poly(head, 'fs');
+    const mane = curve([18.6, 6], [20.8, 15], [20.4, 31], 8);
+    p.fill(SHADE).poly([...crest, [20.4, 31], ...mane.slice().reverse()]);
+    p.fill(SHADE).poly([[15.4, 7.2], [16.6, 0.8], [20.8, 5.4], [18.8, 7.6]]);
+    p.stroke(1, GREY);
+    crest.forEach(([x, y], i) => i > 0 && i < 8 && p.line(mane[i][0] + 1, mane[i][1] + 0.6, x - 1, y + 2));
+    p.stroke(1.8, OUT).poly(head, 's');
+    p.stroke(1.5, INK).path([[8.6, 11.6], [8.1, 24.2]]);
+    p.fill(OUT).ellipse(5.4, 19.2, 2.4, 1.5).circle(12.8, 12.8, 1.7);
+    p.fill(WHITE).circle(12.3, 12.3, 0.55);
+  },
   u_settler(p) {
     // covered wagon
     const wheel = (x, y, r) => {
@@ -404,6 +428,25 @@ const ICONS = {
     p.fill(INK).poly([[13, 25.5], [13, 20.4], ...arcPts(16, 20.4, 3, 3.6, Math.PI, Math.PI * 2, 6), [19, 25.5]]);
     p.fill(INK).rect(12.2, 13.4, 1.6, 3.6, 'f').rect(18.2, 13.4, 1.6, 3.6, 'f');
   },
+  b_market(p) {
+    // market stall: a striped awning over a counter piled with goods
+    p.stroke(2, OUT).line(3.6, 10, 3.6, 22).line(28.4, 10, 28.4, 22);
+    block(p, 2.4, 22, 27.2, 8.6);
+    p.stroke(1, INK).line(11.5, 22.8, 11.5, 30).line(20.5, 22.8, 20.5, 30);
+    for (const [x, y, c] of [[9, 19.3, LIGHT], [16, 19.3, WHITE], [23, 19.3, LIGHT]]) p.fill(c).stroke(1.3, OUT).circle(x, y, 2.9, 'fs');
+    const lo = 2.4;
+    const step = (29.6 - lo) / 5;
+    for (let i = 0; i < 5; i++) {
+      const c = i % 2 ? SHADE : WHITE;
+      const x0 = 6 + 4 * i;
+      const x1 = lo + step * i;
+      p.fill(c).poly([[x0, 2.4], [x0 + 4, 2.4], [x1 + step, 10.2], [x1, 10.2]]);
+      p.fill(c).poly(arcPts(x1 + step / 2, 10.2, step / 2, 3, 0, Math.PI, 8));
+    }
+    const edge = [[6, 2.4], [26, 2.4], [29.6, 10.2]];
+    p.stroke(1.6, OUT).path(edge).path([[6, 2.4], [lo, 10.2]]);
+    for (let i = 0; i < 5; i++) p.stroke(1.6, OUT).path(arcPts(lo + step * (i + 0.5), 10.2, step / 2, 3, 0, Math.PI, 8));
+  },
   b_port(p) {
     // anchor
     const anchor = (w, c) => {
@@ -490,13 +533,16 @@ const ICONS = {
 const SIZES = {
   ic_food: [24, 24], ic_wood: [24, 24], ic_ore: [24, 24], ic_ideas: [24, 24], ic_gold: [24, 24], ic_mood: [24, 24], ic_culture: [24, 24],
   mood_happy: [24, 24], mood_neutral: [24, 24], mood_angry: [24, 24],
-  u_infantry: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_barb: [32, 32], b_city: [48, 46],
-  b_academy: [32, 32], b_fortress: [32, 32], b_port: [32, 32], b_temple: [32, 32],
+  u_infantry: [32, 32], u_cavalry: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_barb: [32, 32], b_city: [48, 46],
+  b_academy: [32, 32], b_fortress: [32, 32], b_market: [32, 32], b_port: [32, 32], b_temple: [32, 32],
   ic_wonder: [32, 32], ic_swords: [24, 24], ic_explore: [24, 24], ic_boat: [24, 24], ic_exhaust: [24, 24],
   ic_action: [20, 20], ic_action_off: [20, 20], ic_card: [20, 24], ic_die: [36, 36], ic_spark: [12, 12],
 };
 
 export const TERRAIN_VARIANTS = 3;
+
+/** The icon of a unit: Barbarian Infantry wear their own helmet; every icon is tinted with its owner's colour. */
+export const unitTexture = (type, owner) => (type === 'infantry' && owner === BARBARIAN ? 'u_barb' : `u_${type}`);
 
 export function buildTextures(scene) {
   for (const [key, draw] of Object.entries(ICONS)) make(scene, key, SIZES[key][0], SIZES[key][1], draw);

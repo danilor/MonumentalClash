@@ -2,7 +2,7 @@
 // plays the results back as small animations and runs the computer's turns.
 import { roman } from '../engine/game.js';
 import { cloneState } from '../engine/state.js';
-import { RuleError, canPay } from '../engine/core.js';
+import { RuleError, canPay, heldModifier } from '../engine/core.js';
 import { ACTION_CARDS, OBJECTIVES } from '../engine/data/cards.js';
 import { ADVANCES, GROUPS } from '../engine/data/advances.js';
 import { WONDERS } from '../engine/data/wonders.js';
@@ -10,7 +10,7 @@ import { answerPrompt, attachAI, chooseAction, resourceWeights } from '../ai/ind
 import { collectPlans } from '../engine/enumerate.js';
 import { moveOptions, planMove } from '../engine/move.js';
 import { cityCapacity, collectCandidates, farCollectLimit } from '../engine/city.js';
-import { cityById, hasAdv, nbrs, terrainOf, unitById } from '../engine/queries.js';
+import { cityById, hasAdv, isArmy, nbrs, terrainOf, unitById } from '../engine/queries.js';
 import { MapView } from './mapview.js';
 import { Hud } from './panels.js';
 import { Context } from './context.js';
@@ -18,7 +18,7 @@ import { createDialogs } from './dialogs.js';
 import { createPrompts } from './prompts.js';
 import { playBattleRound } from './battle.js';
 import { countText, hexLines, placeWords } from './info.js';
-import { PLAYER_HEX, RES, TXT, cap, seatName, turnLabel } from './theme.js';
+import { PLAYER_HEX, RES, TXT, cap, joinNames, seatName, turnLabel } from './theme.js';
 import { SAVE_KEY, SPEED_KEY, store } from './store.js';
 
 const SPEED = { normal: 0.75, fast: 0.3, instant: 0 };
@@ -195,7 +195,7 @@ export class Controller {
 
   // ---------------------------------------------------------- selection
   select(k) {
-    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, settler: 0 }, groups: null } : null;
+    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, settler: 0 }, groups: null } : null;
     if (k) this.initCounts();
     this.refreshView();
   }
@@ -211,6 +211,7 @@ export class Controller {
     const out = {
       ship: { free: [], locked: [], why: '' },
       infantry: { free: [], locked: [], why: '' },
+      cavalry: { free: [], locked: [], why: '' },
       settler: { free: [], locked: [], why: '' },
     };
     for (const u of s.units) {
@@ -219,7 +220,7 @@ export class Controller {
       let why = '';
       if (f && f.fought) why = 'already fought this turn';
       else if (f && f.stopped) why = 'stopped on a Mountain';
-      else if (u.type === 'infantry' && !tactics) why = 'Army units need the Tactics Advance to move';
+      else if (isArmy(u) && !tactics) why = 'Army units need the Tactics Advance to move';
       const grp = out[u.type];
       if (why) {
         grp.locked.push(u);
@@ -235,13 +236,16 @@ export class Controller {
     const c = sel.counts;
     if (terrainOf(this.g.s, sel.hex) === 'sea') {
       c.ship = gr.ship.free.length;
-      const room = c.ship * 2;
-      c.infantry = Math.min(gr.infantry.free.length, room);
-      c.settler = Math.min(gr.settler.free.length, room - c.infantry);
+      let room = c.ship * 2;
+      for (const type of ['infantry', 'cavalry', 'settler']) {
+        c[type] = Math.min(gr[type].free.length, room);
+        room -= c[type];
+      }
     } else {
       c.ship = 0;
       c.infantry = gr.infantry.free.length;
-      c.settler = c.infantry ? 0 : gr.settler.free.length;
+      c.cavalry = gr.cavalry.free.length;
+      c.settler = c.infantry + c.cavalry ? 0 : gr.settler.free.length;
     }
   }
 
@@ -251,14 +255,12 @@ export class Controller {
     sel.groups = this.ownGroups(sel.hex);
     const gr = sel.groups;
     const c = sel.counts;
-    c.ship = Math.min(c.ship, gr.ship.free.length);
-    c.infantry = Math.min(c.infantry, gr.infantry.free.length);
-    c.settler = Math.min(c.settler, gr.settler.free.length);
+    for (const type of ['ship', 'infantry', 'cavalry', 'settler']) c[type] = Math.min(c[type], gr[type].free.length);
     if (c.ship > 0) {
-      const room = c.ship * 2;
-      if (c.infantry + c.settler > room) {
-        c.settler = Math.max(0, Math.min(c.settler, room - c.infantry));
-        c.infantry = Math.min(c.infantry, room - c.settler);
+      let room = c.ship * 2;
+      for (const type of ['infantry', 'cavalry', 'settler']) {
+        c[type] = Math.min(c[type], room);
+        room -= c[type];
       }
     }
     this.moveOpts = [];
@@ -310,7 +312,7 @@ export class Controller {
     const gr = sel.groups || this.ownGroups(sel.hex);
     const c = sel.counts;
     const take = (list, n) => list.slice(0, n).map((u) => u.id);
-    const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.settler.free, c.settler)];
+    const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.cavalry.free, c.cavalry), ...take(gr.settler.free, c.settler)];
     if (c.ship > 0) return { ids: take(gr.ship.free, c.ship), carry: cargo };
     return { ids: cargo, carry: [] };
   }
@@ -327,7 +329,8 @@ export class Controller {
     if (list.length > 1) {
       const plain = list.filter((x) => !x.roads && !x.nav);
       const terr = terrainOf(s, k);
-      if (plain.length === 1 && terr !== 'forest' && terr !== 'mountain') o = plain[0];
+      const penalty = (terr === 'forest' || terr === 'mountain') && !(plain[0] && plain[0].scout);
+      if (plain.length === 1 && !penalty) o = plain[0];
       else {
         o = await this.dialogs.pickVariant(k, list);
         if (!o) return;
@@ -346,7 +349,7 @@ export class Controller {
     // keep working with whatever is left where the units went (or where they started)
     const dest = ship && o.explore !== null ? from : o.to;
     const here = this.ownGroups(dest);
-    const any = here.ship.free.length + here.infantry.free.length + here.settler.free.length;
+    const any = here.ship.free.length + here.infantry.free.length + here.cavalry.free.length + here.settler.free.length;
     if (any && this.humanCanAct()) this.select(dest);
     else if (this.sel) this.clearSelection();
   }
@@ -456,10 +459,28 @@ export class Controller {
       cands: new Map(cands.map((c) => [c.hex, c])),
       picks: new Map(),
       cap: cityCapacity(s, city),
+      surgeCard: heldModifier(s, 0, 'collect'),
+      surge: false,
       metallurgy: false,
       free: t.actionsLeft <= 0 && econ,
       econ,
     };
+    this.refreshView();
+  }
+
+  /** Spaces the chosen city may collect from, counting a ticked Resource Surge card. */
+  collectCap() {
+    const tk = this.task;
+    return tk.cap + (tk.surge ? 2 : 0);
+  }
+
+  setSurge(on) {
+    const tk = this.task;
+    tk.surge = on;
+    if (!on) {
+      const keep = [...tk.picks].slice(0, tk.cap);
+      tk.picks = new Map(keep);
+    }
     this.refreshView();
   }
 
@@ -482,8 +503,9 @@ export class Controller {
     else {
       if (cur === undefined) {
         const s = this.g.s;
-        if (tk.picks.size >= tk.cap) {
-          this.hud.toast(`This city can collect from at most ${tk.cap} space${tk.cap === 1 ? '' : 's'}.`, 'error', 2200);
+        const cap = this.collectCap();
+        if (tk.picks.size >= cap) {
+          this.hud.toast(`This city can collect from at most ${cap} space${cap === 1 ? '' : 's'}.`, 'error', 2200);
           return;
         }
         const picked = [...tk.picks.keys()].map((h) => tk.cands.get(h));
@@ -506,7 +528,7 @@ export class Controller {
     const s = this.g.s;
     const city = cityById(s, tk.city);
     const w = resourceWeights(s, 0);
-    const plans = collectPlans(s, 0, city, w);
+    const plans = collectPlans(s, 0, city, w, tk.surge ? 2 : 0);
     if (!plans.length) return;
     const value = (plan) => plan.reduce((n, p) => n + (w[p.res] || 1), 0);
     plans.sort((a, b) => value(b) - value(a));
@@ -526,6 +548,7 @@ export class Controller {
     const ore = picks.filter((p) => p.res === 'ore').length;
     if (tk.metallurgy && ore >= 2) a.metallurgy = true;
     if (tk.free) a.free = true;
+    if (tk.surge && tk.surgeCard) a.card = tk.surgeCard.id;
     return a;
   }
 
@@ -839,9 +862,12 @@ export class Controller {
       case 'objective':
         this.hud.toast(`${this.who(ev.player)} completed the objective “${OBJECTIVES[ev.objective].name}”!`, ev.player === 0 ? 'good' : 'info', 2600);
         break;
-      case 'trade':
-        this.hud.toast(`${this.who(ev.player)} earned ${ev.routes.length} from trade routes.`, 'info', 1600);
+      case 'trade': {
+        const lines = [`${this.who(ev.player)} earned ${ev.routes.length} from trade routes.`];
+        if (ev.marketGold && ev.marketGold.length) lines.push(`${joinNames(ev.marketGold.map((o) => this.who(o)))} earned 1 Gold from a Market.`);
+        this.hud.toast(lines.join('\n'), 'info', 1600);
         break;
+      }
       case 'government':
         this.hud.toast(`${this.who(ev.player)} adopted the ${GROUPS[ev.government].name} government.`, 'info', 2400);
         break;

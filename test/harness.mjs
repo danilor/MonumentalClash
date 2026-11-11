@@ -7,7 +7,7 @@ import { OBJECTIVE_CARD_LIST } from '../src/engine/data/cards.js';
 import { WONDER_IDS } from '../src/engine/data/wonders.js';
 import { GROUPS } from '../src/engine/data/advances.js';
 import { randInt, seedFromString } from '../src/engine/rng.js';
-import { allOwners, resLimit, totalAges } from '../src/engine/queries.js';
+import { allOwners, isArmy, resLimit, totalAges } from '../src/engine/queries.js';
 
 export function makeRand(seed) {
   const st = { rng: seedFromString(String(seed)) };
@@ -60,7 +60,7 @@ export function checkInvariants(g) {
       shipsAtHex[u.hex] = (shipsAtHex[u.hex] || 0) + 1;
     } else {
       if (h.terrain === 'sea') cargo[u.hex] = (cargo[u.hex] || 0) + 1;
-      if (u.type === 'infantry' && h.terrain !== 'sea') {
+      if (isArmy(u) && h.terrain !== 'sea') {
         const k = `${u.hex}:${u.owner}`;
         stack[k] = (stack[k] || 0) + 1;
       }
@@ -75,8 +75,8 @@ export function checkInvariants(g) {
   for (const [k, n] of Object.entries(count)) {
     const [o, type] = k.split(':');
     const lim = Number(o) === BARBARIAN
-      ? (type === 'infantry' ? PIECE_LIMITS.barbarianInfantry : 0)
-      : { infantry: PIECE_LIMITS.infantry, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
+      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry }[type] ?? 0
+      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
     if (n > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
   }
 

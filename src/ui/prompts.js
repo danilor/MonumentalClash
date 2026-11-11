@@ -5,7 +5,8 @@ import { BUILDING_HELP, BUILDING_NAME, C, HEX_SCALE, HEX_TEX_W, PLAYER_COLORS, R
 import { Choice, Flow, optionModal } from './modals.js';
 import { drawPanel, icon } from './widgets.js';
 import { advancesDialog } from './advdialog.js';
-import { placeWords } from './info.js';
+import { UNIT_NAME, placeWords } from './info.js';
+import { unitTexture } from './textures.js';
 
 const MAP_KINDS = new Set(['pick_hex', 'pick_city', 'pick_cities', 'raze']);
 const RECOMMENDED = new Set(['government', 'siege', 'first_player']);
@@ -15,7 +16,7 @@ const TERRAIN_ORDER = ['plains', 'forest', 'mountain', 'barren', 'sea'];
 const EFFECT = {
   gold_mine: { key: 'ic_gold', text: (w) => `Gold mine: ${w.me ? 'you gain' : `${w.name} gains`} 2 Gold.` },
   exhausted: { key: 'ic_exhaust', text: (w) => `Exhausted land: an Exhausted Land marker is placed next to one of ${w.own} cities.` },
-  spawn: { key: 'u_barb', text: (w) => `Barbarians appear: a Barbarian Settlement with Infantry is placed near ${w.own} cities.` },
+  spawn: { key: 'u_barb', text: (w) => `Barbarians appear: a Barbarian Settlement with Infantry is placed near ${w.own} cities, and another Barbarian city gains an Infantry or a Cavalry.` },
   move: { key: 'u_barb', text: (w) => `Barbarians march: Barbarian armies near ${w.own} cities advance and attack. If there are none, a new Barbarian Settlement appears.` },
 };
 
@@ -177,6 +178,9 @@ export function createPrompts(ctl) {
       out.icon = `b_${o.id}`;
       out.iconTint = PLAYER_COLORS[0];
       out.desc = BUILDING_HELP[o.id];
+    } else if (p.kind === 'choice' && UNIT_NAME[o.id]) {
+      out.icon = unitTexture(o.id, 0);
+      out.iconTint = PLAYER_COLORS[0];
     } else if (p.kind === 'trade_income' && RES[o.id]) {
       out.icon = `ic_${o.id}`;
     } else if (p.kind === 'first_player') {
