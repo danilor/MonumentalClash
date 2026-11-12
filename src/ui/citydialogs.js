@@ -186,13 +186,14 @@ function recruitDialog(ctl, city) {
   const f = new Flow(ctl.scene, 580, { top: 80 });
   f.text(`This city can recruit up to ${cap} unit${cap === 1 ? '' : 's'} in one action.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
-  const count = { infantry: 0, cavalry: 0, settler: 0, ship: 0 };
+  const count = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
   let update = () => {};
   const army = Math.max(0, Math.min(cap, STACK_LIMIT - armyAt(s, city.hex, 0).length));
   const market = hasBuilding(city, 'market');
   const kinds = [
     ['infantry', 'u_infantry', '1 Food + 1 Ore', army],
     ['cavalry', 'u_cavalry', market ? '1 Food + 1 Wood' : '1 Food + 1 Wood (this city needs a Market)', market ? army : 0],
+    ['elephant', 'u_elephant', market ? '2 Food' : '2 Food (this city needs a Market)', market ? army : 0],
     ['settler', 'u_settler', '2 Food', cap],
     ['ship', 'u_ship', port ? '2 Wood, appears on the Port\'s sea space' : '2 Wood (this city needs a Port)', port ? cap : 0],
   ];
@@ -214,7 +215,7 @@ function recruitDialog(ctl, city) {
   };
   if (hasAdv(s, 0, 'draft')) addOption('draft', `Draft: pay ${hasAdv(s, 0, 'civil_liberties') ? 2 : 1} Mood instead of the resources for one Infantry`, 'Draft lets you pay Mood tokens in place of the Food and Ore of one Infantry.');
   if (hasAdv(s, 0, 'sanitation')) addOption('sanitation', 'Sanitation: pay 1 Mood instead of the Food for one Settler', 'Sanitation lets you pay a Mood token in place of the 2 Food of one Settler.');
-  if (hasAdv(s, 0, 'nationalism')) addOption('nationalism', 'Nationalism: take the bonus as Culture instead of Mood', 'Recruiting Infantry, Cavalry or Ships earns a token. Pick which one.');
+  if (hasAdv(s, 0, 'nationalism')) addOption('nationalism', 'Nationalism: take the bonus as Culture instead of Mood', 'Recruiting Infantry, Cavalry, Elephants or Ships earns a token. Pick which one.');
   f.gap(2);
   const costLabel = txt(ctl.scene, f.pad, f.y + 11, 'Cost', { size: 13, color: TXT.muted, origin: [0, 0.5] });
   f.add(costLabel);
@@ -227,8 +228,8 @@ function recruitDialog(ctl, city) {
   let action = null;
   update = () => {
     const units = { ...count };
-    const total = units.infantry + units.cavalry + units.settler + units.ship;
-    const fighters = units.infantry + units.cavalry + units.ship;
+    const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
+    const fighters = units.infantry + units.cavalry + units.elephant + units.ship;
     if (opt.draft) {
       opt.draft.lock(units.infantry < 1);
       if (units.infantry < 1) opt.draft.set(false);

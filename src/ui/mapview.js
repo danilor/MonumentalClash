@@ -217,7 +217,7 @@ export class MapView {
       const units = s.units.filter((u) => u.hex === h.k && !hide.has(u.id));
       const groups = [];
       for (const owner of OWNERS) {
-        for (const type of ['ship', 'infantry', 'cavalry', 'settler']) {
+        for (const type of ['ship', 'infantry', 'cavalry', 'elephant', 'settler']) {
           const n = units.filter((u) => u.owner === owner && u.type === type).length;
           if (n) groups.push({ owner, type, n });
         }
@@ -235,16 +235,17 @@ export class MapView {
           c.add(icon(this.scene, `b_${type}`, bx, 20.5 * K, 18 * K).setTint(PLAYER_COLORS[who]));
         });
         city.wonders.forEach((w, i) => c.add(icon(this.scene, 'ic_wonder', (26 + i * 2) * K, (-31 + i * 12) * K, 17 * K)));
-        const crowded = groups.length > 2; // Infantry, Cavalry and Settlers in one city
+        const crowded = groups.length > 2; // Infantry, Cavalry, Elephants and Settlers in one city
+        const packed = groups.length > 3;
         groups.forEach((gp, i) => {
-          const gx = (i - (groups.length - 1) / 2) * (crowded ? 22 : 26) * K;
-          this.piece(c, unitKey(gp), gx, 38 * K, (crowded ? 20 : 22) * K, gp.owner, gp.n);
+          const gx = (i - (groups.length - 1) / 2) * (packed ? 18 : crowded ? 22 : 26) * K;
+          this.piece(c, unitKey(gp), gx, 38 * K, (packed ? 17 : crowded ? 20 : 22) * K, gp.owner, gp.n);
         });
       } else {
         const cargo = groups.filter((gp) => gp.type !== 'ship');
         const ships = groups.filter((gp) => gp.type === 'ship');
         const row = (list, yy, w) => {
-          const size = list.length > 2 ? w * 0.8 : w;
+          const size = list.length > 3 ? w * 0.65 : list.length > 2 ? w * 0.8 : w;
           list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * (size + 6), yy, size, gp.owner, gp.n));
         };
         if (ships.length && cargo.length) {

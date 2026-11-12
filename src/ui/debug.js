@@ -3,7 +3,7 @@ import { C, HEX_W, PLAYER_COLORS, W } from './theme.js';
 import { Button, txt, icon, resRow, setupCamera } from './widgets.js';
 import { TERRAIN_VARIANTS } from './textures.js';
 
-const PIECES = ['u_infantry', 'u_cavalry', 'u_settler', 'u_ship', 'u_barb', 'b_city', 'b_academy', 'b_fortress', 'b_market', 'b_port', 'b_temple', 'ic_wonder'];
+const PIECES = ['u_infantry', 'u_cavalry', 'u_elephant', 'u_settler', 'u_ship', 'u_barb', 'b_city', 'b_academy', 'b_fortress', 'b_market', 'b_port', 'b_temple', 'ic_wonder'];
 const MAP_WIDTH = { b_city: 46, b_academy: 18, b_fortress: 18, b_market: 18, b_port: 18, b_temple: 18, ic_wonder: 17 }; // about their size on the board
 
 /** Developer sheet: ?debug=textures shows every generated texture. */
@@ -28,7 +28,7 @@ export class DebugScene extends Phaser.Scene {
 
     // units and buildings: large, then at board size in each owner colour
     PIECES.forEach((k, i) => {
-      const px = 70 + i * 102;
+      const px = 70 + i * Math.floor((W - 140) / (PIECES.length - 1));
       const tinted = k !== 'ic_wonder';
       const big = icon(this, k, px, 250, k === 'b_city' ? 112 : 92);
       if (tinted) big.setTint(PLAYER_COLORS[0]);

@@ -236,10 +236,11 @@ function danger(s, q, ix) {
   const tally = (acc, u) => {
     acc.n += 1;
     if (u.type === 'cavalry') acc.horse += 1;
+    else if (u.type === 'elephant') acc.tusk += 1;
   };
-  /** The Army units `owner` has on a hex: how many, and how many of them are Cavalry. */
+  /** The Army units `owner` has on a hex: how many, and how many of them are Cavalry and Elephants. */
   const armyOf = (k, owner) => {
-    const acc = { n: 0, horse: 0 };
+    const acc = { n: 0, horse: 0, tusk: 0 };
     for (const u of ix.units.get(k) || []) if (u.owner === owner && isArmy(u)) tally(acc, u);
     return acc;
   };
@@ -248,13 +249,15 @@ function danger(s, q, ix) {
     const attackers = {};
     for (const n of nbrs(s, c.hex)) {
       for (const u of ix.units.get(n) || []) {
-        if (u.owner !== q && isArmy(u) && canAttack(s, u.owner)) tally((attackers[u.owner] ||= { n: 0, horse: 0 }), u);
+        if (u.owner !== q && isArmy(u) && canAttack(s, u.owner)) tally((attackers[u.owner] ||= { n: 0, horse: 0, tusk: 0 }), u);
       }
     }
     const worst = Object.values(attackers).reduce((top, a) => (!top || a.n > top.n ? a : top), null);
     if (!worst) continue;
     const def = armyOf(c.hex, q);
-    const odds = battleOdds(Math.min(worst.n, 5), def.n, { fortress: hasBuilding(c, 'fortress'), horseA: worst.horse, horseD: def.horse });
+    const odds = battleOdds(Math.min(worst.n, 5), def.n, {
+      fortress: hasBuilding(c, 'fortress'), horseA: worst.horse, horseD: def.horse, elephantA: worst.tusk, elephantD: def.tusk,
+    });
     const worth = CITY_BASE + 0.6 * (citySize(c) - 1) + 2.2 * Object.keys(c.buildings).length + 9 * c.wonders.length;
     pen += odds.win * (worth + 2 * def.n) * 0.55;
   }
@@ -264,13 +267,13 @@ function danger(s, q, ix) {
     if (u.owner !== q || !isArmy(u) || seen.has(u.hex)) continue;
     seen.add(u.hex);
     if (s.cities.some((c) => c.hex === u.hex && c.owner === q)) continue;
-    const foes = { n: 0, horse: 0 };
+    const foes = { n: 0, horse: 0, tusk: 0 };
     for (const n of nbrs(s, u.hex)) {
       for (const e of ix.units.get(n) || []) if (e.owner !== q && isArmy(e) && canAttack(s, e.owner)) tally(foes, e);
     }
     if (!foes.n) continue;
     const mine = armyOf(u.hex, q);
-    const odds = battleOdds(Math.min(foes.n, 5), mine.n, { horseA: foes.horse, horseD: mine.horse });
+    const odds = battleOdds(Math.min(foes.n, 5), mine.n, { horseA: foes.horse, horseD: mine.horse, elephantA: foes.tusk, elephantD: mine.tusk });
     pen += odds.win * mine.n * 1.4 * 0.5;
   }
   return pen;
@@ -312,7 +315,7 @@ export function sideValue(s, q, cfg = DEFAULTS, ix = null) {
   for (const u of s.units) {
     if (u.owner !== q) continue;
     if (isArmy(u)) {
-      v += (tactics ? 1.4 : 1.1) + (u.type === 'cavalry' ? 0.25 : 0);
+      v += (tactics ? 1.4 : 1.1) + (u.type === 'cavalry' ? 0.25 : u.type === 'elephant' ? 0.4 : 0);
       const home = mine.some((c) => c.hex === u.hex);
       if (!home && tactics && cfg.aggression > 0 && enemyCities.length) {
         const d = Math.min(...enemyCities.map((c) => hexDistance(c.hex, u.hex)));

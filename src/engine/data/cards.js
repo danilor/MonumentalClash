@@ -53,7 +53,7 @@ export const COMBAT_EFFECTS = {
   desperate: { name: 'Desperate Defense', side: 'any', domain: 'any', text: 'Cancel 1 hit against you this round if the battle is in or next to one of your cities.' },
   supply_lines: { name: 'Supply Lines', side: 'any', domain: 'land', text: 'Roll 1 extra die this round if your army is in or next to one of your cities.' },
   incentive: { name: 'Financial Incentive', side: 'any', domain: 'any', text: 'Pay 1 Gold: +1 CV this round.' },
-  clash_block: { name: 'High Ground Combat', side: 'any', domain: 'land', text: 'The enemy gets no Infantry or Cavalry clash bonus this round.' },
+  clash_block: { name: 'High Ground Combat', side: 'any', domain: 'land', text: 'The enemy cannot use any Clash ability this round: no Infantry or Cavalry bonus, and its Elephants cancel no hit.' },
   flanking: { name: 'Flanking Maneuver', side: 'attacker', domain: 'land', text: 'Attacker: +1 CV this round if you attacked from an adjacent land space.' },
   boarding: { name: 'Boarding Party', side: 'any', domain: 'sea', text: 'Naval battle: if your CV is at least the enemy CV, 1 more enemy Ship is destroyed.' },
   wall_defense: { name: 'Wall Defense', side: 'defender', domain: 'land', text: 'Defender: +2 CV this round if you defend a city with a Fortress.' },
@@ -202,8 +202,8 @@ export const EVENT_CARD_LIST = [
 
   // World events: they affect every player, not only the one who drew the card (engine/worldEvents.js).
   E('barbarian_incursion', 'Barbarian Incursion', 'spawn', 'Every Barbarian army moves 1 space toward the nearest city.'),
-  E('severe_famine', 'Severe Famine', 'exhausted', 'Every player pays 1 Food per city, or each unpaid city becomes Angry.'),
-  E('epidemic_city', 'Epidemic', null, 'The player with the largest city (size 2+) loses 1 Building there, shrinking it by 1.'),
+  E('severe_famine', 'Severe Famine', 'exhausted', 'Every player pays 1 Food per city, or each unpaid city becomes Angry. Irrigation ignores this.'),
+  E('epidemic_city', 'Epidemic', null, 'The player with the largest city (size 2+) loses 1 Building there, shrinking it by 1. Sanitation ignores this.'),
   E('social_unrest', 'Social Unrest', null, 'Every player with an Angry city loses 1 Culture token and 1 Mood token.'),
   E('economic_boom', 'Economic Boom', 'gold_mine', 'You gain 3 Gold. Every other player gains 1 Gold.'),
   E('cultural_breakthrough', 'Cultural Breakthrough', null, 'The player with the fewest Advances gains 1 Advance for free.'),

@@ -93,7 +93,7 @@ export const unitsAt = (s, k) => s.units.filter((u) => u.hex === k);
 export const unitById = (s, id) => s.units.find((u) => u.id === id) || null;
 export const unitsOf = (s, p, type) => s.units.filter((u) => u.owner === p && (!type || u.type === type));
 export const isArmy = (u) => ARMY_TYPES.includes(u.type);
-/** All of a player's Army Units (Infantry and Cavalry), wherever they stand. */
+/** All of a player's Army Units (Infantry, Cavalry and Elephants), wherever they stand. */
 export const armyOf = (s, p) => s.units.filter((u) => u.owner === p && isArmy(u));
 export const armyAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.owner === owner && isArmy(u));
 export const shipsAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.type === 'ship' && (owner === undefined || u.owner === owner));
@@ -139,8 +139,8 @@ export const buildingsLeft = (s, p, type) =>
 export function unitsLeft(s, p, type) {
   const limit =
     p === BARBARIAN
-      ? type === 'cavalry' ? PIECE_LIMITS.barbarianCavalry : PIECE_LIMITS.barbarianInfantry
-      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
+      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }[type]
+      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
   return limit - s.units.filter((u) => u.owner === p && u.type === type).length;
 }
 

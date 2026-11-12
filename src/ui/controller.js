@@ -195,7 +195,7 @@ export class Controller {
 
   // ---------------------------------------------------------- selection
   select(k) {
-    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, settler: 0 }, groups: null } : null;
+    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0 }, groups: null } : null;
     if (k) this.initCounts();
     this.refreshView();
   }
@@ -212,6 +212,7 @@ export class Controller {
       ship: { free: [], locked: [], why: '' },
       infantry: { free: [], locked: [], why: '' },
       cavalry: { free: [], locked: [], why: '' },
+      elephant: { free: [], locked: [], why: '' },
       settler: { free: [], locked: [], why: '' },
     };
     for (const u of s.units) {
@@ -237,7 +238,7 @@ export class Controller {
     if (terrainOf(this.g.s, sel.hex) === 'sea') {
       c.ship = gr.ship.free.length;
       let room = c.ship * 2;
-      for (const type of ['infantry', 'cavalry', 'settler']) {
+      for (const type of ['infantry', 'cavalry', 'elephant', 'settler']) {
         c[type] = Math.min(gr[type].free.length, room);
         room -= c[type];
       }
@@ -245,7 +246,8 @@ export class Controller {
       c.ship = 0;
       c.infantry = gr.infantry.free.length;
       c.cavalry = gr.cavalry.free.length;
-      c.settler = c.infantry + c.cavalry ? 0 : gr.settler.free.length;
+      c.elephant = gr.elephant.free.length;
+      c.settler = c.infantry + c.cavalry + c.elephant ? 0 : gr.settler.free.length;
     }
   }
 
@@ -255,10 +257,10 @@ export class Controller {
     sel.groups = this.ownGroups(sel.hex);
     const gr = sel.groups;
     const c = sel.counts;
-    for (const type of ['ship', 'infantry', 'cavalry', 'settler']) c[type] = Math.min(c[type], gr[type].free.length);
+    for (const type of ['ship', 'infantry', 'cavalry', 'elephant', 'settler']) c[type] = Math.min(c[type], gr[type].free.length);
     if (c.ship > 0) {
       let room = c.ship * 2;
-      for (const type of ['infantry', 'cavalry', 'settler']) {
+      for (const type of ['infantry', 'cavalry', 'elephant', 'settler']) {
         c[type] = Math.min(c[type], room);
         room -= c[type];
       }
@@ -312,7 +314,7 @@ export class Controller {
     const gr = sel.groups || this.ownGroups(sel.hex);
     const c = sel.counts;
     const take = (list, n) => list.slice(0, n).map((u) => u.id);
-    const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.cavalry.free, c.cavalry), ...take(gr.settler.free, c.settler)];
+    const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.cavalry.free, c.cavalry), ...take(gr.elephant.free, c.elephant), ...take(gr.settler.free, c.settler)];
     if (c.ship > 0) return { ids: take(gr.ship.free, c.ship), carry: cargo };
     return { ids: cargo, carry: [] };
   }
@@ -349,7 +351,7 @@ export class Controller {
     // keep working with whatever is left where the units went (or where they started)
     const dest = ship && o.explore !== null ? from : o.to;
     const here = this.ownGroups(dest);
-    const any = here.ship.free.length + here.infantry.free.length + here.cavalry.free.length + here.settler.free.length;
+    const any = here.ship.free.length + here.infantry.free.length + here.cavalry.free.length + here.elephant.free.length + here.settler.free.length;
     if (any && this.humanCanAct()) this.select(dest);
     else if (this.sel) this.clearSelection();
   }

@@ -79,7 +79,7 @@ test('Cavalry are recruited only in a city with a Market, for 1 Food and 1 Wood 
   assert.equal(horse.hex, cap.hex);
   assert.deepEqual([me(g).res.food, me(g).res.wood], [0, 0]);
   const event = g.drainEvents().find((e) => e.type === 'recruit');
-  assert.deepEqual(event.units, { infantry: 0, cavalry: 1, settler: 0, ship: 0 });
+  assert.deepEqual(event.units, { infantry: 0, cavalry: 1, elephant: 0, settler: 0, ship: 0 });
 });
 
 test('Infantry and Cavalry can be recruited together and their costs add up', () => {

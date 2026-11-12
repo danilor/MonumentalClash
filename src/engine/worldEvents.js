@@ -156,6 +156,10 @@ export const WORLD_EFFECTS = {
   *severe_famine(g, p) {
     const s = g.s;
     for (const q of seatsFrom(s, p)) {
+      if (hasAdv(s, q, 'irrigation')) {
+        g.log(`Irrigation protects ${g.name(q)} against the Severe Famine.`);
+        continue;
+      }
       yield* payOrSuffer(g, q, {
         title: 'Severe Famine',
         text: 'Pay 1 Food for each city you want to feed. Every city left hungry becomes Angry.',
@@ -178,6 +182,10 @@ export const WORLD_EFFECTS = {
     for (const q of seatsFrom(s, p)) {
       const mine = largest.filter((c) => c.owner === q);
       if (!mine.length) continue;
+      if (hasAdv(s, q, 'sanitation')) {
+        g.log(`Sanitation protects ${g.name(q)} against the Epidemic.`);
+        continue;
+      }
       const city = yield* pickCity(g, q, mine, {
         title: 'Epidemic', text: 'The Epidemic strikes your largest city. Choose which one if several tie.',
       });

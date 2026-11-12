@@ -76,7 +76,7 @@ export function moveGroups(s, p, hex) {
     add(ids(ships));
     if (ships.length > 1) for (const sh of ships) add([sh.id]);
   }
-  // A mixed Army is offered both Cavalry first and Infantry first, so either kind can lead the attack.
+  // A mixed Army is offered once for each kind that could lead the attack (Infantry, Cavalry or Elephants first).
   for (const lead of ARMY_TYPES) {
     const ordered = [...army.filter((u) => u.type === lead), ...army.filter((u) => u.type !== lead)];
     for (let k = 1; k <= ordered.length; k++) add(ids(ordered.slice(0, k)));
@@ -104,12 +104,15 @@ function recruitVariants(g, p, city) {
     seen.add(k);
     if (!recruitBlocked(g, p, city, a).why) out.push(a);
   };
+  // Cavalry and Elephants (at most two mounted Units at a time, to keep the list short) need a Market.
+  const mounted = market ? [[0, 0], [1, 0], [2, 0], [0, 1], [0, 2], [1, 1]] : [[0, 0]];
   for (let inf = 0; inf <= Math.min(cap, room); inf++) {
-    for (let cav = 0; inf + cav <= Math.min(cap, room) && cav <= (market ? 2 : 0); cav++) {
-      for (let st = 0; st + inf + cav <= cap && st <= 2; st++) {
-        for (let sh = 0; sh + st + inf + cav <= cap && sh <= (port ? 2 : 0); sh++) {
-          if (inf + cav + st + sh === 0) continue;
-          const units = { infantry: inf, cavalry: cav, settler: st, ship: sh };
+    for (const [cav, ele] of mounted) {
+      if (inf + cav + ele > Math.min(cap, room)) continue;
+      for (let st = 0; st + inf + cav + ele <= cap && st <= 2; st++) {
+        for (let sh = 0; sh + st + inf + cav + ele <= cap && sh <= (port ? 2 : 0); sh++) {
+          if (inf + cav + ele + st + sh === 0) continue;
+          const units = { infantry: inf, cavalry: cav, elephant: ele, settler: st, ship: sh };
           push(units);
           if (inf && hasAdv(s, p, 'draft')) push(units, { draft: true });
           if (st && hasAdv(s, p, 'sanitation')) push(units, { sanitation: true });

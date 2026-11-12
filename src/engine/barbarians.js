@@ -24,20 +24,25 @@ export function addBarbarianUnit(g, hex, type = 'infantry') {
   return addUnitTo(g, BARBARIAN, type, hex);
 }
 
-/** A Barbarian city that already has an Infantry may receive a Cavalry in place of another Infantry. */
-const cavalryAllowed = (s, hex) => hasRoom(s, hex, 'cavalry')
+/** A Barbarian city that already has an Infantry may receive a Cavalry or an Elephant in place of another Infantry. */
+const mountAllowed = (s, hex, type) => hasRoom(s, hex, type)
   && unitsAt(s, hex).some((u) => u.owner === BARBARIAN && u.type === 'infantry');
 
-/** Which of these Barbarian cities get a Cavalry instead of an Infantry? The player may choose none, some or all. */
-function* chooseCavalryCities(g, p, cities) {
+const MOUNT_PROMPTS = {
+  cavalry: { title: 'Barbarian Cavalry', a: 'a Cavalry' },
+  elephant: { title: 'Barbarian Elephants', a: 'an Elephant' },
+};
+
+/** Which of these Barbarian cities get a Cavalry (or an Elephant) instead of an Infantry? The player may choose none, some or all. */
+function* chooseMountedCities(g, p, cities, type) {
   const s = g.s;
-  const eligible = cities.filter((c) => cavalryAllowed(s, c.hex));
-  const max = Math.min(eligible.length, unitsLeft(s, BARBARIAN, 'cavalry'));
+  const eligible = cities.filter((c) => mountAllowed(s, c.hex, type));
+  const max = Math.min(eligible.length, unitsLeft(s, BARBARIAN, type));
   if (max <= 0) return new Set();
   const ids = yield* chooseMany(g, p, {
     kind: 'pick_cities',
-    title: 'Barbarian Cavalry',
-    text: 'These Barbarian cities already have an Infantry, so each may get a Cavalry instead of another Infantry. Choose which ones do, or none.',
+    title: MOUNT_PROMPTS[type].title,
+    text: `These Barbarian cities already have an Infantry, so each may get ${MOUNT_PROMPTS[type].a} instead of another Infantry. Choose which ones do, or none.`,
     options: eligible.map(cityOption),
     min: 0,
     max,
@@ -135,7 +140,7 @@ export function* placeBarbarianSettlement(g, p, { displace = false } = {}) {
 
 function* reinforceChosenCity(g, p) {
   const s = g.s;
-  const options = barbarianCities(s).filter((c) => hasRoom(s, c.hex, 'infantry') || cavalryAllowed(s, c.hex));
+  const options = barbarianCities(s).filter((c) => hasRoom(s, c.hex, 'infantry') || mountAllowed(s, c.hex, 'cavalry') || mountAllowed(s, c.hex, 'elephant'));
   if (!options.length) return;
   const maps = citiesOf(s, p).map((c) => bfs(s, c.hex, 8, landOnly(s)));
   const far = (c) => Math.min(...maps.map((m) => dist(m, c.hex)));
@@ -143,22 +148,34 @@ function* reinforceChosenCity(g, p) {
   const pick = yield* choose(g, p, {
     kind: 'pick_hex',
     title: 'Barbarians muster',
-    text: 'Choose a Barbarian city that receives another Infantry. If it already has an Infantry, a Cavalry may take its place.',
+    text: 'Choose a Barbarian city that receives another Infantry. If it already has an Infantry, a Cavalry or an Elephant may take its place.',
     options: options.map((c) => ({ id: c.hex, label: c.hex, hex: c.hex })),
     default: options[0].hex,
   });
   const hex = options.some((c) => c.hex === pick) ? pick : options[0].hex;
   let type = 'infantry';
-  if (cavalryAllowed(s, hex)) {
+  const otherwise = () => (hasRoom(s, hex, 'infantry') ? 'Place an Infantry' : 'Place nothing');
+  if (mountAllowed(s, hex, 'cavalry')) {
     const horse = yield* confirm(g, p, {
       kind: 'barbarian_cavalry',
       title: 'Barbarian Cavalry',
       text: 'This Barbarian city already has an Infantry, so it may get a Cavalry instead of another Infantry.',
       yes: 'Place a Cavalry',
-      no: hasRoom(s, hex, 'infantry') ? 'Place an Infantry' : 'Place nothing',
+      no: mountAllowed(s, hex, 'elephant') ? 'No Cavalry' : otherwise(),
       default: false,
     });
     if (horse) type = 'cavalry';
+  }
+  if (type === 'infantry' && mountAllowed(s, hex, 'elephant')) {
+    const tusker = yield* confirm(g, p, {
+      kind: 'barbarian_elephant',
+      title: 'Barbarian Elephant',
+      text: 'This Barbarian city already has an Infantry, so it may get an Elephant instead of another Infantry.',
+      yes: 'Place an Elephant',
+      no: otherwise(),
+      default: false,
+    });
+    if (tusker) type = 'elephant';
   }
   addBarbarianUnit(g, hex, type);
   g.emit({ type: 'barbarians', kind: 'reinforce', hex });
@@ -207,11 +224,17 @@ export function* barbarianMove(g, p) {
     refresh();
   }
 
-  // Step 3: an Infantry (or, where one is already stationed, optionally a Cavalry instead) in every Barbarian city
-  // within 2 land spaces of the active player's cities.
+  // Step 3: an Infantry (or, where one is already stationed, optionally a Cavalry or an Elephant instead) in every
+  // Barbarian city within 2 land spaces of the active player's cities.
   const near = barbarianCities(s).filter((c) => nearest(c.hex) <= 2);
-  const horse = yield* chooseCavalryCities(g, p, near);
-  for (const c of near) addBarbarianUnit(g, c.hex, horse.has(c.id) && cavalryAllowed(s, c.hex) ? 'cavalry' : 'infantry');
+  const horse = yield* chooseMountedCities(g, p, near, 'cavalry');
+  const tuskers = yield* chooseMountedCities(g, p, near.filter((c) => !horse.has(c.id)), 'elephant');
+  for (const c of near) {
+    let type = 'infantry';
+    if (horse.has(c.id) && mountAllowed(s, c.hex, 'cavalry')) type = 'cavalry';
+    else if (tuskers.has(c.id) && mountAllowed(s, c.hex, 'elephant')) type = 'elephant';
+    addBarbarianUnit(g, c.hex, type);
+  }
 }
 
 /**

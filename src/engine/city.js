@@ -390,12 +390,13 @@ export function takeUnit(g, p, type, hex, reserved) {
 export function recruitBlocked(g, p, city, a) {
   const s = g.s;
   const units = Object.fromEntries(RECRUIT_TYPES.map((type) => [type, Math.max(0, a.units?.[type] | 0)]));
-  const total = units.infantry + units.cavalry + units.settler + units.ship;
+  const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
   if (total <= 0) return { why: 'Choose at least one unit to recruit.' };
   const cap = cityCapacity(s, city);
   if (total > cap) return { why: `This city can recruit at most ${plural(cap, 'unit')}.` };
   if (units.ship && !isPortCity(city)) return { why: 'Ships need a city with a Port.' };
   if (units.cavalry && !hasBuilding(city, 'market')) return { why: 'Cavalry need a city with a Market.' };
+  if (units.elephant && !hasBuilding(city, 'market')) return { why: 'Elephants need a city with a Market.' };
   const draft = a.draft ? 1 : 0;
   const sanitation = a.sanitation ? 1 : 0;
   if (draft && (!hasAdv(s, p, 'draft') || units.infantry < 1)) return { why: 'Draft needs the Draft Advance and an Infantry to recruit.' };
@@ -403,7 +404,7 @@ export function recruitBlocked(g, p, city, a) {
   const cost = recruitCost(s, p, units, { draft, sanitation });
   const plan = planPayment(s, p, cost);
   if (!plan) return { why: 'You cannot afford that.' };
-  const placed = units.infantry + units.cavalry;
+  const placed = units.infantry + units.cavalry + units.elephant;
   if (armyAt(s, city.hex, p).length + placed > STACK_LIMIT) return { why: 'A space holds at most 4 Army units.' };
   for (const type of RECRUIT_TYPES) {
     const over = units[type] - Math.max(0, unitsLeft(s, p, type));
@@ -428,7 +429,7 @@ export function* recruitAction(g, a) {
   applyPayment(g, p, plan);
   const reserved = new Set();
   const newShips = [];
-  for (const type of ['settler', 'infantry', 'cavalry', 'ship']) {
+  for (const type of ['settler', 'infantry', 'cavalry', 'elephant', 'ship']) {
     for (let i = 0; i < units[type]; i++) {
       const u = takeUnit(g, p, type, type === 'ship' ? city.port : city.hex, reserved);
       reserved.add(u.id);
@@ -436,7 +437,7 @@ export function* recruitAction(g, a) {
     }
   }
   g.emit({ type: 'recruit', player: p, city: city.id, units });
-  g.log(`${g.name(p)} recruits ${countList(units, { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] })}.`);
+  g.log(`${g.name(p)} recruits ${countList(units, { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], elephant: ['Elephant', 'Elephants'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] })}.`);
 
   if (draft) {
     t.draftUses += 1;
@@ -450,7 +451,7 @@ export function* recruitAction(g, a) {
       g.log(`${g.name(p)} regains 1 ${pickRes} (Medicine).`);
     }
   }
-  if (hasAdv(s, p, 'nationalism') && units.infantry + units.cavalry + units.ship > 0) {
+  if (hasAdv(s, p, 'nationalism') && units.infantry + units.cavalry + units.elephant + units.ship > 0) {
     gainRes(g, p, a.nationalism === 'culture' ? { culture: 1 } : { mood: 1 });
   }
 

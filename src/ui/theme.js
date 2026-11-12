@@ -106,7 +106,7 @@ export const BUILDING_NAME = { academy: 'Academy', fortress: 'Fortress', market:
 export const BUILDING_HELP = {
   academy: 'Academy: +2 Ideas when built.',
   fortress: 'Fortress: the defender rolls an extra die and cancels a hit in the first round.',
-  market: 'Market: lets the city recruit Cavalry, and earns you 1 Gold when an opponent uses Trade Routes with the city. Needs the Bartering Advance.',
+  market: 'Market: lets the city recruit Cavalry and Elephants, and earns you 1 Gold when an opponent uses Trade Routes with the city. Needs the Bartering Advance.',
   port: 'Port: lets the city recruit Ships and collect Gold or a Mood token from the sea.',
   temple: 'Temple: +1 Mood or +1 Culture token when built.',
 };

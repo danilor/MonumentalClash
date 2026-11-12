@@ -16,7 +16,7 @@ const WIDTH = LAYOUT.right - 16;
 const TOP = 48;
 const BOTTOM = LOG_Y - 6;
 const PAD = 12;
-const UNIT_ROWS = ['ship', 'infantry', 'cavalry', 'settler'];
+const UNIT_ROWS = ['ship', 'infantry', 'cavalry', 'elephant', 'settler'];
 
 export class Context {
   constructor(scene, ctl) {
@@ -228,7 +228,7 @@ export class Context {
     const items = [
       ['collect', 'Collect', () => ctl.startCollect(city.id), 'Gather resources from this city and the spaces around it.', 'ic_food'],
       ['construct', 'Construct', () => d.construct(city), 'Build an Academy, Fortress, Market, Port or Temple.', 'b_academy'],
-      ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Cavalry, Settlers or Ships.', 'u_infantry'],
+      ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Cavalry, Elephants, Settlers or Ships.', 'u_infantry'],
       ['wonder', 'Wonder', () => d.wonder(city), 'Build a Wonder (needs a Happy city and Engineering).', 'ic_wonder'],
       ['happiness', 'Happiness', () => d.happiness(city), 'Spend Mood tokens to raise the Mood of your cities.', 'mood_happy'],
       ['influence', 'Influence', () => d.influence(city), 'Try to win over a building in another city with Culture.', 'ic_culture'],
@@ -258,7 +258,7 @@ export class Context {
       this.text(can ? 'Your units (choose who moves)' : 'Your units', { size: 14, bold: true, gap: 4 });
       const sea = terrainOf(s, k) === 'sea';
       const c = sel.counts;
-      const stuck = new Map(); // why units cannot move -> how many; Infantry and Cavalry often share one reason
+      const stuck = new Map(); // why units cannot move -> how many; the Army kinds often share one reason
       for (const type of UNIT_ROWS) {
         const free = gr[type].free.length;
         const locked = gr[type].locked.length;

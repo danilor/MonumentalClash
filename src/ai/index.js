@@ -92,6 +92,8 @@ export function answerPrompt(g, prompt) {
         fortress: !!(city && city.buildings.fortress !== undefined && city.owner !== p),
         horseA: info.atkCav || 0,
         horseD: info.defCav || 0,
+        elephantA: info.atkEle || 0,
+        elephantD: info.defEle || 0,
       });
       return odds.win < 0.3;
     }

@@ -33,10 +33,12 @@ export const PIECE_LIMITS = {
   buildings: 5,
   infantry: 16,
   cavalry: 4,
+  elephants: 4,
   ships: 4,
   settlers: 4,
   barbarianInfantry: 20,
   barbarianCavalry: 4,
+  barbarianElephants: 4,
   barbarianSettlements: 4,
 };
 
@@ -56,20 +58,22 @@ export const UNIT_COST = {
   settler: { food: 2 },
   infantry: { food: 1, ore: 1 },
   cavalry: { food: 1, wood: 1 },
+  elephant: { food: 2 },
   ship: { wood: 2 },
 };
 
 /** Army Units fight on land: they move, stack (up to STACK_LIMIT per space) and are lost as casualties. */
-export const ARMY_TYPES = ['infantry', 'cavalry'];
+export const ARMY_TYPES = ['infantry', 'cavalry', 'elephant'];
 /** The Units a Recruit action may produce. */
-export const RECRUIT_TYPES = ['infantry', 'cavalry', 'settler', 'ship'];
-/** Clash abilities: CV added for each rolled icon, up to the number of such Units in the battle. */
+export const RECRUIT_TYPES = ['infantry', 'cavalry', 'elephant', 'settler', 'ship'];
+/** Clash abilities that add CV: CV added for each rolled icon, up to the number of such Units in the battle. */
 export const CLASH_BONUS = { infantry: 1, cavalry: 2 };
 
 export const BUILDING_COST = { food: 1, wood: 1, ore: 1 };
 
 // d12 faces: [value, combat icon]. Infantry icons add +1 CV and Cavalry icons +2 CV (each up to the number of such Units
-// fighting); the Leader and Elephant icons do nothing yet because those Units are not in the game.
+// fighting). An Elephant icon makes the die add nothing to the CV but cancels one enemy hit (again up to the number of
+// Elephants fighting). The Leader icon does nothing because Leaders are not in the game.
 export const COMBAT_DIE = [
   [1, 'leader'],
   [1, 'leader'],

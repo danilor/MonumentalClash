@@ -75,8 +75,8 @@ export function checkInvariants(g) {
   for (const [k, n] of Object.entries(count)) {
     const [o, type] = k.split(':');
     const lim = Number(o) === BARBARIAN
-      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry }[type] ?? 0
-      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
+      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }[type] ?? 0
+      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
     if (n > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
   }
 

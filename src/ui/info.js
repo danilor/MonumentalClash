@@ -8,12 +8,12 @@ import { BUILDING_NAME, MOOD_NAME, RES, TERRAIN, TERRAIN_HELP, cap, seatName, se
 /** What a tooltip calls the owner of something: "Your", "Enemy" (when there is only one computer), "Red"... or "Barbarian". */
 export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === 0 ? 'Your' : g.s.players.length > 2 ? g.s.players[o].name : 'Enemy');
 export const ownedBy = (g, o) => (o === 0 ? 'yours' : o === BARBARIAN ? 'barbarian' : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's");
-export const UNIT_NAME = { infantry: 'Infantry', cavalry: 'Cavalry', settler: 'Settler', ship: 'Ship' };
-/** "Infantry", "Cavalry", "Settlers", "Ships": the army units keep one form for one and for many. */
+export const UNIT_NAME = { infantry: 'Infantry', cavalry: 'Cavalry', elephant: 'Elephant', settler: 'Settler', ship: 'Ship' };
+/** "Infantry", "Cavalry", "Elephants", "Settlers", "Ships": Infantry and Cavalry keep one form for one and for many. */
 export const unitPlural = (type, n = 2) => `${UNIT_NAME[type]}${n > 1 && type !== 'infantry' && type !== 'cavalry' ? 's' : ''}`;
 
 export function unitCounts(s, k, owner) {
-  const out = { infantry: 0, cavalry: 0, settler: 0, ship: 0 };
+  const out = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
   for (const u of unitsAt(s, k)) if (owner === undefined || u.owner === owner) out[u.type] += 1;
   return out;
 }

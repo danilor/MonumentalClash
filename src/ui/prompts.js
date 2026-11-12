@@ -16,7 +16,7 @@ const TERRAIN_ORDER = ['plains', 'forest', 'mountain', 'barren', 'sea'];
 const EFFECT = {
   gold_mine: { key: 'ic_gold', text: (w) => `Gold mine: ${w.me ? 'you gain' : `${w.name} gains`} 2 Gold.` },
   exhausted: { key: 'ic_exhaust', text: (w) => `Exhausted land: an Exhausted Land marker is placed next to one of ${w.own} cities.` },
-  spawn: { key: 'u_barb', text: (w) => `Barbarians appear: a Barbarian Settlement with Infantry is placed near ${w.own} cities, and another Barbarian city gains an Infantry or a Cavalry.` },
+  spawn: { key: 'u_barb', text: (w) => `Barbarians appear: a Barbarian Settlement with Infantry is placed near ${w.own} cities, and another Barbarian city gains an Infantry, a Cavalry or an Elephant.` },
   move: { key: 'u_barb', text: (w) => `Barbarians march: Barbarian armies near ${w.own} cities advance and attack. If there are none, a new Barbarian Settlement appears.` },
 };
 

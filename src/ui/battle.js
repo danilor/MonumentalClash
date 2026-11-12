@@ -12,7 +12,8 @@ const DIE = 40;
 const GAP = 6;
 const DICE_Y = 124; // top of the dice area
 const FACES = COMBAT_DIE.map(([v, ic]) => ({ v, icon: ic }));
-const MARKS = { infantry: 'u_infantry', cavalry: 'u_cavalry' }; // die icons that add to the combat value
+const MARKS = { infantry: 'u_infantry', cavalry: 'u_cavalry', elephant: 'u_elephant' }; // die icons that act on the combat value
+const SPENT = 0x7bd88f; // an Elephant die that was used: its value no longer counts, but it cancels an enemy hit
 const STAGES = 3; // 1: dice total and combat value, 2: the hits, 3: who loses what
 
 /** One die, drawn around its own centre so that it can spin and swell. `final` is the face the engine rolled. */
@@ -21,7 +22,8 @@ function makeDie(scene, x, y, color, final) {
   const g = scene.add.graphics();
   const value = txt(scene, 0, 0, '', { size: 22, bold: true, origin: 0.5 });
   const mark = icon(scene, 'u_infantry', 0, 11, 13).setTint(0xffd23f);
-  root.add([g, value, mark]);
+  const strike = scene.add.graphics();
+  root.add([g, value, mark, strike]);
   let drawn = '';
   const die = {
     root,
@@ -32,19 +34,25 @@ function makeDie(scene, x, y, color, final) {
     face: null, // what it shows now
     show(f, glow = 0) {
       const tex = MARKS[f.icon];
-      const key = `${f.v}${tex || ''}${Math.round(glow * 10)}`;
+      const spent = !!(tex && f.ignored);
+      const key = `${f.v}${tex || ''}${spent ? '!' : ''}${Math.round(glow * 10)}`;
       if (key === drawn) return;
       drawn = key;
       die.face = f;
       g.clear();
+      strike.clear();
       if (glow > 0) {
         g.fillStyle(C.gold, 0.3 * glow);
         g.fillRoundedRect(-DIE / 2 - 4, -DIE / 2 - 4, DIE + 8, DIE + 8, 10);
       }
-      drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 0x10171f, border: tex ? C.gold : color, radius: 7, line: 2 });
-      value.setText(String(f.v)).setY(tex ? -5 : 0);
+      drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 0x10171f, border: spent ? C.good : tex ? C.gold : color, radius: 7, line: 2 });
+      value.setText(String(f.v)).setY(tex ? -5 : 0).setAlpha(spent ? 0.35 : 1);
+      if (spent) {
+        strike.lineStyle(2, SPENT, 1);
+        strike.lineBetween(-10, -5, 10, -5);
+      }
       if (tex) mark.setTexture(tex);
-      mark.setVisible(!!tex);
+      mark.setTint(spent ? SPENT : 0xffd23f).setVisible(!!tex);
     },
   };
   return die;
@@ -79,10 +87,11 @@ function sideColumn(modal, ctl, ev, key, x, w, stages) {
   });
   let y = DICE_Y + area * (DIE + GAP) + 6;
 
-  const sum = side.dice.reduce((n, d) => n + d.v, 0);
+  const sum = side.dice.reduce((n, d) => n + (d.ignored ? 0 : d.v), 0); // the die of an Elephant that was used does not count
   const horse = side.cavalry || 0; // older events and hand-made ones carry no Cavalry bonus
+  const tusks = side.elephants || 0;
   const other = side.cv - sum - side.bonus - horse - side.mod;
-  const lines = [['Dice total', sum]];
+  const lines = [[tusks ? 'Dice total (Elephant dice left out)' : 'Dice total', sum]];
   if (side.bonus) lines.push(['Infantry bonus', `+${side.bonus}`]);
   if (horse) lines.push(['Cavalry bonus', `+${horse}`]);
   if (side.mod) lines.push(['Cards and weapons', side.mod > 0 ? `+${side.mod}` : `${side.mod}`]);
@@ -110,7 +119,8 @@ function sideColumn(modal, ctl, ev, key, x, w, stages) {
     y += 16;
   }
   if (cancel) {
-    hits.add(txt(scene, x + 14, y, `${plural(cancel, 'hit', 'hits')} against this side cancelled (Fortress, Warships or card)`, { size: 12, color: TXT.good, wrap: w - 28 }));
+    const why = [tusks ? (tusks === 1 ? 'Elephant' : 'Elephants') : '', cancel > tusks ? 'Fortress, Warships or card' : ''].filter(Boolean);
+    hits.add(txt(scene, x + 14, y, `${plural(cancel, 'hit', 'hits')} against this side cancelled (${why.join(', ')})`, { size: 12, color: TXT.good, wrap: w - 28 }));
     y += 30;
   }
   if (side.card) {
@@ -188,7 +198,7 @@ export function playBattleRound(ctl, ev) {
   return new Promise((resolve) => {
     const w = 740;
     const notes = ev.notes || [];
-    const h = 490 + (ev.extraA || ev.extraD ? 16 : 0) + notes.length * 18; // room for every optional line of both columns, the Cavalry bonus and Boarding Party included, and the card notes
+    const h = 502 + (ev.extraA || ev.extraD ? 16 : 0) + notes.length * 18; // room for every optional line of both columns, the Cavalry bonus and Boarding Party included, and the card notes
     const sea = ev.domain === 'sea';
     const terr = TERRAIN[terrainOf(g.s, ev.hex)] || 'Sea';
     let live = true; // false once the window is gone: nothing may touch its objects then
@@ -231,7 +241,7 @@ export function playBattleRound(ctl, ev) {
     const yourLoss = you.lost ? `You lose ${plural(you.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'You lose nothing.';
     const theirLoss = them.lost ? `The enemy loses ${plural(them.lost, sea ? 'ship' : 'unit', sea ? 'ships' : 'units')}.` : 'The enemy loses nothing.';
     stages[2].add(txt(scene, w / 2, yb, `${yourLoss}  ${theirLoss}`, { size: 15, bold: true, color: you.lost > them.lost ? TXT.bad : you.lost < them.lost ? TXT.good : TXT.text, origin: [0.5, 0] }));
-    modal.add(txt(scene, w / 2, h - 66, 'A die with an Infantry mark adds +1 CV and one with a Cavalry mark adds +2 CV, for each such unit you have in the fight (up to the number of marked dice). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: 'center' }));
+    modal.add(txt(scene, w / 2, h - 80, 'A die with an Infantry mark adds +1 CV and one with a Cavalry mark adds +2 CV; the die of an Elephant is left out of the total, but the Elephant cancels one enemy hit. Each mark needs a matching unit in the fight (one die per unit). Every full 5 CV is one hit.', { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: 'center' }));
 
     // Both sides throw together: the dice are launched alternately, the attacker's from the left and the defender's from the right.
     const order = [];

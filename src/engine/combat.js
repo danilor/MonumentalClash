@@ -14,10 +14,12 @@ import { onBattleEnd } from './objectives.js';
 import { countList, plural } from './text.js';
 
 const MAX_ROUNDS = 40;
-const ARMY_NAMES = { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'] };
+const ARMY_NAMES = { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], elephant: ['Elephant', 'Elephants'] };
+// Which Army Units are lost first when nobody chooses (and always for the Barbarians): the strongest are kept.
+const CASUALTY_ORDER = ['infantry', 'cavalry', 'elephant'];
 // Which cargo is left behind first when Ships are overloaded (the owner may choose otherwise).
-const LEAVE_ORDER = { settler: 0, infantry: 1, cavalry: 2 };
-const LEFT_BEHIND = { settler: 'a Settler', infantry: 'an Infantry', cavalry: 'a Cavalry' };
+const LEAVE_ORDER = { settler: 0, infantry: 1, cavalry: 2, elephant: 3 };
+const LEFT_BEHIND = { settler: 'a Settler', infantry: 'an Infantry', cavalry: 'a Cavalry', elephant: 'an Elephant' };
 
 export const effectOfCard = (cardId) => ACTION_CARDS[cardId].combat;
 
@@ -54,12 +56,17 @@ const rollDie = (s) => COMBAT_DIE[randInt(s, COMBAT_DIE.length)];
 
 /**
  * A Clash icon only counts while a matching Unit is left to use it, once per Unit:
- * `army` is { infantry, cavalry }. `bonus` is the Infantry CV, `cavalry` the Cavalry CV.
+ * `army` is { infantry, cavalry, elephant }. `bonus` is the Infantry CV, `cavalry` the Cavalry CV. Each Elephant that
+ * is activated takes the value of its die out of the sum (the die is flagged `ignored`) and cancels one enemy hit:
+ * `elephants` counts them. The Elephants take the lowest dice with their icon, so their owner loses as little CV as possible.
  */
 function scoreDice(dice, army) {
-  const sum = dice.reduce((a, d) => a + d.v, 0);
+  const spent = dice.filter((d) => d.icon === 'elephant').sort((a, b) => a.v - b.v).slice(0, army.elephant || 0);
+  for (const d of dice) delete d.ignored;
+  for (const d of spent) d.ignored = true;
+  const sum = dice.reduce((a, d) => a + (d.ignored ? 0 : d.v), 0);
   const clash = (type) => Math.min(dice.filter((d) => d.icon === type).length, army[type] || 0) * CLASH_BONUS[type];
-  return { sum, bonus: clash('infantry'), cavalry: clash('cavalry') };
+  return { sum, bonus: clash('infantry'), cavalry: clash('cavalry'), elephants: spent.length };
 }
 
 /** Roll `count` dice and score them. */
@@ -91,9 +98,9 @@ function rerollHighest(s, roll, army) {
   return { from, to: v };
 }
 
-/** How many Infantry and Cavalry stand among the given unit ids. */
+/** How many Infantry, Cavalry and Elephants stand among the given unit ids. */
 function armyIn(s, ids) {
-  const n = { infantry: 0, cavalry: 0 };
+  const n = { infantry: 0, cavalry: 0, elephant: 0 };
   for (const id of ids) {
     const u = unitById(s, id);
     if (u && u.type in n) n[u.type] += 1;
@@ -104,34 +111,52 @@ function armyIn(s, ids) {
 const infantryIn = (s, ids) => armyIn(s, ids).infantry;
 
 /**
- * The units an owner loses to `hits` hits. The owner picks any Army Units, so a stack of Infantry and Cavalry
- * asks them how to split the losses (Barbarians and the default keep the Cavalry and lose Infantry first).
+ * The units an owner loses to `hits` hits. The owner picks any Army Units, so a stack of mixed Infantry, Cavalry and
+ * Elephants asks them how to split the losses (Barbarians and the default lose Infantry first, then Cavalry, and keep the Elephants).
+ * An answer is the number lost of each kind after the first one, in that order, separated by commas: "1" is one
+ * Cavalry (and the rest Infantry) in a stack of Infantry and Cavalry, "0,1" is one Elephant and no Cavalry.
  */
 function* pickCasualties(g, owner, ids, hits) {
   const s = g.s;
   if (hits <= 0) return [];
   if (hits >= ids.length) return [...ids];
-  const horse = ids.filter((id) => unitById(s, id).type === 'cavalry');
-  const foot = ids.filter((id) => unitById(s, id).type !== 'cavalry');
-  if (!horse.length || !foot.length) return ids.slice(0, hits);
-  const fewest = Math.max(0, hits - foot.length);
-  const most = Math.min(hits, horse.length);
-  let cavalry = fewest;
-  if (most > fewest && owner !== BARBARIAN) {
-    const options = [];
-    for (let n = fewest; n <= most; n++) {
-      options.push({ id: String(n), label: `Lose ${countList({ infantry: hits - n, cavalry: n }, ARMY_NAMES)}` });
+  const kindOf = (id) => {
+    const { type } = unitById(s, id);
+    return CASUALTY_ORDER.includes(type) ? type : CASUALTY_ORDER[0]; // Ships and anything else go with the Infantry
+  };
+  const groups = CASUALTY_ORDER.map((type) => ({ type, ids: ids.filter((id) => kindOf(id) === type) })).filter((x) => x.ids.length);
+  if (groups.length < 2) return ids.slice(0, hits);
+
+  // Every way to take `hits` units from the groups, the first of them being the one that keeps the strongest units
+  const splits = [];
+  const walk = (i, left, taken) => {
+    if (i === groups.length - 1) {
+      if (left <= groups[i].ids.length) splits.push([...taken, left]);
+      return;
     }
-    const ans = Number(yield* choose(g, owner, {
+    for (let n = 0; n <= Math.min(left, groups[i].ids.length); n++) walk(i + 1, left - n, [...taken, n]);
+  };
+  walk(0, hits, []);
+  splits.sort((a, b) => {
+    for (let i = a.length - 1; i > 0; i--) if (a[i] !== b[i]) return a[i] - b[i];
+    return 0;
+  });
+  const idOf = (split) => split.slice(1).join(',');
+  let pick = splits[0];
+  if (splits.length > 1 && owner !== BARBARIAN) {
+    const ans = yield* choose(g, owner, {
       kind: 'casualties',
       title: 'Choose your casualties',
       text: `You must remove ${plural(hits, 'Army Unit')}. Choose which ones.`,
-      options,
-      default: String(fewest),
-    }));
-    if (Number.isInteger(ans) && ans >= fewest && ans <= most) cavalry = ans;
+      options: splits.map((split) => ({
+        id: idOf(split),
+        label: `Lose ${countList(Object.fromEntries(groups.map((x, i) => [x.type, split[i]])), ARMY_NAMES)}`,
+      })),
+      default: idOf(splits[0]),
+    });
+    pick = splits.find((split) => idOf(split) === String(ans)) || pick;
   }
-  return [...foot.slice(0, hits - cavalry), ...horse.slice(0, cavalry)];
+  return groups.flatMap((x, i) => x.ids.slice(0, pick[i]));
 }
 
 function tally(res, owner, kind, n = 1) {
@@ -139,7 +164,7 @@ function tally(res, owner, kind, n = 1) {
   k[kind] += n;
 }
 
-/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship). Settlers go first, then Infantry, then Cavalry. */
+/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship). Settlers go first, then Infantry, Cavalry and Elephants. */
 export function trimCargo(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return [];
@@ -158,7 +183,7 @@ export function trimCargo(g, hex) {
   return lost;
 }
 
-/** After a naval battle the owner of overloaded Ships decides who is left behind when Settlers, Infantry and Cavalry are mixed. */
+/** After a naval battle the owner of overloaded Ships decides who is left behind when Settlers, Infantry, Cavalry and Elephants are mixed. */
 export function* trimCargoChoice(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return;
@@ -504,8 +529,8 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       }
       g.emit({
         type: 'battle_round', hex, round, domain: ctx.domain, disengage: true,
-        a: { owner: A, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, mod: 0, card: played.A, lost: 0 },
-        d: { owner: D, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, mod: 0, card: played.D, lost: 0, fortress: false },
+        a: { owner: A, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, elephants: 0, mod: 0, card: played.A, lost: 0 },
+        d: { owner: D, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, elephants: 0, mod: 0, card: played.D, lost: 0, fortress: false },
         cancelA: 0, cancelD: 0, notes: ['Both armies step back: the battle ends with no further casualties.'],
       });
       g.log('Both armies step back: the battle ends with no further casualties.');
@@ -561,13 +586,15 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
         if (again) notes.push(`Confusion: ${g.name(owners[side])} rerolls a ${again.from} and gets a ${again.to}.`);
       }
       if (mods[side].noClash) {
-        r.bonus = 0;
-        r.cavalry = 0;
+        const cancelled = r.elephants;
+        Object.assign(r, scoreDice(r.dice, {}));
         notes.push(`High Ground Combat: ${g.name(owners[side])} gets no clash bonus.`);
+        if (cancelled) notes.push(`High Ground Combat: the Elephants of ${g.name(owners[side])} cancel no hit.`);
       }
       if (mods[side].sabotage) {
-        mods[side].cv -= r.dice.length;
-        notes.push(`Sabotaged Supplies: ${g.name(owners[side])} loses ${plural(r.dice.length, 'point')} (-1 per die).`);
+        const counted = r.dice.filter((d) => !d.ignored).length; // the die of an Elephant has no value left to lose
+        mods[side].cv -= counted;
+        notes.push(`Sabotaged Supplies: ${g.name(owners[side])} loses ${plural(counted, 'point')} (-1 per die${counted < r.dice.length ? ' that counts' : ''}).`);
       }
     }
     for (const line of notes) g.log(line);
@@ -608,12 +635,12 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       }
     }
 
-    // 4) hits
+    // 4) hits: the Elephants that were activated cancel enemy hits too
     const raw = { A: Math.floor(cv.A / 5), D: Math.floor(cv.D / 5) };
-    let cancelD = mods.D.cancel;
+    let cancelD = mods.D.cancel + rollD.elephants;
     if (fortActive && !siege.hit && !noFortress) cancelD += 1;
     if (!land && round === 1 && hasAdv(s, D, 'warships')) cancelD += 1;
-    let cancelA = mods.A.cancel;
+    let cancelA = mods.A.cancel + rollA.elephants;
     if (round === 1 && hasAdv(s, A, 'warships') && (!land || ctx.landed)) cancelA += 1;
     // Boarding Party sinks one more Ship when the CV at least matches the enemy's; nothing can cancel it
     const boardA = mods.A.board && cv.A >= cv.D ? 1 : 0;
@@ -658,8 +685,8 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     }
     g.emit({
       type: 'battle_round', hex, round, domain: ctx.domain,
-      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, cavalry: rollA.cavalry, mod: mods.A.cv + steel.A, card: played.A, lost: killA.length },
-      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, cavalry: rollD.cavalry, mod: mods.D.cv + steel.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
+      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, cavalry: rollA.cavalry, elephants: rollA.elephants, mod: mods.A.cv + steel.A, card: played.A, lost: killA.length },
+      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, cavalry: rollD.cavalry, elephants: rollD.elephants, mod: mods.D.cv + steel.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
       cancelA, cancelD, notes, extraA: boardA, extraD: boardD,
     });
     g.log(`Round ${round}: ${g.name(A)} CV ${cv.A} vs ${g.name(D)} CV ${cv.D}; losses ${killA.length} / ${killD.length}.`);
@@ -700,6 +727,7 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
         info: {
           round, atk: atkLive().length, def: defLive().length, hex, domain: ctx.domain,
           atkCav: armyIn(s, atkLive()).cavalry, defCav: armyIn(s, defLive()).cavalry,
+          atkEle: armyIn(s, atkLive()).elephant, defEle: armyIn(s, defLive()).elephant,
         },
       });
     }
