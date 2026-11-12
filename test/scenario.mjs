@@ -157,8 +157,8 @@ export function readCsv(name) {
   return rows.filter((r) => r.some((x) => x.trim()));
 }
 
-/** Computer players play a whole game (two of them, or `opponents` + 1); invariants are checked after every action. `prepare(g)` may set the table up before the first turn. */
-export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1, prepare } = {}) {
+/** Computer players play a whole game (two of them, or `opponents` + 1); invariants are checked after every action. `prepare(g)` may set the table up before the first turn, `turn(g, p)` before each turn of player p. */
+export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1, prepare, turn } = {}) {
   const seats = opponents + 1;
   const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents });
   for (let p = 0; p < seats; p++) attachAI(g, p);
@@ -167,6 +167,7 @@ export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1, prepare 
   const problems = [];
   for (let turns = 0; g.s.phase !== 'over' && turns < maxTurns; turns++) {
     const p = g.cur;
+    turn?.(g, p);
     for (let n = 0; g.s.phase !== 'over' && g.cur === p && n < 40; n++) {
       const choice = chooseAction(g, p);
       let r = g.apply(choice.action);

@@ -2,7 +2,7 @@
 import { BARBARIAN } from './data/constants.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from './data/cards.js';
 import { GROUPS } from './data/advances.js';
-import { armyOf, citiesOf, cityAt, foesOf, hasBuilding, nbrs, unitsOf, hexDistance } from './queries.js';
+import { armyOf, citiesOf, cityAt, foesOf, hasBuilding, isNpc, nbrs, unitsOf, hexDistance } from './queries.js';
 import { gainRes } from './core.js';
 
 const SUPPLY_COST = { eureka: 'ideas', wealth: 'gold', ore_supplies: 'ore', wood_supplies: 'wood', food_supplies: 'food' };
@@ -109,7 +109,7 @@ function complete(g, p, cardId, side, detail = null) {
 
 /** Complete an event objective (if the player holds a matching card). */
 export function completeEvent(g, p, objId) {
-  if (p === BARBARIAN) return false;
+  if (isNpc(p)) return false;
   const hand = g.s.players[p].hand.objective;
   for (const cardId of hand) {
     const card = OBJECTIVE_CARDS[cardId];
@@ -123,7 +123,7 @@ export function completeEvent(g, p, objId) {
 export function* onBattleEnd(g, res) {
   const s = g.s;
   for (const p of [res.attacker, res.defender]) {
-    if (p === BARBARIAN) continue;
+    if (isNpc(p)) continue;
     const foe = p === res.attacker ? res.defender : res.attacker;
     const isAtk = p === res.attacker;
     const land = res.domain === 'land';
@@ -132,7 +132,7 @@ export function* onBattleEnd(g, res) {
     const foeStart = isAtk ? res.defStart : res.atkStart;
     const myLost = isAtk ? res.atkLost : res.defLost;
     const k = res.kills[p] || { army: 0, settlers: 0, ships: 0 };
-    const foePlayer = foe !== BARBARIAN;
+    const foePlayer = !isNpc(foe);
     const hits = [];
     if (land && k.army >= 3) hits.push('warmonger');
     if (land && won && foeStart >= 2 && myLost === 0) hits.push('general');

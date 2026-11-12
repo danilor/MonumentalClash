@@ -1,8 +1,8 @@
 // The Game facade: owns the state, runs rule flows (generators) and hands prompts to players.
-import { BARBARIAN, MAIN_ACTIONS_PER_TURN, ROUNDS_PER_AGE } from './data/constants.js';
+import { BARBARIAN, MAIN_ACTIONS_PER_TURN, PIRATE, ROUNDS_PER_AGE } from './data/constants.js';
 import { createState, upgradeState } from './state.js';
 import { RuleError, clampResources, fail, gainRes } from './core.js';
-import { cityById, hasAdv, hasBuilding, nextSeat, revealedDistances, turnOrder } from './queries.js';
+import { bfs, cityById, hasAdv, hasBuilding, isHidden, nextSeat, pirateBlocked, turnOrder } from './queries.js';
 import { choose, confirm } from './prompts.js';
 import { plural } from './text.js';
 import { advanceAction } from './advance.js';
@@ -43,6 +43,7 @@ export function newTurn(player) {
 
 /**
  * Trade routes: each Settler/Ship pairs with a different enemy city (not Angry) within 2 revealed spaces. Max 4.
+ * Pirate Ships block routes that start in, or go through, the Sea spaces they are in or next to.
  * Cities without a Market come first, so a route that pays an opponent's Market is only used when it adds to the count.
  */
 export function tradeRoutes(s, p) {
@@ -51,7 +52,8 @@ export function tradeRoutes(s, p) {
     .filter((c) => c.owner !== p && c.owner !== BARBARIAN && c.mood !== 'angry')
     .sort((a, b) => hasBuilding(a, 'market') - hasBuilding(b, 'market'));
   const mine = s.units.filter((u) => u.owner === p && (u.type === 'settler' || u.type === 'ship'));
-  const near = new Map(mine.map((u) => [u.id, revealedDistances(s, u.hex, 2)]));
+  const reach = (from) => (pirateBlocked(s, from) ? new Map() : bfs(s, from, 2, (n) => !isHidden(s, n) && !pirateBlocked(s, n)));
+  const near = new Map(mine.map((u) => [u.id, reach(u.hex)]));
   // Pairs are built city by city: a city that gets a partner keeps one, so earlier cities are never given up.
   const holder = new Map();
   const attempt = (c, seen) => {
@@ -223,6 +225,7 @@ export class Game {
   }
 
   name(p) {
+    if (p === PIRATE) return 'The Pirates';
     return p === BARBARIAN ? 'The Barbarians' : this.s.players[p].name;
   }
 

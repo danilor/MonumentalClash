@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EVENT_CARD_LIST } from '../src/engine/data/cards.js';
-import { BARBARIAN, STACK_LIMIT } from '../src/engine/data/constants.js';
+import { BARBARIAN, PIRATE, STACK_LIMIT } from '../src/engine/data/constants.js';
 import { addUnit } from '../src/engine/state.js';
 import { resolveEvent } from '../src/engine/events.js';
 import { WORLD_EFFECTS, endRound } from '../src/engine/worldEvents.js';
@@ -1078,7 +1078,7 @@ test('Earthquake: a random Building of a random city falls, whoever owns it, and
   assert.ok(logged(quiet, /The earthquake finds no Building to topple/));
 });
 
-test('Pirate Raids: every player with a Port loses 1 resource, by default the one they can best do without; the others are spared', () => {
+test('Pirate Raids: a Pirate Ship appears first; then every player with a Port loses 1 resource, by default the one they can best do without; the others are spared', () => {
   const g = flat();
   harbour(g, realm(g, 0, ['market'])[0]);
   harbour(g, capitalOf(g, 1));
@@ -1086,9 +1086,10 @@ test('Pirate Raids: every player with a Port loses 1 resource, by default the on
   stock(g, 1, {});
   stock(g, 2, { food: 2, gold: 3 });
   const { asked } = effect(g, 'pirate_raids', 1);
-  assert.deepEqual(asked.map((q) => [q.player, q.kind, q.role]), [[0, 'pick_resource', 'give']], 'the Port of the player with nothing costs nothing');
-  assert.deepEqual(asked[0].options.map((o) => o.id), ['food', 'wood', 'gold']);
-  assert.equal(asked[0].default, 'gold');
+  assert.deepEqual(asked.map((q) => [q.player, q.kind]), [[1, 'pick_hex'], [0, 'pick_resource']], 'the drawer places the Ship; the Port of the player with nothing costs nothing');
+  assert.equal(unitsOf(g.s, PIRATE, 'ship').length, 1);
+  assert.deepEqual(asked[1].options.map((o) => o.id), ['food', 'wood', 'gold']);
+  assert.equal(asked[1].default, 'gold');
   assert.deepEqual([me(g, 0).res.food, me(g, 0).res.wood, me(g, 0).res.gold], [2, 1, 2]);
   assert.deepEqual([me(g, 2).res.food, me(g, 2).res.gold], [2, 3], 'no Port, no raid');
 
@@ -1097,6 +1098,7 @@ test('Pirate Raids: every player with a Port loses 1 resource, by default the on
   stock(picked, 0, { food: 2, wood: 1, gold: 3 });
   effect(picked, 'pirate_raids', 0, { pick_resource: only(0, 'wood') });
   assert.deepEqual([me(picked, 0).res.food, me(picked, 0).res.wood, me(picked, 0).res.gold], [2, 0, 3]);
+  assert.equal(unitsOf(picked.s, PIRATE, 'ship').length, 1, 'the only Sea space gets the Ship without a question');
   assert.deepEqual(checkInvariants(picked), []);
 });
 
@@ -1107,7 +1109,7 @@ test('Pirate Raids: the drawer is raided first and then the others clockwise', (
     stock(g, p, { food: 1, gold: 1 });
   }
   const { asked } = effect(g, 'pirate_raids', 1);
-  assert.deepEqual(asked.map((q) => q.player), [1, 2, 0]);
+  assert.deepEqual(asked.filter((q) => q.kind === 'pick_resource').map((q) => q.player), [1, 2, 0]);
 });
 
 // ------------------------------------------------------------ Culture and score

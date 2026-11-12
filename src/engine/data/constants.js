@@ -21,12 +21,13 @@ export const BUILDING_ADVANCE = {
 };
 
 // The human sits in seat 0, the computer players in the seats after, clockwise around the table.
-// The Barbarians always use the highest possible index, so they never clash with a seat.
+// The Barbarians and the Pirates take the two indexes after the last possible seat, so they never clash with one.
 export const MIN_OPPONENTS = 1;
 export const MAX_OPPONENTS = 3;
 export const DEFAULT_OPPONENTS = 1;
 export const MAX_PLAYERS = 1 + MAX_OPPONENTS;
 export const BARBARIAN = MAX_PLAYERS;
+export const PIRATE = MAX_PLAYERS + 1;
 
 export const PIECE_LIMITS = {
   settlements: 7,
@@ -40,6 +41,7 @@ export const PIECE_LIMITS = {
   barbarianCavalry: 4,
   barbarianElephants: 4,
   barbarianSettlements: 4,
+  pirateShips: 4,
 };
 
 export const MAX_RESOURCE = 7;

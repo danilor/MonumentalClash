@@ -1,5 +1,5 @@
 // The context panel (top right): explains what is selected and offers the actions that apply to it.
-import { BARBARIAN, BUILDINGS, RECRUIT_TYPES } from '../engine/data/constants.js';
+import { BARBARIAN, BUILDINGS, PIRATE, RECRUIT_TYPES } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, wonderBlocked } from '../engine/city.js';
 import { canPay, heldModifier } from '../engine/core.js';
@@ -251,7 +251,7 @@ export class Context {
     const k = sel.hex;
     const gr = sel.groups;
     const hasMine = UNIT_ROWS.some((t) => gr[t].free.length + gr[t].locked.length > 0);
-    const foes = [...foesOf(s, 0), BARBARIAN].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => Object.values(c).some((n) => n > 0));
+    const foes = [...foesOf(s, 0), BARBARIAN, PIRATE].map((o) => [o, unitCounts(s, k, o)]).filter(([, c]) => Object.values(c).some((n) => n > 0));
     if (!hasMine && !foes.length) return;
     this.rule();
     if (hasMine) {

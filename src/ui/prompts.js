@@ -18,6 +18,7 @@ const EFFECT = {
   exhausted: { key: 'ic_exhaust', text: (w) => `Exhausted land: an Exhausted Land marker is placed next to one of ${w.own} cities.` },
   spawn: { key: 'u_barb', text: (w) => `Barbarians appear: a Barbarian Settlement with Infantry is placed near ${w.own} cities, and another Barbarian city gains an Infantry, a Cavalry or an Elephant.` },
   move: { key: 'u_barb', text: (w) => `Barbarians march: Barbarian armies near ${w.own} cities advance and attack. If there are none, a new Barbarian Settlement appears.` },
+  pirates: { key: 'u_pirate', text: (w) => `Pirates spawn and raid: two Pirate Ships appear on the Sea, one of them next to ${w.own} cities if possible. Every player with a city next to a Pirate Ship loses 1 Resource, Mood token or Culture token.` },
 };
 
 const isYesNo = (p) => p.options.length === 2 && p.options[0].id === 'yes' && p.options[1].id === 'no';
@@ -181,7 +182,7 @@ export function createPrompts(ctl) {
     } else if (p.kind === 'choice' && UNIT_NAME[o.id]) {
       out.icon = unitTexture(o.id, 0);
       out.iconTint = PLAYER_COLORS[0];
-    } else if (p.kind === 'trade_income' && RES[o.id]) {
+    } else if ((p.kind === 'trade_income' || p.kind === 'pirate_loss' || p.kind === 'pirate_bounty') && RES[o.id]) {
       out.icon = `ic_${o.id}`;
     } else if (p.kind === 'first_player') {
       out.label = o.id === '0' ? 'You go first' : `${cap(seatName(ctl.g.s, Number(o.id)))} goes first`;

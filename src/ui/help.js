@@ -47,7 +47,7 @@ export const TOPICS = [
       '# Units',
       '• Infantry, Cavalry and Elephants are Army units. They fight, and can only move once you have researched Tactics. At most 4 Army units may share a space, and you have 16 Infantry, 4 Cavalry and 4 Elephants.',
       '• Settlers found cities. They cannot enter enemy spaces without Army units.',
-      '• Ships sail through connected Sea spaces, carry up to 2 land units each and stop when they meet an enemy Ship. To board, select land units next to your Ship and click its space. To land, select the Ship\'s space, set the number of Ships to 0 and click a land space beside it.',
+      '• Ships sail through connected Sea spaces, carry up to 2 land units each and stop when they meet an enemy Ship (a Pirate Ship counts too). To board, select land units next to your Ship and click its space. To land, select the Ship\'s space, set the number of Ships to 0 and click a land space beside it.',
       '# Moving',
       '• Select your units, then click a highlighted space. One Move action lets up to 3 groups move; each group moves one space (two with Roads).',
       '• Forest: units that enter cannot attack that turn. Mountain: units that enter must stop there.',
@@ -73,6 +73,7 @@ export const TOPICS = [
       '# Capturing a city',
       '• When all defenders are gone, Army units that attacked take the city. The captor gains Gold equal to the city\'s size (+1 if it was Happy, only 1 if it was Angry). A Barbarian city is worth just 1 Gold whatever its size.',
       '• Beating a group of Barbarian units earns 1 more Gold, whether you attacked them or they attacked you.',
+      '• Every Pirate Ship you sink pays 1 Gold and then 1 Mood or 1 Culture token of your choice, even if you lose the battle.',
       '• The captured city becomes Angry. The old owner places a free Settler in one of the remaining cities.',
     ],
   },
@@ -113,7 +114,7 @@ export const TOPICS = [
   },
   {
     id: 'events',
-    title: 'Events & Barbarians',
+    title: 'Events, Barbarians & Pirates',
     body: [
       'Events come from a shared deck. Most affect only the player who drew the card; some affect every player. An icon in the corner of a card is resolved first.',
       '• Some Events last until the end of the round: Drought, Locusts and the Dark Age (every paid Advance costs 1 more Idea) affect everybody, and hired mercenaries leave. A corrupt city cannot Collect until another action activates it.',
@@ -124,6 +125,12 @@ export const TOPICS = [
       '• Barbarian units and cities block Collecting in their space. Attack them by moving into them.',
       '• Beating a group of Barbarian units earns 1 Gold, and capturing a Barbarian city earns 1 more.',
       '• A city the Barbarians capture becomes theirs, and its owner receives a free Settler in another city.',
+      '# Pirates',
+      '• The Pirates are black Ships (4 of them) that belong to nobody and never move. Pirate Raids puts one on a Sea space with no Ships. The Pirates Spawn and Raid symbol puts two, one of them next to a city of the player who drew the card if possible, and then every player with a city next to any Pirate Ship loses 1 Resource, 1 Mood token or 1 Culture token (a player who cannot pay lowers the Mood of one such city instead, unless they are all Angry).',
+      '• When the Pirates run out of Ships, the player who drew the card first takes the missing Ships off the map.',
+      '• Pirates block Collecting from the Sea spaces they stand on and from the Sea spaces next to them, which stops Fishing and the Gold or Mood of a Port. They also block Trade Routes that start in or pass through those spaces.',
+      '• No Ship can sail past them: a Ship that enters a Pirate space stops and fights a naval battle. The Pirates never play Action cards, and a Ship recruited straight into a Pirate space cannot retreat.',
+      '• Every Pirate Ship you sink pays 1 Gold and then 1 Mood or 1 Culture token of your choice.',
     ],
   },
   {

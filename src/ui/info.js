@@ -1,13 +1,13 @@
 // Plain-text descriptions of board things (used by tooltips, the context panel and the log).
 import { ADVANCES, GROUPS } from '../engine/data/advances.js';
 import { WONDERS } from '../engine/data/wonders.js';
-import { BARBARIAN } from '../engine/data/constants.js';
+import { BARBARIAN, PIRATE } from '../engine/data/constants.js';
 import { cityAt, citySize, unitsAt } from '../engine/queries.js';
 import { BUILDING_NAME, MOOD_NAME, RES, TERRAIN, TERRAIN_HELP, cap, seatName, seatOwner } from './theme.js';
 
-/** What a tooltip calls the owner of something: "Your", "Enemy" (when there is only one computer), "Red"... or "Barbarian". */
-export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === 0 ? 'Your' : g.s.players.length > 2 ? g.s.players[o].name : 'Enemy');
-export const ownedBy = (g, o) => (o === 0 ? 'yours' : o === BARBARIAN ? 'barbarian' : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's");
+/** What a tooltip calls the owner of something: "Your", "Enemy" (when there is only one computer), "Red"... or "Barbarian" or "Pirate". */
+export const ownerName = (g, o) => (o === BARBARIAN ? 'Barbarian' : o === PIRATE ? 'Pirate' : o === 0 ? 'Your' : g.s.players.length > 2 ? g.s.players[o].name : 'Enemy');
+export const ownedBy = (g, o) => (o === 0 ? 'yours' : o === BARBARIAN ? 'barbarian' : o === PIRATE ? 'pirate' : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's");
 export const UNIT_NAME = { infantry: 'Infantry', cavalry: 'Cavalry', elephant: 'Elephant', settler: 'Settler', ship: 'Ship' };
 /** "Infantry", "Cavalry", "Elephants", "Settlers", "Ships": Infantry and Cavalry keep one form for one and for many. */
 export const unitPlural = (type, n = 2) => `${UNIT_NAME[type]}${n > 1 && type !== 'infantry' && type !== 'cavalry' ? 's' : ''}`;
@@ -70,7 +70,7 @@ export function hexLines(g, k) {
   if (h.exhausted) lines.push('Exhausted land gives nothing and cannot hold a city.');
   const city = cityAt(s, k);
   if (city) lines.push('', cityText(g, city));
-  for (const owner of [...s.players.map((p) => p.idx), BARBARIAN]) {
+  for (const owner of [...s.players.map((p) => p.idx), BARBARIAN, PIRATE]) {
     const c = unitCounts(s, k, owner);
     const t = countText(c);
     if (t) lines.push(`${ownerName(g, owner)} units: ${t}`);

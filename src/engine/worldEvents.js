@@ -13,6 +13,7 @@ import { plural } from './text.js';
 import { bySize, cityOption, eventMoodLoss, pickCity } from './eventTools.js';
 import { addBarbarianUnit, barbarianFeud, barbarianIncursion, steppeScourge } from './barbarians.js';
 import { trimCargo } from './combat.js';
+import { placePirates } from './pirates.js';
 import { availableAdvances, gainAdvance } from './advance.js';
 import { changeGovernment } from './government.js';
 import { scoreOf } from './scoring.js';
@@ -231,6 +232,7 @@ export const WORLD_EFFECTS = {
 
   *pirate_raids(g, p) {
     const s = g.s;
+    yield* placePirates(g, p, 1);
     for (const q of seatsFrom(s, p)) {
       if (!citiesOf(s, q).some((c) => hasBuilding(c, 'port'))) continue;
       yield* loseResource(g, q, 'Pirate Raids', 'Pirates plunder your Ports. Lose 1 resource of your choice.');

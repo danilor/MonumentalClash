@@ -1,10 +1,9 @@
 // Position evaluation for the AI. Values are in "points" where one Victory Point is worth about 2.2.
-import { BARBARIAN } from '../engine/data/constants.js';
 import { GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from '../engine/data/cards.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkStatus } from '../engine/objectives.js';
-import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isArmy, isHidden, nbrs, resLimit } from '../engine/queries.js';
+import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isArmy, isHidden, isNpc, nbrs, resLimit } from '../engine/queries.js';
 import { battleOdds } from './odds.js';
 
 export const DEFAULTS = {
@@ -48,7 +47,7 @@ const unitsByHex = (s) => {
   return m;
 };
 
-const canAttack = (s, owner) => owner === BARBARIAN || s.players[owner].advances.includes('tactics');
+const canAttack = (s, owner) => isNpc(owner) || s.players[owner].advances.includes('tactics');
 
 /** How good a spot is for a new city of player q (about 0 .. 6). */
 export function siteQuality(s, q, hex, claimed) {

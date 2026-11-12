@@ -1,5 +1,5 @@
 // Shared look & feel: sizes, colours and names used across the UI.
-import { BARBARIAN } from '../engine/data/constants.js';
+import { BARBARIAN, PIRATE } from '../engine/data/constants.js';
 
 export const W = 1280; // design resolution
 export const H = 720;
@@ -48,22 +48,24 @@ export const TXT = {
 export const FONT = '"Segoe UI", "Trebuchet MS", Roboto, Helvetica, Arial, sans-serif';
 export const SERIF = '"Palatino Linotype", Georgia, "Times New Roman", serif';
 
-// Blue is you; the computers are Red, Yellow and Green in that order. The last entry is the Barbarians (BARBARIAN = 4).
-export const PLAYER_COLORS = [0x3d8bfd, 0xe5534b, 0xe9c032, 0x3fbf8a, 0x7d6b91];
-export const PLAYER_HEX = ['#6aa8ff', '#ff8a82', '#f4d96a', '#72d9a8', '#b7a6c9'];
+// Blue is you; the computers are Red, Yellow and Green in that order. Then come the Barbarians (BARBARIAN = 4) and the
+// Pirates (PIRATE = 5). The Pirate Ships are drawn in their own black, so their tint is plain white.
+export const PLAYER_COLORS = [0x3d8bfd, 0xe5534b, 0xe9c032, 0x3fbf8a, 0x7d6b91, 0xffffff];
+export const PLAYER_HEX = ['#6aa8ff', '#ff8a82', '#f4d96a', '#72d9a8', '#b7a6c9', '#dfe3ea'];
 export const PLAYER_NAMES = ['Blue', 'Red', 'Yellow', 'Green'];
 export const LOG_HEX = ['#9cc3ff', '#ff9f98', '#f4dd86', '#8fe0b8'];
 
 /** How a sentence calls a player: "you", "the computer" (when there is only one) or "Red". */
 export function seatName(s, p) {
   if (p === BARBARIAN) return 'the Barbarians';
+  if (p === PIRATE) return 'the Pirates';
   if (p === 0) return 'you';
   return s.players.length > 2 ? s.players[p].name : 'the computer';
 }
 /** The same as the owner of something: "your", "the computer's", "Red's". */
-export const seatOwner = (s, p) => (p === 0 ? 'your' : p === BARBARIAN ? "the Barbarians'" : `${seatName(s, p)}'s`);
+export const seatOwner = (s, p) => (p === 0 ? 'your' : p === BARBARIAN ? "the Barbarians'" : p === PIRATE ? "the Pirates'" : `${seatName(s, p)}'s`);
 /** A short name for a card, a column or a label: "You", "Computer" (when there is only one) or "Red". */
-export const seatLabel = (s, p) => (p === 0 ? 'You' : p === BARBARIAN ? 'Barbarians' : s.players.length > 2 ? s.players[p].name : 'Computer');
+export const seatLabel = (s, p) => (p === 0 ? 'You' : p === BARBARIAN ? 'Barbarians' : p === PIRATE ? 'Pirates' : s.players.length > 2 ? s.players[p].name : 'Computer');
 /** The title of a turn: "Your turn", "Computer's turn" (when there is only one) or "Red's turn". */
 export const turnLabel = (s, p) => (p === 0 ? 'Your turn' : `${seatLabel(s, p)}'s turn`);
 

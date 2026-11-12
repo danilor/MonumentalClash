@@ -1,11 +1,14 @@
 // Read-only helpers over the plain-object game state.
 import { neighborKeys, parse, distance } from './hex.js';
 import {
-  BARBARIAN, PIECE_LIMITS, FOOD_LIMIT_BASE, MAX_CITY_SIZE, MAX_RESOURCE, SHIP_CAPACITY, STACK_LIMIT, ARMY_TYPES,
+  BARBARIAN, PIRATE, PIECE_LIMITS, FOOD_LIMIT_BASE, MAX_CITY_SIZE, MAX_RESOURCE, SHIP_CAPACITY, STACK_LIMIT, ARMY_TYPES,
   DEFAULT_AGES, MIN_AGES, MAX_AGES, DEFAULT_OPPONENTS, MIN_OPPONENTS, MAX_OPPONENTS,
 } from './data/constants.js';
 
 export const isBarbarian = (o) => o === BARBARIAN;
+export const isPirate = (o) => o === PIRATE;
+/** The Barbarians and the Pirates: enemies that no one owns. They have no hand, no Advances and never choose. */
+export const isNpc = (o) => o === BARBARIAN || o === PIRATE;
 
 // ------------------------------------------------------------ opponents
 /** A requested number of computer opponents as a whole number from MIN_OPPONENTS to MAX_OPPONENTS. */
@@ -15,13 +18,13 @@ export function normalizeOpponents(v) {
   return Math.min(MAX_OPPONENTS, Math.max(MIN_OPPONENTS, Math.round(n)));
 }
 
-/** The other players at the table (never the Barbarians). */
+/** The other players at the table (never the Barbarians or the Pirates). */
 export const foesOf = (s, p) => s.players.filter((x) => x.idx !== p).map((x) => x.idx);
 /** The seat clockwise of p. */
 export const nextSeat = (s, p) => (p + 1) % s.players.length;
 /** Seats in playing order for the current round: the first player, then everyone else clockwise. */
 export const turnOrder = (s) => s.players.map((_, i) => (s.first + i) % s.players.length);
-/** Every owner a piece can have: all the players, then the Barbarians. */
+/** Every owner of land units and buildings: all the players, then the Barbarians. The Pirates only have Ships. */
 export const allOwners = (s) => [...s.players.map((x) => x.idx), BARBARIAN];
 
 // ---------------------------------------------------------- game length
@@ -97,6 +100,9 @@ export const isArmy = (u) => ARMY_TYPES.includes(u.type);
 export const armyOf = (s, p) => s.units.filter((u) => u.owner === p && isArmy(u));
 export const armyAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.owner === owner && isArmy(u));
 export const shipsAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.type === 'ship' && (owner === undefined || u.owner === owner));
+/** Whether Pirate Ships stop Resources being Collected from, and Trade Routes starting from or going through, a Sea space. */
+export const pirateBlocked = (s, k) =>
+  isSea(s, k) && s.units.some((u) => u.owner === PIRATE && (u.hex === k || neighborKeys(u.hex).includes(k)));
 export const unitOwnerAt = (s, k) => {
   const u = s.units.find((x) => x.hex === k);
   return u ? u.owner : null;
@@ -116,7 +122,7 @@ export const shipCapacityAt = (s, k) => shipsAt(s, k).length * SHIP_CAPACITY;
 export const owns = (s, p, adv) => s.players[p].advances.includes(adv);
 /** Whether p may use an Advance right now (owned, or borrowed through the Great Library this turn). */
 export function hasAdv(s, p, adv) {
-  if (p === BARBARIAN) return false;
+  if (isNpc(p)) return false;
   if (s.players[p].advances.includes(adv)) return true;
   return !!(s.turn && s.turn.player === p && s.turn.libAdv === adv);
 }
@@ -137,11 +143,12 @@ export const settlementsLeft = (s, p) =>
 export const buildingsLeft = (s, p, type) =>
   PIECE_LIMITS.buildings - s.cities.filter((c) => c.buildings[type] === p).length;
 export function unitsLeft(s, p, type) {
-  const limit =
-    p === BARBARIAN
-      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }[type]
-      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
-  return limit - s.units.filter((u) => u.owner === p && u.type === type).length;
+  const limits = isPirate(p)
+    ? { ship: PIECE_LIMITS.pirateShips }
+    : p === BARBARIAN
+      ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }
+      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers };
+  return limits[type] - s.units.filter((u) => u.owner === p && u.type === type).length;
 }
 
 // ----------------------------------------------------------- distances

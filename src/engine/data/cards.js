@@ -177,7 +177,7 @@ export const OBJECTIVE_CARD_LIST = [
 export const OBJECTIVE_CARDS = Object.fromEntries(OBJECTIVE_CARD_LIST.map((c) => [c.id, c]));
 
 // -------------------------------------------------------------------- Events
-// icon: gold_mine | exhausted | spawn | move | null
+// icon: gold_mine | exhausted | spawn | move | pirates | null
 const E = (id, name, icon, text) => ({ id, name, icon, text });
 
 export const EVENT_CARD_LIST = [
@@ -207,7 +207,7 @@ export const EVENT_CARD_LIST = [
   E('social_unrest', 'Social Unrest', null, 'Every player with an Angry city loses 1 Culture token and 1 Mood token.'),
   E('economic_boom', 'Economic Boom', 'gold_mine', 'You gain 3 Gold. Every other player gains 1 Gold.'),
   E('cultural_breakthrough', 'Cultural Breakthrough', null, 'The player with the fewest Advances gains 1 Advance for free.'),
-  E('pirate_raids', 'Pirate Raids', 'spawn', 'Every player with a Port loses 1 resource of their choice.'),
+  E('pirate_raids', 'Pirate Raids', 'spawn', 'Place a Pirate Ship on a Sea space. Every player with a Port loses 1 resource of their choice.'),
   E('scientific_discovery', 'Scientific Discovery', null, 'Every player with an Academy gains 1 Idea.'),
   E('civil_revolt', 'Civil Revolt', null, 'The player with the most Angry cities loses a Building there, and a Barbarian Infantry rises next to it.'),
   E('golden_age', 'Golden Age', null, 'Every player whose cities are all Happy gains 2 Culture tokens.'),

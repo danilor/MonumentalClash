@@ -1,7 +1,7 @@
 // Shared helpers for the test suite and the simulation script.
 import { Game } from '../src/engine/game.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
-import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, RESOURCES, STACK_LIMIT, SHIP_CAPACITY } from '../src/engine/data/constants.js';
+import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, PIRATE, RESOURCES, STACK_LIMIT, SHIP_CAPACITY } from '../src/engine/data/constants.js';
 import { ACTION_DECK_LIST } from '../src/engine/data/cards.js';
 import { OBJECTIVE_CARD_LIST } from '../src/engine/data/cards.js';
 import { WONDER_IDS } from '../src/engine/data/wonders.js';
@@ -76,7 +76,9 @@ export function checkInvariants(g) {
     const [o, type] = k.split(':');
     const lim = Number(o) === BARBARIAN
       ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }[type] ?? 0
-      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
+      : Number(o) === PIRATE
+        ? { ship: PIECE_LIMITS.pirateShips }[type] ?? 0
+        : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
     if (n > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
   }
 

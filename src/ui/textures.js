@@ -1,6 +1,6 @@
 // Procedural art: every texture is drawn with Phaser Graphics at boot, so the game needs no image files.
 import { ART_S, HEX_SCALE, Z } from './theme.js';
-import { BARBARIAN } from '../engine/data/constants.js';
+import { BARBARIAN, PIRATE } from '../engine/data/constants.js';
 
 /**
  * Thin wrapper over Graphics that takes design-pixel coordinates and draws at the internal render scale.
@@ -389,6 +389,22 @@ const ICONS = {
     p.fill(INK);
     for (const x of [12, 16.5, 21]) p.rect(x, 18.8, 2, 1.8, 'f');
   },
+  u_pirate(p) {
+    // a black galleon with a skull on its sail; it keeps its own colours (the Pirates' tint is plain white)
+    const NIGHT = 0x0b0d10;
+    p.stroke(2, NIGHT).line(13, 2.4, 13, 18).line(22, 7, 22, 18);
+    p.stroke(1.8, NIGHT).line(28.5, 17, 31.2, 14.6);
+    p.fill(0x59616f).stroke(1.6, NIGHT).poly(curve([13.8, 4], [26, 10.2], [13.8, 16.2]), 'fs');
+    p.fill(0x424955).stroke(1.6, NIGHT).poly(curve([22.8, 8], [30.4, 12.2], [22.8, 16.2], 8), 'fs');
+    p.fill(0xc9352e).stroke(1.4, NIGHT).poly([[13.4, 1.2], [19, 2.8], [13.4, 4.4]], 'fs');
+    p.fill(0xf3eedc).circle(16.9, 9, 2.4).rect(15.7, 10.4, 2.4, 2, 'f');
+    p.fill(NIGHT).circle(16, 8.8, 0.8).circle(17.9, 8.8, 0.8);
+    const hull = [[3.4, 13.4], [9.4, 13.4], [9.4, 17.4], [28.6, 17.4], ...curve([28.6, 17.4], [26.6, 25.2], [21.5, 26.6], 6), [10.4, 26.6], ...curve([10.4, 26.6], [4.6, 25], [3.4, 13.4], 8)];
+    p.fill(0x4b392b).stroke(1.8, NIGHT).poly(hull, 'fs');
+    p.stroke(1.3, 0xc9a45a).line(7.8, 21.6, 25.6, 21.6);
+    p.fill(0xd9d2bc);
+    for (const x of [12, 16.5, 21]) p.rect(x, 18.8, 2, 1.8, 'f');
+  },
   u_barb(p) {
     // horned helmet over a fierce face and a pointed beard
     const horn = [...curve([9.6, 12.4], [-0.6, 12.6], [1.4, 1.4]), ...curve([1.4, 1.4], [6.6, 8], [10.4, 17.6])];
@@ -549,7 +565,7 @@ const ICONS = {
 const SIZES = {
   ic_food: [24, 24], ic_wood: [24, 24], ic_ore: [24, 24], ic_ideas: [24, 24], ic_gold: [24, 24], ic_mood: [24, 24], ic_culture: [24, 24],
   mood_happy: [24, 24], mood_neutral: [24, 24], mood_angry: [24, 24],
-  u_infantry: [32, 32], u_cavalry: [32, 32], u_elephant: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_barb: [32, 32], b_city: [48, 46],
+  u_infantry: [32, 32], u_cavalry: [32, 32], u_elephant: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_pirate: [32, 32], u_barb: [32, 32], b_city: [48, 46],
   b_academy: [32, 32], b_fortress: [32, 32], b_market: [32, 32], b_port: [32, 32], b_temple: [32, 32],
   ic_wonder: [32, 32], ic_swords: [24, 24], ic_explore: [24, 24], ic_boat: [24, 24], ic_exhaust: [24, 24],
   ic_action: [20, 20], ic_action_off: [20, 20], ic_card: [20, 24], ic_die: [36, 36], ic_spark: [12, 12],
@@ -557,8 +573,8 @@ const SIZES = {
 
 export const TERRAIN_VARIANTS = 3;
 
-/** The icon of a unit: Barbarian Infantry wear their own helmet; every icon is tinted with its owner's colour. */
-export const unitTexture = (type, owner) => (type === 'infantry' && owner === BARBARIAN ? 'u_barb' : `u_${type}`);
+/** The icon of a unit: Barbarian Infantry wear their own helmet and the Pirate Ships fly a skull; the rest are tinted with their owner's colour. */
+export const unitTexture = (type, owner) => (type === 'infantry' && owner === BARBARIAN ? 'u_barb' : type === 'ship' && owner === PIRATE ? 'u_pirate' : `u_${type}`);
 
 export function buildTextures(scene) {
   for (const [key, draw] of Object.entries(ICONS)) make(scene, key, SIZES[key][0], SIZES[key][1], draw);

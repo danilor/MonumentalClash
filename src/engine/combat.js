@@ -1,16 +1,17 @@
 // Land and naval battles, plus city capture.
-import { BARBARIAN, CLASH_BONUS, COMBAT_DIE, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
+import { BARBARIAN, CLASH_BONUS, COMBAT_DIE, PIRATE, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
 import { ACTION_CARDS, COMBAT_EFFECTS } from './data/cards.js';
 import { randInt } from './rng.js';
 import {
   unitById, unitsAt, armyAt, shipsAt, cityAt, citiesOf, hasAdv, hasBuilding, playerOwnsWonder,
-  citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners, nbrs, isLand,
+  citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners, nbrs, isLand, isNpc,
 } from './queries.js';
 import {
   gainRes, applyPayment, planPayment, canPay, removeUnits, addUnitTo, unitFlags, discardCard, removeCity,
 } from './core.js';
 import { choose, confirm } from './prompts.js';
 import { onBattleEnd } from './objectives.js';
+import { pirateBounty } from './pirates.js';
 import { countList, plural } from './text.js';
 
 const MAX_ROUNDS = 40;
@@ -23,9 +24,9 @@ const LEFT_BEHIND = { settler: 'a Settler', infantry: 'an Infantry', cavalry: 'a
 
 export const effectOfCard = (cardId) => ACTION_CARDS[cardId].combat;
 
-/** Cards a player could play this round (needs Tactics). `info` describes the battle from their point of view. */
+/** Cards a player could play this round (needs Tactics). `info` describes the battle from their point of view. The Pirates play none. */
 export function combatCardOptions(g, p, ctx, role, info) {
-  if (p === BARBARIAN || !hasAdv(g.s, p, 'tactics') || info.units <= 0) return [];
+  if (isNpc(p) || !hasAdv(g.s, p, 'tactics') || info.units <= 0) return [];
   const seen = new Set();
   const out = [];
   for (const id of g.s.players[p].hand.action) {
@@ -143,7 +144,7 @@ function* pickCasualties(g, owner, ids, hits) {
   });
   const idOf = (split) => split.slice(1).join(',');
   let pick = splits[0];
-  if (splits.length > 1 && owner !== BARBARIAN) {
+  if (splits.length > 1 && !isNpc(owner)) {
     const ans = yield* choose(g, owner, {
       kind: 'casualties',
       title: 'Choose your casualties',
@@ -376,10 +377,12 @@ export function* battle(g, ctx) {
     gainRes(g, winner, { gold: 1 });
     g.log(`${g.name(winner)} gains 1 Gold for defeating Barbarians.`);
   }
+  // The Pirates pay for every Ship that goes down, even when their attacker loses the battle.
+  if (D === PIRATE && !isNpc(A)) yield* pirateBounty(g, A, res.kills[A]?.ships || 0);
   if (winner !== null) {
-    if (winner !== BARBARIAN) s.players[winner].stats.battlesWon += 1;
+    if (!isNpc(winner)) s.players[winner].stats.battlesWon += 1;
     const loser = opp(winner);
-    if (loser !== BARBARIAN) s.players[loser].stats.battlesLost += 1;
+    if (!isNpc(loser)) s.players[loser].stats.battlesLost += 1;
     if (land) yield* maybeFanaticism(g, loser, city);
   }
   for (const id of [...atkLive(), ...ctx.settlers]) {
@@ -714,7 +717,7 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       res.retreated = true;
       break;
     }
-    const canRetreat = A !== BARBARIAN && !ctx.inPlace && !!ctx.from;
+    const canRetreat = !isNpc(A) && !ctx.inPlace && !!ctx.from;
     let retreat = false;
     if (canRetreat) {
       retreat = yield* confirm(g, A, {

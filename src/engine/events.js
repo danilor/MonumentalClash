@@ -8,6 +8,7 @@ import { addUnitTo, canPay, discardCard, drawFrom, gainRes, pay, removeCity, rem
 import { chooseMany, confirm } from './prompts.js';
 import { plural } from './text.js';
 import { barbarianMove, barbarianSpawn } from './barbarians.js';
+import { pirateSpawn } from './pirates.js';
 import { bySize, cityOption, eventMoodLoss, exhaustedLand, pickCity, placeSettler, victim } from './eventTools.js';
 import { WORLD_EFFECTS } from './worldEvents.js';
 
@@ -225,6 +226,9 @@ export function* resolveEvent(g, p) {
       break;
     case 'move':
       yield* barbarianMove(g, p);
+      break;
+    case 'pirates':
+      yield* pirateSpawn(g, p);
       break;
     default:
       break;

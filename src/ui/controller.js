@@ -18,7 +18,7 @@ import { createDialogs } from './dialogs.js';
 import { createPrompts } from './prompts.js';
 import { playBattleRound } from './battle.js';
 import { countText, hexLines, placeWords } from './info.js';
-import { PLAYER_HEX, RES, TXT, cap, joinNames, seatName, turnLabel } from './theme.js';
+import { PLAYER_HEX, RES, TXT, cap, joinNames, plural, seatName, turnLabel } from './theme.js';
 import { SAVE_KEY, SPEED_KEY, store } from './store.js';
 
 const SPEED = { normal: 0.75, fast: 0.3, instant: 0 };
@@ -887,6 +887,27 @@ export class Controller {
         void map.pulse(ev.hex, 0xb7a6c9, 56);
         if (ev.kind === 'spawn') this.hud.toast('Barbarians appear!', 'error', 2200);
         await this.sleep(350);
+        break;
+      }
+      case 'pirates': {
+        if (ev.kind === 'spawn' || ev.kind === 'leave') {
+          this.syncBefore('all');
+          this.draw();
+          if (ev.kind === 'leave') void map.floatText(ev.hex, 'Pirates leave', '#c9d2dc');
+          else {
+            void map.pulse(ev.hex, 0x2b2f39, 56);
+            if (!(next && next.type === 'pirates' && next.kind === 'spawn')) this.hud.toast('Pirates appear!', 'error', 2200);
+          }
+          await this.sleep(350);
+        } else if (ev.kind === 'raid') {
+          this.syncBefore('cities');
+          this.draw();
+          this.hud.update();
+          this.hud.toast(`Pirates raid ${seatName(s, ev.player)}!`, ev.player === 0 ? 'error' : 'info', 2000);
+        } else if (ev.kind === 'bounty') {
+          this.hud.update();
+          this.hud.toast(`${this.who(ev.player)} earned a bounty for ${plural(ev.ships, 'Pirate Ship')}.`, ev.player === 0 ? 'good' : 'info', 2200);
+        }
         break;
       }
       case 'exhausted': {

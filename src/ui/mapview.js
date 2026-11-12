@@ -4,12 +4,12 @@ import { HEX_H, HEX_SCALE as K, HEX_TEX_W, HEX_W, H, LAYOUT, PLAYER_COLORS, S, W
 import { icon, tip, txt } from './widgets.js';
 import { textureForTerrain, unitTexture } from './textures.js';
 import { cityAt, citySize } from '../engine/queries.js';
-import { BARBARIAN } from '../engine/data/constants.js';
+import { BARBARIAN, PIRATE } from '../engine/data/constants.js';
 import { DIRS } from '../engine/hex.js';
 
 const DIR_ANGLE = [60, 120, 180, 240, 300, 0]; // screen direction of each entry of DIRS (degrees, y down)
 const BARB = BARBARIAN;
-const OWNERS = [0, 1, 2, 3, BARB];
+const OWNERS = [0, 1, 2, 3, BARB, PIRATE];
 
 const corner = (cx, cy, deg, r = S) => [cx + r * Math.cos((deg * Math.PI) / 180), cy + r * Math.sin((deg * Math.PI) / 180)];
 export const hexCorners = (cx, cy, r = S) => [-30, 30, 90, 150, 210, 270].map((a) => corner(cx, cy, a, r));

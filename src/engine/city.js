@@ -5,7 +5,7 @@ import { WONDERS } from './data/wonders.js';
 import { roll } from './rng.js';
 import {
   allHexKeys, armyAt, bfs, buildingsLeft, cityAt, cityById, citiesOf, cityHasWonder, citySize, citySizeCap, hasAdv, hasBuilding,
-  isLand, isPortCity, isSea, nbrs, owns, revealedDistances, seaNbrs, settlementsLeft, shipsAt, terrainOf, unitById,
+  isLand, isPortCity, isSea, nbrs, owns, pirateBlocked, revealedDistances, seaNbrs, settlementsLeft, shipsAt, terrainOf, unitById,
   unitsAt, unitsLeft, unitsOf, hexDistance,
 } from './queries.js';
 import { addCity } from './state.js';
@@ -146,6 +146,7 @@ export function collectCandidates(s, p, city) {
     if (!h || h.terrain === null || h.exhausted) return;
     if (k !== city.hex && cityAt(s, k)) return;
     if (unitsAt(s, k).some((u) => u.owner !== p)) return;
+    if (pirateBlocked(s, k)) return;
     const opts = resourcesFrom(s, p, city, h.terrain);
     if (opts.length) out.set(k, { hex: k, opts, sea: h.terrain === 'sea', far });
   };

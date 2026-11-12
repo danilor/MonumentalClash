@@ -319,7 +319,7 @@ export class Hud {
     c.add(pips);
     c.add(txt(sc, x + 148, y + 224, `in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}`, { size: 12, origin: [0, 0.5], color: TXT.text }));
     const evHit = hitBox(sc, x + 10, y + 212, CARD_W - 20, 24);
-    tip(evHit, 'Every 3 Advances trigger an Event card for that player:\nsome help, some hurt (barbarians, unrest, exhausted land...).');
+    tip(evHit, 'Every 3 Advances trigger an Event card for that player:\nsome help, some hurt (barbarians, pirates, unrest, exhausted land...).');
     c.add(evHit);
 
     const btn = new Button(sc, x + 10, y + 258, CARD_W - 20, 32, 'Overview', () => this.ctl.dialogs.overview(p), { size: 14, style: 'ghost', tip: 'Advances, wonders, objectives and score breakdown' });
