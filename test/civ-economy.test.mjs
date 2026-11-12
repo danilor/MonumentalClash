@@ -229,4 +229,195 @@ test('Terracing: a Settler walks on after entering a Mountain, while Army units 
   }
 });
 
+// ------------------------------------------------------------------ Flood Plains (Egypt)
+test('Egypt: Flood Plains let a city Collect Food or Wood from a Barren space', () => {
+  const g = table('egypt', 'flood_plains');
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [dust, sand] = ring(g, city.hex, 1);
+  setTerrain(g, dust, 'barren');
+  setTerrain(g, sand, 'barren');
+  act(g, gather(city, [pick(dust, 'food'), pick(sand, 'wood')]));
+  assert.deepEqual(holds(g), { food: 1, wood: 1 });
+});
+
+test('Without Flood Plains a Barren space gives Food only with Irrigation, and never Wood', () => {
+  const g = table('rome');
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [dust] = ring(g, city.hex, 1);
+  setTerrain(g, dust, 'barren');
+  assert.match(refused(g, gather(city, [pick(dust, 'food')])), /cannot collect from that space/);
+  give(g, 0, { advances: ['irrigation'] });
+  assert.match(refused(g, gather(city, [pick(dust, 'wood')])), /does not give/);
+  act(g, gather(city, [pick(dust, 'food')]));
+  assert.deepEqual(holds(g), { food: 1 });
+});
+
+test('Flood Plains let Egypt found a city on a Barren space, which costs an action and the Settler; other peoples cannot', () => {
+  const g = table('egypt', 'flood_plains');
+  const [dust] = ring(g, capitalOf(g).hex, 1);
+  setTerrain(g, dust, 'barren');
+  const settler = troops(g, 0, 'settler', dust)[0];
+  act(g, { type: 'found_city', unit: settler.id });
+  const city = g.s.cities.find((c) => c.hex === dust);
+  assert.ok(city && city.owner === 0 && city.mood === 'neutral', 'a Neutral city of Egypt stands on the Barren space');
+  assert.ok(!g.s.units.some((u) => u.id === settler.id), 'the Settler became the city');
+  assert.equal(g.s.turn.actionsLeft, 2);
+  assert.deepEqual(checkInvariants(g), []);
+
+  const rome = table('rome');
+  const [waste] = ring(rome, capitalOf(rome).hex, 1);
+  setTerrain(rome, waste, 'barren');
+  const stray = troops(rome, 0, 'settler', waste)[0];
+  assert.match(refused(rome, { type: 'found_city', unit: stray.id }), /Barren/);
+});
+
+test('A Barren city captured from Egypt stays there and gives its new owner Food, only with Irrigation', () => {
+  const g = world(['rome', 'egypt']);
+  const [dust] = ring(g, capitalOf(g).hex, 1);
+  setTerrain(g, dust, 'barren');
+  const lost = town(g, 1, dust);
+  power(g, 1, 'flood_plains');
+  asking(g);
+  run(g, captureCity(g, lost, 0));
+  stock(g, 0, {});
+  const city = g.s.cities.find((c) => c.hex === dust);
+  assert.equal(city.owner, 0);
+  assert.equal(g.s.map.hexes[dust].terrain, 'barren');
+  assert.match(refused(g, gather(city, [pick(dust, 'food')])), /cannot collect from that space/, 'no Irrigation');
+  give(g, 0, { advances: ['irrigation'] });
+  assert.match(refused(g, gather(city, [pick(dust, 'wood')])), /does not give/, 'Food only, not Wood');
+  act(g, gather(city, [pick(dust, 'food')]));
+  assert.deepEqual(holds(g), { food: 1 });
+  assert.deepEqual(checkInvariants(g), []);
+});
+
+// ------------------------------------------------------------------ Aztec Gold (Aztecs)
+/** Player 0's capital with `n` of the spaces around it turned into Mountains. */
+const mountainous = (g, n = 2) => {
+  const city = capitalOf(g);
+  const spaces = ring(g, city.hex, 1).slice(0, n);
+  for (const k of spaces) setTerrain(g, k, 'mountain');
+  return { city, spaces };
+};
+
+test('Aztecs: Aztec Gold turns exactly 1 Ore collected from a Mountain into 1 Gold or 1 Culture', () => {
+  for (const [kind, want] of [['gold', { ore: 1, gold: 1 }], ['culture', { ore: 1, culture: 1 }]]) {
+    const g = table('aztecs', 'aztec_gold');
+    stock(g, 0, {});
+    const { city, spaces: [a, b] } = mountainous(g);
+    act(g, gather(city, [pick(a, 'ore'), pick(b, 'ore')], { aztecGold: kind }));
+    assert.deepEqual(holds(g), want, `2 Ore, one of them taken as ${kind}`);
+  }
+  const plain = table('aztecs', 'aztec_gold');
+  stock(plain, 0, {});
+  const { city, spaces: [a, b] } = mountainous(plain);
+  act(plain, gather(city, [pick(a, 'ore'), pick(b, 'ore')]));
+  assert.deepEqual(holds(plain), { ore: 2 }, 'a Collect without the option keeps its Ore');
+});
+
+test('Aztec Gold can be used once per turn and needs Ore from a Mountain', () => {
+  const g = table('aztecs', 'aztec_gold');
+  stock(g, 0, {});
+  const { city, spaces: [a, b] } = mountainous(g);
+  const [plain] = ring(g, city.hex, 1).filter((k) => k !== a && k !== b);
+  act(g, gather(city, [pick(a, 'ore')], { aztecGold: 'gold' }));
+  assert.deepEqual(holds(g), { gold: 1 });
+  assert.match(refused(g, gather(city, [pick(b, 'ore')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/, 'the second time in a turn');
+  act(g, gather(city, [pick(b, 'ore')]));
+  assert.deepEqual(holds(g), { gold: 1, ore: 1 }, 'an ordinary Collect is still fine');
+
+  const other = table('aztecs', 'aztec_gold');
+  stock(other, 0, {});
+  const home = capitalOf(other);
+  const [field] = ring(other, home.hex, 1);
+  assert.match(refused(other, gather(home, [pick(field, 'food')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/, 'no Ore collected');
+  const { spaces: [hill] } = mountainous(other, 1);
+  assert.match(refused(other, gather(home, [pick(hill, 'ore')], { aztecGold: 'wood' })), /Aztec Gold needs 1 Ore/, 'only Gold or Culture');
+  assert.ok(plain, 'the scenario has a Plains space');
+});
+
+test('Aztec Gold belongs to the Aztecs', () => {
+  const g = table('rome');
+  stock(g, 0, {});
+  const { city, spaces: [hill] } = mountainous(g, 1);
+  assert.match(refused(g, gather(city, [pick(hill, 'ore')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/);
+});
+
+// ------------------------------------------------------------------ Tribute Empire (Aztecs)
+test('Aztecs: Tribute Empire lets a city Collect from the space of an enemy city within 2 spaces, whatever its Mood', () => {
+  const g = table('aztecs', 'tribute_empire');
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [next] = ring(g, city.hex, 1);
+  const [two] = ring(g, city.hex, 2);
+  const [three] = ring(g, city.hex, 3);
+  setTerrain(g, two, 'forest');
+  const cities = [town(g, 1, next, 'angry'), town(g, 1, two, 'happy'), town(g, 1, three)];
+  assert.match(refused(g, gather(city, [pick(three, 'food')])), /cannot collect from that space/, '3 spaces away');
+  act(g, gather(city, [pick(next, 'food'), pick(two, 'wood')]));
+  assert.deepEqual(holds(g), { food: 1, wood: 1 }, 'the resource of the space the enemy city stands on');
+  assert.deepEqual(cities.map((c) => g.s.cities.find((x) => x.id === c.id).owner), [1, 1, 1], 'nothing changed for the cities');
+});
+
+test('Tribute Empire does not reach a city that enemy units stand in, nor work for other peoples', () => {
+  const g = table('aztecs', 'tribute_empire');
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [next, held] = ring(g, city.hex, 1);
+  town(g, 1, next);
+  town(g, 1, held);
+  troops(g, 1, 'infantry', held);
+  act(g, gather(city, [pick(next, 'food')]));
+  assert.match(refused(g, gather(city, [pick(held, 'food')])), /cannot collect from that space/);
+
+  const rome = table('rome');
+  const home = capitalOf(rome);
+  const [door] = ring(rome, home.hex, 1);
+  town(rome, 1, door);
+  assert.match(refused(rome, gather(home, [pick(door, 'food')])), /cannot collect from that space/);
+});
+
+test('Tribute Empire collects from a Barbarian city, whose Army units can be taken as Captives instead of a resource', () => {
+  const lone = table('aztecs', 'tribute_empire');
+  stock(lone, 0, {});
+  const [empty, guarded] = ring(lone, capitalOf(lone).hex, 2);
+  addCityAt(lone, BARBARIAN, empty);
+  addCityAt(lone, BARBARIAN, guarded);
+  barbarians(lone, 'infantry', guarded, 2);
+  act(lone, gather(capitalOf(lone), [pick(empty, 'food')]));
+  assert.deepEqual(holds(lone), { food: 1 }, 'an empty Barbarian city gives the resource of its space');
+  assert.match(refused(lone, gather(capitalOf(lone), [pick(guarded, 'food')])), /cannot collect from that space/, 'without Captives its defenders are in the way');
+
+  const g = table('aztecs', 'captives', 'tribute_empire');
+  govern(g);
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [post, fort] = ring(g, city.hex, 2);
+  for (const k of [post, fort]) {
+    addCityAt(g, BARBARIAN, k);
+    barbarians(g, 'infantry', k, 2);
+  }
+  assert.match(refused(g, gather(city, [pick(post, 'food')])), /does not give/, 'a Captive instead of a resource');
+  act(g, gather(capitalOf(g), [pick(post, 'captive'), pick(fort, 'captive')]));
+  assert.deepEqual(me(g).captives, [{ owner: BARBARIAN, type: 'infantry' }, { owner: BARBARIAN, type: 'infantry' }]);
+  assert.deepEqual(holds(g), {}, 'no resource');
+  assert.equal(g.s.units.filter((u) => u.owner === BARBARIAN).length, 2, 'one Barbarian unit left each city');
+  assert.deepEqual(checkInvariants(g), []);
+});
+
+test('Tribute Empire takes no more Captives than the 4 an Aztec can keep', () => {
+  const g = table('aztecs', 'captives', 'tribute_empire');
+  govern(g);
+  stock(g, 0, {});
+  const city = capitalOf(g);
+  const [post] = ring(g, city.hex, 2);
+  addCityAt(g, BARBARIAN, post);
+  barbarians(g, 'infantry', post, 2);
+  me(g).captives = Array.from({ length: 4 }, () => ({ owner: BARBARIAN, type: 'infantry' }));
+  assert.match(refused(g, gather(city, [pick(post, 'captive')])), /cannot collect from that space/);
+  assert.deepEqual(checkInvariants(g), []);
+});
+
 // @@END@@
