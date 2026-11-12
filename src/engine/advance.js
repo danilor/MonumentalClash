@@ -1,9 +1,10 @@
 // Advances: purchase rules, benefits on gain, Event tracker.
 import { ADVANCES, GROUPS, SCIENCE_ADVANCES } from './data/advances.js';
 import { WONDERS } from './data/wonders.js';
-import { hasAdv } from './queries.js';
+import { hasAdv, hasCivAdv } from './queries.js';
 import { fail, gainRes, pay, planPayment, clampResources, drawActionCard, drawObjectiveCard, drawWonderCard, applyPayment } from './core.js';
 import { resolveEvent } from './events.js';
+import { grantCivAdvances, starCatalogs } from './civs.js';
 
 const FREE_BY = {
   math: ['engineering', 'roads'],
@@ -33,8 +34,11 @@ export function availableAdvances(s, p) {
   return Object.keys(ADVANCES).filter((id) => !advanceBlocked(s, p, id));
 }
 
-/** The cheapest way to research: returns { cost, via } where via is a once-per-turn/free source. */
-export function advanceCost(s, p, id) {
+/**
+ * The cheapest way to research: returns { cost, via } where via is a once-per-turn/free source.
+ * `full` ignores the Civilization discounts that cost an action for them (Rome's Aqueducts: Sanitation without an action).
+ */
+export function advanceCost(s, p, id, { full = false } = {}) {
   const t = s.turn && s.turn.player === p ? s.turn : null;
   for (const [src, list] of Object.entries(FREE_BY)) {
     if (list.includes(id) && hasAdv(s, p, src)) return { cost: {}, via: src };
@@ -43,7 +47,15 @@ export function advanceCost(s, p, id) {
     return { cost: {}, via: 'priesthood' };
   }
   // Dark Age event: every paid Advance costs 1 more Idea until the end of the round.
-  return { cost: s.flags.darkAge ? { food: 2, ideas: 1 } : { food: 2 }, via: null };
+  const extra = s.flags.darkAge ? { ideas: 1 } : {};
+  // Vikings: Navigation costs no Food. Rome: Sanitation costs no Food (or no action, see advanceAction).
+  if (id === 'navigation' && hasCivAdv(s, p, 'shipcraft')) return { cost: { ...extra }, via: 'shipcraft' };
+  if (id === 'sanitation' && !full && hasCivAdv(s, p, 'aqueducts')) return { cost: { ...extra }, via: 'aqueducts' };
+  // Maya: once per turn a Spirituality Advance costs 1 Food less.
+  if (ADVANCES[id].group === 'spirituality' && hasCivAdv(s, p, 'ballcourts') && !(t && t.used.ballcourtsAdvance)) {
+    return { cost: { food: 1, ...extra }, via: 'ballcourts' };
+  }
+  return { cost: { food: 2, ...extra }, via: null };
 }
 
 export function* gainAdvance(g, p, id, { quiet = false } = {}) {
@@ -55,6 +67,7 @@ export function* gainAdvance(g, p, id, { quiet = false } = {}) {
   if (group.gov && !pl.government) pl.government = group.id;
   if (!quiet) g.log(`${g.name(p)} learns ${adv.name}.`);
   g.emit({ type: 'advance', player: p, advance: id });
+  grantCivAdvances(g, p, id);
 
   // Tracker cube and its slot bonus.
   pl.cubes -= 1;
@@ -73,6 +86,7 @@ export function* gainAdvance(g, p, id, { quiet = false } = {}) {
   if (pl.cubes <= 0) {
     // Reset the tracker first: an event can hand this player another Advance (Cultural Breakthrough).
     pl.cubes = 3;
+    yield* starCatalogs(g, p);
     yield* resolveEvent(g, p);
   }
 }
@@ -84,10 +98,20 @@ export function* advanceAction(g, a) {
   const id = a.advance;
   const why = advanceBlocked(s, p, id);
   if (why) fail(why);
-  const { cost, via } = advanceCost(s, p, id);
+  // Rome's Aqueducts: Sanitation costs either no Food or no action.
+  if (a.noAction && !(id === 'sanitation' && hasCivAdv(s, p, 'aqueducts'))) fail('Only Aqueducts lets you buy Sanitation without an action.');
+  let { cost, via } = advanceCost(s, p, id, { full: !!a.noAction });
+  // India's Peace and Poetry: once per turn, 1 Mood pays for the Food of an Advance.
+  if (a.peace) {
+    if (!hasCivAdv(s, p, 'peace_and_poetry')) fail('You need Peace and Poetry.');
+    if (t.used.peacePoetry) fail('Peace and Poetry can be used once per turn.');
+    if (!cost.food) fail('This Advance costs no Food to replace.');
+    const { food, ...rest } = cost;
+    cost = { ...rest, mood: 1 };
+  }
   const plan = planPayment(s, p, cost, { ideasAsFood: true, ideasFirst: true });
   let paid = plan;
-  if (a.pay) {
+  if (a.pay && !a.peace) {
     paid = planPayment(s, p, {}, {});
     const sum = (a.pay.food || 0) + (a.pay.ideas || 0) + (a.pay.gold || 0);
     if (sum !== (cost.food || 0)) fail('Wrong payment amount.');
@@ -113,9 +137,11 @@ export function* advanceAction(g, a) {
     const ideasLeft = s.players[p].res.ideas - paid.ideas;
     if (ideasLeft < 1) fail('Free Education needs 1 extra Idea.');
   }
-  g.spendAction();
+  if (!a.noAction) g.spendAction();
   applyPayment(g, p, paid);
   if (via === 'priesthood') t.used.priesthood = true;
+  if (via === 'ballcourts') t.used.ballcourtsAdvance = true;
+  if (a.peace) t.used.peacePoetry = true;
   if (useFreeEdu) {
     s.players[p].res.ideas -= 1;
     gainRes(g, p, { mood: 1 });

@@ -1,10 +1,10 @@
 // The context panel (top right): explains what is selected and offers the actions that apply to it.
-import { BARBARIAN, BUILDINGS, PIRATE, RECRUIT_TYPES } from '../engine/data/constants.js';
+import { BARBARIAN, PIRATE, RECRUIT_TYPES } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
-import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, wonderBlocked } from '../engine/city.js';
+import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, settlerOrigin, wonderBlocked } from '../engine/city.js';
 import { canPay, heldModifier } from '../engine/core.js';
-import { cityAt, citySize, foesOf, hasAdv, terrainOf } from '../engine/queries.js';
-import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, seatLabel, turnLabel } from './theme.js';
+import { buildingsIn, cityAt, citySize, foesOf, hasAdv, hasCivAdv, terrainOf } from '../engine/queries.js';
+import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, cap, seatLabel, seatOwner, turnLabel } from './theme.js';
 import { RIGHT_X, LOG_Y } from './panels.js';
 import { Button, Checkbox, Stepper, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
 import { countText, freeMoveText, ownedBy, ownerName, unitCounts, unitPlural, UNIT_NAME } from './info.js';
@@ -156,13 +156,17 @@ export class Context {
     tip(hit, 'Size = 1 + the number of buildings.\nHappy: +1 capacity. Angry: capacity 1, can act only once, no building.\nMood also changes when a city is activated more than once per turn.');
     this.box.add(hit);
     this.y += 22;
-    const blds = BUILDINGS.filter((b) => city.buildings[b] !== undefined).map((b) => {
+    const blds = buildingsIn(s).filter((b) => city.buildings[b] !== undefined).map((b) => {
       const o = city.buildings[b];
       return `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(ctl.g, o)})` : ''}`;
     });
     this.text(`Buildings: ${blds.length ? blds.join(', ') : 'none'}`, { size: 12, color: TXT.muted, gap: 2 });
     if (city.wonders.length) this.text(`Wonders: ${city.wonders.map((w) => WONDERS[w.id].name).join(', ')}`, { size: 12, color: '#ffe9a8', gap: 2 });
-    if (!own) return;
+    if (city.druid !== undefined) this.text(`${cap(seatOwner(s, city.druid))} Culture token lies under this city (Druidic Influence: worth 1 VP until the city is captured).`, { size: 12, color: '#c79bef', gap: 2 });
+    if (!own) {
+      if (can) this.hellenization(city);
+      return;
+    }
     const t = s.turn;
     const used = t ? t.activated[city.id] || 0 : 0;
     this.text(`Can collect or recruit up to ${cityCapacity(s, city)}.`, { size: 12, color: TXT.muted, gap: 2 });
@@ -170,6 +174,45 @@ export class Context {
     if (city.corrupt) this.text('Corrupt: it cannot Collect until another action has activated it.', { size: 12, color: TXT.bad, gap: 2 });
     this.gap(2);
     this.cityButtons(city, can);
+    this.nomadToggle(city, can);
+  }
+
+  /** Hellenization (Greece): a foreign city that holds one of your Buildings starts an Influence attempt like your own cities. */
+  hellenization(city) {
+    const s = this.ctl.g.s;
+    if (!hasCivAdv(s, 0, 'hellenization') || !Object.values(city.buildings).includes(0)) return;
+    this.gap(2);
+    this.influenceFrom(city, 'Influence from here', 'Hellenization: this city holds one of your Buildings, so it can start an Influence attempt like one of your own cities (range = its size).');
+  }
+
+  /** An Influence button for a starting place that is not one of your cities (Hellenization, Proselytism). */
+  influenceFrom(origin, label, help) {
+    const ctl = this.ctl;
+    const s = ctl.g.s;
+    const t = s.turn;
+    let reason = '';
+    if (!ctl.humanCanAct()) reason = 'Wait for your turn.';
+    else if (t.actionsLeft <= 0) reason = 'You have no actions left.';
+    else if (t.influenceSuccess) reason = 'Only one Influence Culture success is possible per turn.';
+    else if (!influenceTargets(s, origin, { card: heldModifier(s, 0, 'influence') }).length) reason = 'Nothing in range can be influenced from here.';
+    const b = this.button(label, X + PAD, this.y, WIDTH - 2 * PAD, 28, () => ctl.dialogs.influence(origin), { size: 13, icon: 'ic_culture', iconSize: 16, tip: help });
+    b.setDisabled(!!reason, reason);
+    this.y += 34;
+  }
+
+  /** Huns' Nomads: a size 1 city may go along with the units that move (it uses the same Move action). */
+  nomadToggle(city, can) {
+    const ctl = this.ctl;
+    if (!can || !ctl.nomadCandidate(city.hex)) return;
+    const on = !!ctl.sel.city;
+    const cb = new Checkbox(this.scene, X + PAD, this.y, 'Nomads: move this city (choose the space on the map)', on, (v) => ctl.setMoveCity(v), { w: WIDTH - 2 * PAD, h: 34, size: 12 });
+    this.box.add(cb);
+    this.y += 38;
+    if (!on) return;
+    const gr = ctl.sel.groups;
+    if (UNIT_ROWS.some((t) => gr[t].free.length + gr[t].locked.length > 0)) return; // the unit help below says it
+    if (ctl.moveOpts.length) this.text('Click a highlighted space to move the city there (1 action).', { size: 12, color: TXT.good, gap: 2 });
+    else if (ctl.stuckWhy) this.text(ctl.stuckWhy, { size: 12, color: TXT.warn, gap: 2 });
   }
 
   /** Why a city action cannot be used right now ('' when it can). */
@@ -196,7 +239,7 @@ export class Context {
         if (city.corrupt) return 'This city is corrupt: it cannot Collect until another action has activated it.';
         return collectCandidates(s, 0, city).length ? '' : 'Nothing to collect here yet.\nResearch Farming, Mining or Fishing to gather from the land around this city.';
       case 'construct': {
-        const why = BUILDINGS.map((b) => [b, constructBlocked(s, 0, city, b)]);
+        const why = buildingsIn(s).map((b) => [b, constructBlocked(s, 0, city, b)]);
         if (why.some(([, r]) => !r)) return '';
         return `No building is possible right now:\n${why.map(([b, r]) => `${BUILDING_NAME[b]}: ${r}`).join('\n')}`;
       }
@@ -225,9 +268,11 @@ export class Context {
   cityButtons(city, can) {
     const ctl = this.ctl;
     const d = ctl.dialogs;
+    const names = buildingsIn(ctl.g.s).map((b) => BUILDING_NAME[b]).sort();
+    const buildable = `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
     const items = [
       ['collect', 'Collect', () => ctl.startCollect(city.id), 'Gather resources from this city and the spaces around it.', 'ic_food'],
-      ['construct', 'Construct', () => d.construct(city), 'Build an Academy, Fortress, Market, Port or Temple.', 'b_academy'],
+      ['construct', 'Construct', () => d.construct(city), `Build an ${buildable}.`, 'b_academy'],
       ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Cavalry, Elephants, Settlers or Ships.', 'u_infantry'],
       ['wonder', 'Wonder', () => d.wonder(city), 'Build a Wonder (needs a Happy city and Engineering).', 'ic_wonder'],
       ['happiness', 'Happiness', () => d.happiness(city), 'Spend Mood tokens to raise the Mood of your cities.', 'mood_happy'],
@@ -306,13 +351,21 @@ export class Context {
         this.button('Found a city here', X + PAD, this.y, WIDTH - 2 * PAD, 30, () => ctl.foundCity(), { style: 'gold', size: 14, icon: 'b_city', iconSize: 20, tip: 'Use a Settler to found a new city on this space (1 action).' });
         this.y += 36;
       } else if (why && !cityAt(s, k)) this.text(`Cannot found a city here: ${why}`, { size: 11, color: TXT.muted, gap: 2 });
+      const origin = cityAt(s, k) ? null : settlerOrigin(s, 0, k);
+      if (origin) {
+        this.gap(2);
+        this.influenceFrom(origin, 'Influence from the Settlers', `Proselytism: Settlers can start an Influence attempt against an enemy city. Range = 1 + the number of Settlers on this space (${origin.settlers}).`);
+      }
     }
     if (ctl.moveOpts.length) {
       const mv = t.move;
       if (mv && mv.credits > 0) {
-        const rules = [mv.only === 'army' ? 'Army units only' : mv.only === 'ships' ? 'Ships only' : '', mv.scout ? 'up to 2 spaces, ignoring Forest and Mountain penalties' : ''].filter(Boolean);
+        const only = { army: 'Army units only', ships: 'Ships only', settlers: mv.sprawl ? 'Settlers that start in your cities (Sprawling)' : 'Settlers only' };
+        const rules = [only[mv.only] || '', mv.scout ? 'up to 2 spaces, ignoring Forest and Mountain penalties' : ''].filter(Boolean);
         this.text(`Move in progress: ${freeMoveText(mv)} still free${rules.length ? ` (${rules.join('; ')})` : ''}.`, { size: 12, color: TXT.good, gap: 2 });
       } else this.text('Click a highlighted space. A Move costs 1 action and lets up to 3 groups move.', { size: 12, color: TXT.good, gap: 2 });
+      if (ctl.moveOpts.some((o) => o.convert)) this.text('Shipcraft: the spaces marked "Shipcraft" change the units that go there: Ships become Settlers or Infantry on land, Settlers and Infantry become Ships at sea.', { size: 11, color: TXT.muted, gap: 2 });
+      if (ctl.nomadCity()) this.text('Nomads: the city moves along with the units you chose.', { size: 11, color: TXT.muted, gap: 2 });
     } else if (ctl.stuckWhy) this.text(ctl.stuckWhy, { size: 12, color: TXT.warn, gap: 2 });
   }
 
@@ -329,8 +382,8 @@ export class Context {
       this.box.add(cb);
       this.y += 38;
     }
-    const cap = ctl.collectCap();
-    this.text(`Spaces chosen: ${tk.picks.size} of ${cap}`, { bold: true, color: tk.picks.size === cap ? TXT.good : TXT.text });
+    const limit = ctl.collectCap();
+    this.text(`Spaces chosen: ${tk.picks.size} of ${limit}`, { bold: true, color: tk.picks.size === limit ? TXT.good : TXT.text });
     const gain = {};
     for (const r of tk.picks.values()) gain[r] = (gain[r] || 0) + 1;
     let line = 0;
@@ -356,6 +409,21 @@ export class Context {
       this.box.add(cb);
       this.y += 26;
     }
+    if (tk.ball) {
+      const cb = new Checkbox(this.scene, X + PAD, this.y, 'Ballcourts: collect from 1 more space (costs 1 Mood)', tk.ballcourts, (v) => ctl.setBallcourts(v), { w: WIDTH - 2 * PAD, h: 34, size: 12 });
+      this.box.add(cb);
+      this.y += 38;
+    }
+    if (ctl.aztecGoldOk()) {
+      for (const [want, label] of [['gold', 'Aztec Gold: turn the Mountain\'s Ore into 1 Gold'], ['culture', 'Aztec Gold: turn the Mountain\'s Ore into 1 Culture']]) {
+        const cb = new Checkbox(this.scene, X + PAD, this.y, label, tk.aztecGold === want, (v) => {
+          tk.aztecGold = v ? want : null;
+          ctl.refreshView();
+        }, { w: WIDTH - 2 * PAD, size: 12 });
+        this.box.add(cb);
+        this.y += 26;
+      }
+    }
     if (tk.econ) {
       const forced = s.turn.actionsLeft <= 0;
       const cb = new Checkbox(this.scene, X + PAD, this.y, 'Economic Liberty: free, costs 1 Mood, only Collect this turn', tk.free, (v) => {
@@ -366,11 +434,16 @@ export class Context {
       this.box.add(cb);
       this.y += 38;
     }
-    let status = { ok: false, error: 'Choose at least one space.' };
+    let status = { ok: false, error: 'Choose at least one space.', events: [] };
     if (tk.picks.size) status = ctl.check(ctl.collectAction());
     if (status.ok) {
-      const parts = Object.entries(gain).map(([r, n]) => `${n} ${RES[r].name}`).join(', ');
-      this.text(`You will receive: ${parts}`, { size: 12, color: TXT.good });
+      // The engine knows best what a Collect gives (Canals, Pottery and other bonuses change the tally).
+      const done = status.events.find((e) => e.type === 'collect');
+      const got = done ? done.gain : gain;
+      const parts = Object.entries(got).filter(([, n]) => n > 0).map(([r, n]) => `${n} ${RES[r].name}`);
+      const captives = [...tk.picks.values()].filter((r) => r === 'captive').length;
+      if (captives) parts.push(`${captives} ${captives === 1 ? 'Captive' : 'Captives'}`);
+      this.text(`You will receive: ${parts.join(', ') || 'nothing'}`, { size: 12, color: TXT.good });
     } else if (tk.picks.size) this.text(status.error, { size: 12, color: TXT.bad });
     this.y = Math.max(this.y, BOTTOM - 44);
     const b1 = this.button('Collect', X + PAD, this.y, half, 32, () => ctl.confirmCollect(), { style: 'primary', size: 14 });

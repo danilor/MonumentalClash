@@ -2,14 +2,19 @@
 import { ACTION_CARDS, COMBAT_EFFECTS, OBJECTIVES, OBJECTIVE_CARDS, TOP_EFFECTS } from '../engine/data/cards.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { ADVANCES, ADVANCE_GROUPS } from '../engine/data/advances.js';
+import { CIVS, CIV_ADVANCES } from '../engine/data/civs.js';
+import { PIRATE } from '../engine/data/constants.js';
 import { objectiveSatisfiedNow } from '../engine/objectives.js';
-import { citiesOf, hasAdv, owns, playerOwnsWonder, resLimit } from '../engine/queries.js';
-import { C, RES, TXT } from './theme.js';
-import { Button, Modal, drawPanel, resRow, txt } from './widgets.js';
+import { canSpawnBarbarians } from '../engine/barbarians.js';
+import { hegemonyShips, hegemonySites } from '../engine/civActions.js';
+import { cityAt, citiesOf, citySize, hasAdv, hasCivAdv, isSea, owns, playerOwnsWonder, resLimit, terrainOf } from '../engine/queries.js';
+import { C, PLAYER_COLORS, RES, TERRAIN, TXT } from './theme.js';
+import { Button, Modal, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
 import { Flow, optionModal } from './modals.js';
 import { haveLine, stepRow, submit } from './citydialogs.js';
 import { advancesDialog } from './advdialog.js';
-import { freeMoveText } from './info.js';
+import { countText, freeMoveText } from './info.js';
+import { unitTexture } from './textures.js';
 
 const TILE_W = 442;
 const TILE_H = 128;
@@ -253,6 +258,151 @@ function taxationDialog(ctl, back) {
   sync();
 }
 
+/** Human Sacrifice (Aztecs): choose what each Captive is worth. */
+function sacrificeDialog(ctl, back) {
+  const scene = ctl.scene;
+  const s = ctl.g.s;
+  const pl = s.players[0];
+  const n = pl.captives.length;
+  const kinds = ['food', 'mood', 'culture'];
+  const amount = { food: 0, mood: 0, culture: 0 };
+  const f = new Flow(scene, 580, { top: 80 });
+  f.text(`You hold ${n} Captive${n === 1 ? '' : 's'}. Each one you sacrifice is worth 1 Food, 1 Mood or 1 Culture token. This is a free action.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+  haveLine(f, s);
+  let modal = null;
+  let confirm = null;
+  let status = null;
+  let err = null;
+  const steppers = {};
+  const sync = () => {
+    const total = kinds.reduce((a, k) => a + amount[k], 0);
+    kinds.forEach((k) => steppers[k].setRange(0, amount[k] + (n - total)));
+    status.setText(`${total} of ${n} Captive${n === 1 ? '' : 's'} sacrificed`);
+    confirm.setDisabled(total < 1, 'Choose at least one Captive.');
+  };
+  for (const k of kinds) {
+    const have = k === 'food' ? pl.res.food : pl[k];
+    steppers[k] = stepRow(f, {
+      img: `ic_${k}`,
+      label: RES[k].name,
+      caption: k === 'food' ? `You have ${have} (limit ${resLimit(s, 0, k)})` : `You have ${have}`,
+      value: 0,
+      min: 0,
+      max: n,
+      onChange: (v) => {
+        amount[k] = v;
+        sync();
+      },
+    });
+  }
+  status = f.text('', { center: true, size: 13, color: TXT.gold, gap: 2 });
+  err = f.text(' ', { center: true, size: 13, color: TXT.bad, gap: 6 });
+  const gain = () => Object.fromEntries(kinds.filter((k) => amount[k]).map((k) => [k, amount[k]]));
+  [confirm] = f.buttons([
+    { label: 'Sacrifice', style: 'primary', w: 170, fn: () => submit(ctl, modal, { type: 'human_sacrifice', gain: gain() }, err) },
+    {
+      label: 'Back',
+      w: 120,
+      fn: () => {
+        modal.close();
+        back();
+      },
+    },
+  ]);
+  modal = f.finish({ title: 'Human Sacrifice', subtitle: 'Free action', closable: false });
+  sync();
+}
+
+const BAND_ROWS = 8;
+
+/** Fighting Bands (China): choose, space by space, the Settlers that become Infantry and the Infantry that become Settlers. */
+function fightingBandsDialog(ctl, back) {
+  const scene = ctl.scene;
+  const s = ctl.g.s;
+  const spaces = new Map();
+  for (const u of s.units) {
+    if (u.owner !== 0 || (u.type !== 'settler' && u.type !== 'infantry')) continue;
+    if (!spaces.has(u.hex)) spaces.set(u.hex, { hex: u.hex, settler: [], infantry: [] });
+    spaces.get(u.hex)[u.type].push(u.id);
+  }
+  const all = [...spaces.values()].sort((a, b) => !!cityAt(s, b.hex) - !!cityAt(s, a.hex));
+  const list = all.slice(0, BAND_ROWS);
+  const pick = list.map(() => ({ settler: 0, infantry: 0 }));
+  const f = new Flow(scene, 720, { top: 80 });
+  f.text('Settlers become Infantry and Infantry become Settlers, wherever they stand. This is a free action, once per turn.', { size: 13, color: TXT.muted, center: true, gap: 8 });
+  let modal = null;
+  let confirm = null;
+  let err = null;
+  const units = () => list.flatMap((sp, i) => [...sp.settler.slice(0, pick[i].settler), ...sp.infantry.slice(0, pick[i].infantry)]);
+  const sync = () => confirm.setDisabled(!units().length, 'Choose at least one unit to exchange.');
+  const seen = new Map();
+  list.forEach((sp, i) => {
+    const city = cityAt(s, sp.hex);
+    const base = city ? `City, size ${citySize(city)}` : isSea(s, sp.hex) ? 'At sea' : `${TERRAIN[terrainOf(s, sp.hex)]} space`;
+    seen.set(base, (seen.get(base) || 0) + 1);
+    const y = f.y;
+    const g = scene.add.graphics();
+    drawPanel(g, f.pad, y, f.inner, 44, { fill: 0x1a2432, border: C.border, radius: 8 });
+    f.add(g);
+    f.add(txt(scene, f.pad + 12, y + 7, seen.get(base) > 1 ? `${base} (${seen.get(base)})` : base, { size: 15, bold: true }));
+    f.add(txt(scene, f.pad + 12, y + 26, countText({ settler: sp.settler.length, infantry: sp.infantry.length }), { size: 12, color: TXT.muted }));
+    const swap = (from, to, x0) => {
+      if (!sp[from].length) return;
+      f.add(icon(scene, unitTexture(from, 0), x0 + 11, y + 22, 24).setTint(PLAYER_COLORS[0]));
+      f.add(txt(scene, x0 + 34, y + 22, '→', { size: 16, bold: true, origin: 0.5, color: TXT.muted }));
+      f.add(icon(scene, unitTexture(to, 0), x0 + 56, y + 22, 24).setTint(PLAYER_COLORS[0]));
+      f.add(new Stepper(scene, x0 + 82, y + 9, 0, 0, sp[from].length, (v) => {
+        pick[i][from] = v;
+        sync();
+      }, { gap: 62 }));
+    };
+    swap('settler', 'infantry', f.pad + f.inner - 400);
+    swap('infantry', 'settler', f.pad + f.inner - 200);
+    f.y += 50;
+  });
+  if (all.length > list.length) f.text(`Showing ${list.length} of ${all.length} spaces.`, { size: 12, color: TXT.dim, center: true, gap: 2 });
+  err = f.text(' ', { center: true, size: 13, color: TXT.bad, gap: 6 });
+  [confirm] = f.buttons([
+    { label: 'Exchange', style: 'primary', w: 170, fn: () => submit(ctl, modal, { type: 'fighting_bands', units: units() }, err) },
+    {
+      label: 'Back',
+      w: 120,
+      fn: () => {
+        modal.close();
+        back();
+      },
+    },
+  ]);
+  modal = f.finish({ title: 'Fighting Bands', subtitle: 'Free action · once per turn', closable: false });
+  sync();
+}
+
+/** Hegemony (Carthage): pick a Ship on the map, then the Land space where it founds a city. */
+async function hegemonyPick(ctl) {
+  const s = ctl.g.s;
+  const cancel = { id: 'cancel', label: 'Cancel' };
+  const ships = new Map();
+  for (const u of hegemonyShips(s, 0)) {
+    if (!hegemonySites(s, 0, u).length) continue;
+    // A Pirate Ship under your control is spent first, so that your own Ship stays in play.
+    if (!ships.has(u.hex) || u.owner === PIRATE) ships.set(u.hex, u);
+  }
+  const at = await ctl.mapPick({
+    title: 'Hegemony',
+    text: 'Choose the Ship that founds the new city. It is removed, and the units on board go ashore.',
+    options: [...ships.keys()].map((k) => ({ id: k, label: 'Use the Ship here', hex: k, tag: 'Ship' })).concat(cancel),
+  });
+  if (at === 'cancel') return;
+  const ship = ships.get(at);
+  const to = await ctl.mapPick({
+    title: 'Hegemony',
+    text: 'Choose the Land space for the new city.',
+    options: hegemonySites(s, 0, ship).map((k) => ({ id: k, label: 'Found the city here', hex: k, tag: 'City' })).concat(cancel),
+  });
+  if (to === 'cancel') return;
+  await ctl.act({ type: 'hegemony', unit: ship.id, to });
+}
+
 export function abilitiesDialog(ctl) {
   const scene = ctl.scene;
   const s = ctl.g.s;
@@ -401,8 +551,59 @@ export function abilitiesDialog(ctl) {
     });
   }
 
+  if (s.civs) {
+    const civName = CIVS[pl.civ].name;
+    const civRow = (id, tag, buttons) => rows.push({ name: CIV_ADVANCES[id].name, text: CIV_ADVANCES[id].text, tag: `${civName} · ${tag}`, buttons });
+    if (hasCivAdv(s, 0, 'hegemony')) {
+      const sites = hegemonyShips(s, 0).some((u) => hegemonySites(s, 0, u).length);
+      civRow('hegemony', 'Costs 1 action', [{
+        label: 'Found a city...', w: 160,
+        ...off(notNow, noAction, !sites && 'None of your Ships is next to a Land space where a city can be founded.'),
+        fn: run(() => hegemonyPick(ctl)),
+      }]);
+    }
+    if (hasCivAdv(s, 0, 'sprawling')) {
+      const ready = mine && t.sprawl;
+      civRow('sprawling', ready ? 'Free · available now' : 'Free · after a Recruit that made a Settler', [{
+        label: 'Move Settlers', w: 150,
+        ...off(notNow, !ready && 'Sprawling follows a Recruit action that made a Settler.'),
+        fn: run(() => ctl.act({ type: 'sprawl' }).then((res) => {
+          if (res.ok) ctl.toast('Sprawling: select the Settlers in one of your cities, then click a highlighted space. These moves are free.', 'info', 3600);
+        })),
+      }]);
+    }
+    if (hasCivAdv(s, 0, 'fighting_bands')) {
+      civRow('fighting_bands', used.fightingBands ? 'Already used this turn' : 'Free · once per turn', [{
+        label: 'Exchange...', w: 140,
+        ...off(notNow, used.fightingBands && 'Fighting Bands can be used once per turn.', !s.units.some((u) => u.owner === 0 && (u.type === 'settler' || u.type === 'infantry')) && 'You have no Settlers or Infantry.'),
+        fn: run(() => fightingBandsDialog(ctl, reopen)),
+      }]);
+    }
+    if (hasCivAdv(s, 0, 'tribal_allies')) {
+      civRow('tribal_allies', used.tribalAllies ? 'Already used this turn' : 'Free · once per turn', [{
+        label: 'Call the tribes', w: 150,
+        ...off(notNow, used.tribalAllies && 'Tribal Allies can be used once per turn.', !canSpawnBarbarians(s, 0) && 'No Barbarians can appear now.'),
+        fn: direct({ type: 'tribal_allies' }),
+      }]);
+    }
+    if (hasCivAdv(s, 0, 'human_sacrifice')) {
+      civRow('human_sacrifice', 'Free', [{
+        label: 'Sacrifice...', w: 140,
+        ...off(notNow, !pl.captives.length && 'You hold no Captives.'),
+        fn: run(() => sacrificeDialog(ctl, reopen)),
+      }]);
+    }
+    if (hasCivAdv(s, 0, 'calendar')) {
+      civRow('calendar', 'Free · as often as you like', [{
+        label: 'Look at the Event', w: 160,
+        ...off(notNow),
+        fn: direct({ type: 'calendar' }),
+      }]);
+    }
+  }
+
   if (!rows.length) {
-    f.text('You have no special abilities yet.\nAdvances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power and Forced Labor, and the Great Library and Great Statue Wonders, add them here.', { center: true, color: TXT.dim, size: 14, gap: 10 });
+    f.text(`You have no special abilities yet.\nAdvances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power and Forced Labor, and the Great Library and Great Statue Wonders, add them here.${s.civs ? ' So do some Civilization advances.' : ''}`, { center: true, color: TXT.dim, size: 14, gap: 10 });
   }
 
   for (const r of rows) {
@@ -431,7 +632,7 @@ export function abilitiesDialog(ctl) {
     f.y += h + 8;
   }
 
-  f.text('Other powers have their own buttons: Arts (Influence), Voting and Circus & Sports (Happiness), Economic Liberty (Collect) and Free Education (Advances).', { size: 12, color: TXT.dim, center: true, gap: 4 });
+  f.text(`Other powers have their own buttons: Arts (Influence), Voting and Circus & Sports (Happiness), Economic Liberty (Collect) and Free Education (Advances).${s.civs ? ' The rest of your Civilization\'s powers work by themselves: see the Civilization window.' : ''}`, { size: 12, color: TXT.dim, center: true, gap: 4 });
   modal = f.finish({ title: 'Abilities', closable: true });
   return modal;
 }

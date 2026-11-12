@@ -8,8 +8,11 @@ import { advancesDialog } from './advdialog.js';
 import { UNIT_NAME, placeWords } from './info.js';
 import { unitTexture } from './textures.js';
 
-const MAP_KINDS = new Set(['pick_hex', 'pick_city', 'pick_cities', 'raze']);
+const MAP_KINDS = new Set(['pick_hex', 'pick_city', 'pick_cities', 'raze', 'city_states']);
 const RECOMMENDED = new Set(['government', 'siege', 'first_player']);
+// Civilizations: prompts whose answers are tokens or resources get the matching icon.
+const TOKEN_ICON = { food: 'ic_food', wood: 'ic_wood', ore: 'ic_ore', ideas: 'ic_ideas', gold: 'ic_gold', mood: 'ic_mood', culture: 'ic_culture', culture_a: 'ic_culture', ideas_a: 'ic_ideas' };
+const TOKEN_KINDS = new Set(['banking', 'stelas', 'star_catalogs', 'trade_route_income', 'marauders', 'hunnic_tribes']);
 const TERRAIN_ORDER = ['plains', 'forest', 'mountain', 'barren', 'sea'];
 
 // What the symbol on an Event card does in addition to its text. `w` is who drew the card: { me, name, own }.
@@ -42,7 +45,8 @@ export function createPrompts(ctl) {
   const scene = () => ctl.scene;
 
   // ------------------------------------------------------------ Event cards
-  function cardView(card, player) {
+  /** An Event card face. With `options` the window asks a question about the card instead of just showing it. */
+  function cardView(card, player, { options = null, title = 'Event', subtitle = null, note = null } = {}) {
     const s = ctl.g.s;
     const who = { me: player === 0, name: seatName(s, player), own: seatOwner(s, player) };
     return new Promise((resolve) => {
@@ -68,14 +72,32 @@ export function createPrompts(ctl) {
         frame.lineBetween(46, lineY, f.w - 46, lineY);
       }
       f.gap(12);
+      if (note) f.text(note, { size: 14, center: true, color: TXT.muted, gap: 12 });
       let modal;
-      f.buttons([{ label: 'Continue', style: 'primary', w: 180, fn: () => modal.close('ok') }]);
+      if (options) {
+        f.buttons(options.map((o) => ({ label: o.label, style: o.primary ? 'primary' : 'normal', w: options.length > 1 ? 224 : 180, wrap: true, fn: () => modal.close(o.id) })), { h: 42 });
+      } else {
+        f.buttons([{ label: 'Continue', style: 'primary', w: 180, fn: () => modal.close('ok') }]);
+      }
       modal = f.finish({
-        title: 'Event',
-        subtitle: `${cap(who.name)} drew an Event card`,
+        title,
+        subtitle: subtitle || `${cap(who.name)} drew an Event card`,
         closable: false,
-        onClose: () => resolve('ok'),
+        onClose: (r) => resolve(options ? r : 'ok'),
       });
+    });
+  }
+
+  /** A question about an Event card (Human Sacrifice, Calendar): the card is shown with the answers as buttons. */
+  function cardQuestion(p) {
+    const card = EVENT_CARDS[p.card];
+    if (!card) return generic(p);
+    const calendar = p.kind === 'calendar';
+    return cardView(card, p.player, {
+      title: p.title.split(':')[0],
+      subtitle: calendar ? 'The next Event card is…' : 'An Event card has been drawn',
+      note: calendar ? null : p.text,
+      options: p.options.map((o) => ({ ...o, primary: o.id === p.default })),
     });
   }
 
@@ -184,6 +206,11 @@ export function createPrompts(ctl) {
       out.iconTint = PLAYER_COLORS[0];
     } else if ((p.kind === 'trade_income' || p.kind === 'pirate_loss' || p.kind === 'pirate_bounty') && RES[o.id]) {
       out.icon = `ic_${o.id}`;
+    } else if (p.kind === 'nomad_resource' && RES[o.id]) {
+      out.label = RES[o.id].name;
+      out.icon = `ic_${o.id}`;
+    } else if (TOKEN_KINDS.has(p.kind) && TOKEN_ICON[o.id]) {
+      out.icon = TOKEN_ICON[o.id];
     } else if (p.kind === 'first_player') {
       out.label = o.id === '0' ? 'You go first' : `${cap(seatName(ctl.g.s, Number(o.id)))} goes first`;
     }
@@ -223,6 +250,9 @@ export function createPrompts(ctl) {
         return orientation(p);
       case 'combat_card':
         return combatCard(p);
+      case 'human_sacrifice':
+      case 'calendar':
+        return cardQuestion(p);
       default:
         return isYesNo(p) ? yesNo(p) : generic(p);
     }

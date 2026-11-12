@@ -1,8 +1,10 @@
 // Menu, history, overview, move-variant and game-over windows, plus the registry that wires every dialog to the controller.
 import { ADVANCE_GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES } from '../engine/data/cards.js';
+import { PIRATE } from '../engine/data/constants.js';
+import { CIVS } from '../engine/data/civs.js';
 import { WONDERS } from '../engine/data/wonders.js';
-import { citiesOf, terrainOf, totalAges } from '../engine/queries.js';
+import { citiesOf, shipsAt, terrainOf, totalAges } from '../engine/queries.js';
 import { finalResult, scoreOf } from '../engine/scoring.js';
 import { C, LOG_HEX, PLAYER_COLORS, TERRAIN, TXT, cap, joinNames, logColor, seatLabel, seatName, seatOwner } from './theme.js';
 import { placeWords } from './info.js';
@@ -11,6 +13,7 @@ import { Button, Modal, txt } from './widgets.js';
 import { createCityDialogs } from './citydialogs.js';
 import { advancesDialog } from './advdialog.js';
 import { abilitiesDialog, cardsDialog } from './carddialogs.js';
+import { civExtras, civilizationDialog } from './civdialog.js';
 import { helpDialog } from './help.js';
 
 const SUB_DEPTH = 1100;
@@ -18,8 +21,8 @@ const SPEEDS = [['normal', 'Normal'], ['fast', 'Fast'], ['instant', 'Instant']];
 
 export const fmtVP = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-// A restart or follow-up game keeps the length of the game and the number of opponents; the title screen is where they are changed.
-const startGame = (ctl) => ctl.scene.scene.start('Game', { fresh: true, ages: totalAges(ctl.g.s), opponents: ctl.g.s.players.length - 1 });
+// A restart or follow-up game keeps the length of the game, the number of opponents and the Civilizations module; the title screen is where they are changed.
+const startGame = (ctl) => ctl.scene.scene.start('Game', { fresh: true, ages: totalAges(ctl.g.s), opponents: ctl.g.s.players.length - 1, civilizations: !!ctl.g.s.civs });
 const toTitle = (ctl) => ctl.scene.scene.start('Menu');
 
 // ------------------------------------------------------------------- menu
@@ -143,9 +146,10 @@ function overviewDialog(ctl, p) {
   const w = 960;
   const h = 640;
   const gov = pl.government ? ADVANCE_GROUPS.find((x) => x.id === pl.government).name : 'none yet';
+  const civ = s.civs ? CIVS[pl.civ] : null;
   const modal = new Modal(scene, {
     title: p === 0 ? 'Your civilization' : `${cap(seatOwner(s, p))} civilization`,
-    subtitle: `${g.name(p)} · Government: ${gov} · ${pl.advances.length} Advance${pl.advances.length === 1 ? '' : 's'}`,
+    subtitle: `${g.name(p)} · ${civ ? `${civ.name} · ` : ''}Government: ${gov} · ${pl.advances.length} Advance${pl.advances.length === 1 ? '' : 's'}`,
     w,
     h,
     closable: true,
@@ -182,6 +186,20 @@ function overviewDialog(ctl, p) {
     y += Math.max(head.height, list.height) + 8;
   }
   if (!any) modal.add(txt(scene, leftX, y, 'No Advances yet.', { size: 13, color: TXT.muted }));
+  if (!any) y += 26;
+  if (civ) {
+    const owned = civ.advances.filter((a) => pl.civAdv.includes(a.id));
+    const head = txt(scene, leftX, y, 'Civilization', { size: 13, bold: true, color: TXT.gold });
+    const list = txt(scene, leftX + 130, y, `${civ.name}${owned.length ? `: ${owned.map((a) => a.name).join(', ')}` : ''}`, { size: 13, wrap: leftW - 130 });
+    modal.add(head);
+    modal.add(list);
+    y += Math.max(head.height, list.height) + 8;
+    for (const line of civExtras(s, p)) {
+      const t = txt(scene, leftX, y, line, { size: 12, wrap: leftW, color: TXT.muted });
+      modal.add(t);
+      y += t.height + 4;
+    }
+  }
 
   // score, wonders, objectives, cards
   y = 74;
@@ -195,6 +213,7 @@ function overviewDialog(ctl, p) {
     ['Wonders', sc.parts.wonders],
     ['Events and bonuses', sc.parts.events],
   ];
+  if (s.civs) rows.push(['Captives, tokens and Runestones', sc.parts.civ]);
   for (const [name, value] of rows) {
     modal.add(txt(scene, rightX, y, name, { size: 13, color: TXT.muted }));
     modal.add(txt(scene, rightX + rightW, y, fmtVP(value), { size: 13, bold: true, origin: [1, 0] }));
@@ -222,7 +241,10 @@ function overviewDialog(ctl, p) {
   section('Completed Objectives', done, 'None yet.');
   const hand = pl.hand;
   section('Cards in hand', [`Action ${hand.action.length} · Objective ${hand.objective.length} · Wonder ${hand.wonder.length}  ${p !== 0 ? ' (hidden)' : ''}`], '');
-  modal.add(new Button(scene, w / 2 - 70, h - 52, 140, 34, 'Close', () => modal.close(), { size: 14 }));
+  const buttons = [{ label: 'Close', w: 140, fn: () => modal.close() }];
+  if (civ) buttons.unshift({ label: civ.name, w: 140, fn: () => civilizationDialog(ctl, p) });
+  const bw = buttons.length * 140 + (buttons.length - 1) * 10;
+  buttons.forEach((b, i) => modal.add(new Button(scene, w / 2 - bw / 2 + i * 150, h - 52, b.w, 34, b.label, b.fn, { size: 14 })));
   return modal;
 }
 
@@ -230,11 +252,21 @@ function overviewDialog(ctl, p) {
 async function pickVariant(ctl, k, options) {
   const s = ctl.g.s;
   const terr = terrainOf(s, k);
+  const pirates = shipsAt(s, k, PIRATE).length > 0;
   const list = options.map((o, i) => {
     const ship = o.kind === 'ship';
     let label;
     let desc;
-    if (o.nav) {
+    if (o.convert) {
+      const into = o.convert.into;
+      label = into === 'settler' ? 'Land as Settlers' : into === 'infantry' ? 'Land as Infantry' : 'Become Ships';
+      desc = into === 'settler' ? 'Shipcraft: each Ship turns into a Settler on that coast.'
+        : into === 'infantry' ? 'Shipcraft and Tactics: each Ship turns into an Infantry on that coast.'
+          : 'Shipcraft: the Settlers and Infantry turn into Ships in that Sea space.';
+    } else if (o.attack) {
+      label = o.nav ? 'Attack the Pirate Ships, sailing around the map edge' : 'Attack the Pirate Ships';
+      desc = 'Pirate Allies normally share the space with the Pirates; this starts a battle instead.';
+    } else if (o.nav) {
       label = `Sail around the map edge, ${o.nav === 1 ? 'clockwise' : 'counter-clockwise'}`;
       desc = 'Navigation: the Ship leaves one edge of the map and appears at the other end of the Sea.';
     } else if (o.roads) {
@@ -243,13 +275,19 @@ async function pickVariant(ctl, k, options) {
     } else if (o.scout) {
       label = 'Scout';
       desc = 'Free (Scouting Report): up to 2 spaces, ignoring the Forest and Mountain penalties.';
+    } else if (o.kind === 'embark' && options.some((x) => x.convert)) {
+      label = 'Board the Ship';
+      desc = 'Free: the units go aboard the Ship in that Sea space.';
+    } else if (ship && pirates && options.some((x) => x.attack)) {
+      label = 'Share the space with the Pirate Ships';
+      desc = 'Pirate Allies: no battle, your Ships simply sail in alongside them.';
     } else {
       label = ship ? 'Sail normally' : 'Move normally';
       desc = terr === 'forest' ? 'Free. Units that enter a Forest cannot attack this turn.'
         : terr === 'mountain' ? 'Free. Units that enter a Mountain must stop there.'
           : ship ? 'Sail through the connected Sea spaces.' : 'Free: one space.';
     }
-    return { id: String(i), label, desc, primary: !o.roads && !o.nav };
+    return { id: String(i), label, desc, primary: !o.roads && !o.nav && !o.convert && !o.attack };
   });
   const id = await optionModal(ctl, {
     title: 'How do you want to go?',
@@ -307,6 +345,7 @@ function gameOverDialog(ctl) {
       ['Wonders', 'wonders'],
       ['Events and bonuses', 'events'],
     ];
+    if (s.civs) rows.push(['Captives, tokens and Runestones', 'civ']);
     for (const [name, key] of rows) {
       f.add(txt(ctl.scene, f.pad, f.y, name, { size: 14, color: TXT.muted }));
       for (let i = 0; i < n; i++) f.add(txt(ctl.scene, colX(i), f.y, fmtVP(res.scores[i].parts[key]), { size: 14, origin: [1, 0] }));
@@ -338,6 +377,7 @@ export function createDialogs(ctl) {
     cards: (tab) => cardsDialog(ctl, tab),
     abilities: () => abilitiesDialog(ctl),
     overview: (p) => overviewDialog(ctl, p),
+    civilization: (p) => civilizationDialog(ctl, p),
     pickVariant: (k, options) => pickVariant(ctl, k, options),
     confirm: (o) => confirmModal(ctl, o),
     gameOver: () => gameOverDialog(ctl),

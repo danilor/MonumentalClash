@@ -1,9 +1,8 @@
 // The Game facade: owns the state, runs rule flows (generators) and hands prompts to players.
 import { BARBARIAN, MAIN_ACTIONS_PER_TURN, PIRATE, ROUNDS_PER_AGE } from './data/constants.js';
 import { createState, upgradeState } from './state.js';
-import { RuleError, clampResources, fail, gainRes } from './core.js';
-import { bfs, cityById, hasAdv, hasBuilding, isHidden, nextSeat, pirateBlocked, turnOrder } from './queries.js';
-import { choose, confirm } from './prompts.js';
+import { RuleError, clampResources, fail } from './core.js';
+import { nextSeat, turnOrder } from './queries.js';
 import { plural } from './text.js';
 import { advanceAction } from './advance.js';
 import {
@@ -17,6 +16,12 @@ import {
 } from './abilities.js';
 import { statusPhase } from './status.js';
 import { endRound } from './worldEvents.js';
+import { tradePhase, tradeRoutes } from './trade.js';
+import {
+  calendarAction, fightingBandsAction, hegemonyAction, humanSacrificeAction, sprawlAction, tribalAlliesAction,
+} from './civActions.js';
+
+export { tradeRoutes };
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 export const roman = (n) => ROMAN[n] || String(n);
@@ -41,38 +46,6 @@ export function newTurn(player) {
   };
 }
 
-/**
- * Trade routes: each Settler/Ship pairs with a different enemy city (not Angry) within 2 revealed spaces. Max 4.
- * Pirate Ships block routes that start in, or go through, the Sea spaces they are in or next to.
- * Cities without a Market come first, so a route that pays an opponent's Market is only used when it adds to the count.
- */
-export function tradeRoutes(s, p) {
-  if (!hasAdv(s, p, 'trade_routes')) return [];
-  const foes = s.cities
-    .filter((c) => c.owner !== p && c.owner !== BARBARIAN && c.mood !== 'angry')
-    .sort((a, b) => hasBuilding(a, 'market') - hasBuilding(b, 'market'));
-  const mine = s.units.filter((u) => u.owner === p && (u.type === 'settler' || u.type === 'ship'));
-  const reach = (from) => (pirateBlocked(s, from) ? new Map() : bfs(s, from, 2, (n) => !isHidden(s, n) && !pirateBlocked(s, n)));
-  const near = new Map(mine.map((u) => [u.id, reach(u.hex)]));
-  // Pairs are built city by city: a city that gets a partner keeps one, so earlier cities are never given up.
-  const holder = new Map();
-  const attempt = (c, seen) => {
-    for (const u of mine) {
-      if (seen.has(u.id) || !near.get(u.id).has(c.hex)) continue;
-      seen.add(u.id);
-      const prev = holder.get(u.id);
-      if (!prev || attempt(prev, seen)) {
-        holder.set(u.id, c);
-        return true;
-      }
-    }
-    return false;
-  };
-  for (const c of foes) attempt(c, new Set());
-  const unitOf = new Map([...holder].map(([unit, c]) => [c.id, unit]));
-  return foes.filter((c) => unitOf.has(c.id)).map((c) => ({ city: c.id, unit: unitOf.get(c.id) })).slice(0, 4);
-}
-
 function* startTurn(g, p) {
   const s = g.s;
   s.turn = newTurn(p);
@@ -85,42 +58,7 @@ function* startTurn(g, p) {
   s.players[p].denied = 0;
   g.emit({ type: 'turn_start', player: p, age: s.age, round: s.round });
   g.log(`— Age ${roman(s.age)}, round ${s.round}: ${g.name(p)} —`);
-  let routes = tradeRoutes(s, p);
-  // A Market pays 1 Gold to its owner when an opponent trades with it, so those routes are optional.
-  const toMarket = (list) => list.filter((r) => hasBuilding(cityById(s, r.city), 'market'));
-  const exposed = toMarket(routes);
-  if (exposed.length) {
-    const payees = [...new Set(exposed.map((r) => cityById(s, r.city).owner))];
-    const use = yield* confirm(g, p, {
-      kind: 'trade_market',
-      title: 'Trade Routes',
-      text: `${plural(exposed.length, 'trade route ends', 'trade routes end')} in a city with a Market. Using ${exposed.length === 1 ? 'it' : 'them'} gives ${payees.map((o) => g.name(o)).join(' and ')} 1 Gold. Use ${exposed.length === 1 ? 'it' : 'them'}?`,
-      yes: 'Use all trade routes',
-      no: 'Skip the Market routes',
-      default: true,
-    });
-    if (!use) routes = routes.filter((r) => !exposed.includes(r));
-  }
-  if (!routes.length) return;
-  let kind = 'food';
-  if (hasAdv(s, p, 'currency')) {
-    kind = yield* choose(g, p, {
-      kind: 'trade_income',
-      title: 'Trade Routes',
-      text: `You have ${plural(routes.length, 'trade route')}. Take the income as Food or as Gold?`,
-      options: [
-        { id: 'food', label: `${routes.length} Food` },
-        { id: 'gold', label: `${routes.length} Gold` },
-      ],
-      default: 'food',
-    });
-  }
-  gainRes(g, p, { [kind]: routes.length });
-  const marketGold = [...new Set(toMarket(routes).map((r) => cityById(s, r.city).owner))];
-  for (const o of marketGold) gainRes(g, o, { gold: 1 });
-  g.emit({ type: 'trade', player: p, routes, marketGold });
-  g.log(`${g.name(p)} earns ${routes.length} ${kind} from trade routes.`);
-  for (const o of marketGold) g.log(`${g.name(o)} earns 1 Gold from a Market on ${g.name(p)}'s trade route.`);
+  yield* tradePhase(g, p);
 }
 
 function* endTurn(g) {
@@ -172,6 +110,12 @@ const ACTIONS = {
   forced_labor: forcedLaborAbility,
   great_library: greatLibraryAbility,
   great_statue: greatStatueAbility,
+  hegemony: hegemonyAction,
+  sprawl: sprawlAction,
+  fighting_bands: fightingBandsAction,
+  tribal_allies: tribalAlliesAction,
+  human_sacrifice: humanSacrificeAction,
+  calendar: calendarAction,
   end_turn: endTurn,
 };
 
@@ -254,6 +198,7 @@ export class Game {
     if (!t || t.actionsLeft <= 0) fail('You have no actions left.');
     t.actionsLeft -= 1;
     t.move = null;
+    t.sprawl = false;
   }
 
   /** Perform an action for the player whose turn it is. Returns { ok, error?, pending? }. */

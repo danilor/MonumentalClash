@@ -2,12 +2,13 @@
 import { ACTION_CARDS, COMBAT_EFFECTS, OBJECTIVE_CARDS, OBJECTIVES, TOP_EFFECTS } from './data/cards.js';
 import { ADVANCES } from './data/advances.js';
 import { BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
-import { armyAt, armyOf, citiesOf, cityById, foesOf, hasAdv, isArmy, nbrs, resLimit, unitsAt, unitsOf } from './queries.js';
+import { armyAt, armyOf, citiesOf, cityById, foesOf, hasAdv, hasCivAdv, isArmy, nbrs, resLimit, unitsAt, unitsOf } from './queries.js';
 import { applyPayment, discardCard, drawActionCard, drawObjectiveCard, fail, gainRes, moodUp, planPayment } from './core.js';
 import { choose, chooseMany } from './prompts.js';
 import { availableAdvances, quickAdvance } from './advance.js';
 import { constructBlocked, performConstruct, takeUnit } from './city.js';
 import { openFreeMove } from './move.js';
+import { subterfuge } from './civs.js';
 import { scoreOf } from './scoring.js';
 import { plural } from './text.js';
 
@@ -303,11 +304,15 @@ export function* playCard(g, a) {
     const action = { collect: 'a Collect', construct: 'a Construct', influence: 'an Influence Culture' }[eff.with];
     fail(`${eff.name} is played together with ${action} action, not on its own.`);
   }
+  const paid = eff.timing === 'action' && !hasCivAdv(s, p, 'shogunate');
+  if (paid && (!s.turn || s.turn.actionsLeft <= 0)) fail('You have no actions left.');
   pl.hand.action.splice(idx, 1);
   discardCard(g, p, 'action', def.id);
-  if (eff.timing === 'action') g.spendAction();
   g.emit({ type: 'card', player: p, card: def.id });
   g.log(`${g.name(p)} plays ${def.name}.`);
+  // Subterfuge: the card was announced, but nothing is paid if a rival cancels it.
+  if (yield* subterfuge(g, p, def)) return;
+  if (paid) g.spendAction();
   if (GAINS[def.top]) {
     gainRes(g, p, GAINS[def.top]);
     return;

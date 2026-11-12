@@ -26,7 +26,7 @@ export const countText = (c) =>
 
 /** What is left of a free Move, e.g. "2 group moves", "1 Army group move" (a card may limit it to Army units or Ships). */
 export function freeMoveText(mv) {
-  const kind = mv.only === 'army' ? 'Army ' : mv.only === 'ships' ? 'Ship ' : '';
+  const kind = mv.only === 'army' ? 'Army ' : mv.only === 'ships' ? 'Ship ' : mv.only === 'settlers' ? 'Settler ' : '';
   return `${mv.credits} ${kind}group move${mv.credits === 1 ? '' : 's'}`;
 }
 
@@ -50,6 +50,7 @@ export function cityText(g, city) {
   const blds = Object.entries(city.buildings).map(([b, o]) => `${BUILDING_NAME[b]}${o !== city.owner ? ` (${ownedBy(g, o)})` : ''}`);
   if (blds.length) parts.push(blds.join(', '));
   if (city.wonders.length) parts.push(city.wonders.map((w) => WONDERS[w.id].name).join(', '));
+  if (city.druid !== undefined) parts.push(`${cap(seatOwner(g.s, city.druid))} Culture token lies under this city (Druidic Influence, 1 VP)`);
   if (city.corrupt) parts.push('Corrupt: cannot Collect until another action has activated it');
   return parts.join('\n');
 }

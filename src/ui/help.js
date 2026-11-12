@@ -134,6 +134,21 @@ export const TOPICS = [
     ],
   },
   {
+    id: 'civs',
+    title: 'Civilizations',
+    body: [
+      'When Civilizations are on (a switch on the title screen), every player is dealt one of fifteen cultures. Each has four Advances of its own, which it gets the moment it researches the ordinary Advance printed on them. They need no tracker cube and cannot trigger an Event.',
+      '# Finding your powers',
+      '• Click your Civilization on your player card to read its four powers and see which are active. In the Advances window a gold star marks an Advance that also gives you one of them.',
+      '• Powers you start yourself have a button in the Abilities window: Hegemony, Sprawling, Fighting Bands, Tribal Allies, Human Sacrifice and the Calendar. Most others work by themselves, or ask you a question when they apply.',
+      '• Some change the usual windows: Recruit can use Ballcourts, Mounts and Pirate Allies, and Influence can start from Settlers (Proselytism) or a Greek city (Hellenization).',
+      '# Scoring and extras',
+      '• Captives are worth ½ VP each (at most 4). Runestones (Vikings) and the Druid tokens under captured cities (Celts) are worth 1 VP each. The VP tooltip shows them as one line.',
+      '• Two more Buildings exist: the Obelisk (needs Arts; it cannot be Influenced, and it stays yours when its city is captured) and the Observatory (needs Math; building it draws an Action card).',
+      '• Changing Government moves your tracker cubes, and the Civilization Advances that hang on the Advances they land on come with them.',
+    ],
+  },
+  {
     id: 'status',
     title: 'Status Phase',
     body: [

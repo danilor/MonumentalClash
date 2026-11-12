@@ -3,6 +3,7 @@ import { GROUPS, GOVERNMENT_GROUPS } from './data/advances.js';
 import { owns } from './queries.js';
 import { applyPayment, clampResources, planPayment } from './core.js';
 import { choose, chooseMany } from './prompts.js';
+import { grantCivAdvances } from './civs.js';
 import { plural } from './text.js';
 
 export function* changeGovernment(g, p, { free = false } = {}) {
@@ -42,10 +43,13 @@ export function* changeGovernment(g, p, { free = false } = {}) {
     : [];
   if (plan) applyPayment(g, p, plan);
   const gone = new Set(owned.map((a) => a.id));
+  const moved = [GROUPS[pick].advances[0].id, ...chosen];
   pl.advances = pl.advances.filter((id) => !gone.has(id));
-  pl.advances.push(GROUPS[pick].advances[0].id, ...chosen);
+  pl.advances.push(...moved);
   pl.government = pick;
   clampResources(g, p);
   g.emit({ type: 'government', player: p, government: pick });
   g.log(`${g.name(p)} changes Government to ${GROUPS[pick].name}.`);
+  // Cubes that land on an Advance count as obtaining it (a Civilization Advance may hang on one of them).
+  for (const id of moved) grantCivAdvances(g, p, id);
 }

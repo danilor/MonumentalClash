@@ -1,10 +1,10 @@
 // World events: Event cards that affect every player, not only the one who drew the card. `resolveEvent` (events.js)
 // applies the card's icon first and then runs the effect found here. Effects start with the drawer and go clockwise.
-import { BARBARIAN, BASE_RESOURCES, RESOURCES, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
+import { BARBARIAN, BASE_RESOURCES, RESOURCES, STACK_LIMIT } from './data/constants.js';
 import { ADVANCES } from './data/advances.js';
 import {
-  armyAt, armyOf, bfs, cityAt, citiesOf, citySize, hasAdv, hasBuilding, hexDistance, isLand, isPortCity, nbrs, resLimit,
-  terrainOf, unitsAt, unitsLeft, unitsOf,
+  armyAt, armyOf, bfs, cityAt, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, hexDistance, isLand, isPortCity, nbrs, resLimit,
+  shipCap, terrainOf, unitsAt, unitsLeft, unitsOf,
 } from './queries.js';
 import { addUnitTo, canPay, gainRes, pay, removeUnits } from './core.js';
 import { randInt } from './rng.js';
@@ -110,7 +110,7 @@ function* payOrSuffer(g, q, { title, text, cost, cities, suffer }) {
 
 // ------------------------------------------------------------------ buildings
 // The Building an owner gives up first: the one that is cheapest to do without.
-const CHEAPEST_FIRST = ['market', 'port', 'fortress', 'temple', 'academy'];
+const CHEAPEST_FIRST = ['obelisk', 'observatory', 'market', 'port', 'fortress', 'temple', 'academy'];
 
 function* chooseBuilding(g, q, city, title) {
   const types = buildingTypes(city);
@@ -159,6 +159,10 @@ export const WORLD_EFFECTS = {
     for (const q of seatsFrom(s, p)) {
       if (hasAdv(s, q, 'irrigation')) {
         g.log(`Irrigation protects ${g.name(q)} against the Severe Famine.`);
+        continue;
+      }
+      if (hasCivAdv(s, q, 'aqueducts')) {
+        g.log(`The Aqueducts protect ${g.name(q)} against the Severe Famine.`);
         continue;
       }
       yield* payOrSuffer(g, q, {
@@ -523,7 +527,7 @@ export const WORLD_EFFECTS = {
       const ships = here.filter((u) => u.type === 'ship');
       const cargo = here.filter((u) => u.type !== 'ship');
       // The Ships left behind keep what they can carry; the rest sails along.
-      const crew = cargo.slice(0, Math.max(0, cargo.length - (ships.length - 1) * SHIP_CAPACITY));
+      const crew = cargo.slice(0, Math.max(0, cargo.length - (ships.length - 1) * shipCap(s, q)));
       const moved = [ships[0], ...crew];
       for (const u of moved) u.hex = to;
       g.emit({ type: 'move', player: q, units: moved.map((u) => u.id), from, to });

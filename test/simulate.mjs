@@ -1,4 +1,4 @@
-// AI-vs-AI (or AI-vs-random) simulations: node test/simulate.mjs [games=4] [firstSeed=1] [--opponents=1] [--vs=ai|random] [--ages=6] [--check] [-v]
+// AI-vs-AI (or AI-vs-random) simulations: node test/simulate.mjs [games=4] [firstSeed=1] [--opponents=1] [--vs=ai|random] [--ages=6] [--civs] [--check] [-v]
 import { Game } from '../src/engine/game.js';
 import { attachAI, chooseAction } from '../src/ai/index.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
@@ -18,13 +18,14 @@ const firstSeed = nums[1] ?? 1;
 const vs = opt('vs', 'ai');
 const verbose = flag('-v');
 const check = flag('--check');
+const civs = flag('--civs');
 const ages = opt('ages', undefined);
 const opponents = normalizeOpponents(opt('opponents', undefined));
 const seats = opponents + 1;
 const zeros = () => Array.from({ length: seats }, () => 0);
 
 function playOne(seed) {
-  const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents });
+  const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents, civilizations: civs });
   const rand = makeRand(`sim:${seed}`);
   for (let p = 0; p < seats; p++) attachAI(g, p);
   if (vs === 'random') g.policy[0] = (_g, prompt) => randomAnswer(rand, prompt);

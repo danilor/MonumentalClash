@@ -2,11 +2,12 @@
 // the world events (worldEvents.js) affect every player.
 import { EVENT_CARDS } from './data/cards.js';
 import {
-  citiesOf, citySize, hasAdv, hasBuilding, isArmy, nbrs, playerOwnsWonder, terrainOf, unitsAt, unitsLeft, unitsOf,
+  citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, isArmy, nbrs, playerOwnsWonder, terrainOf, unitsAt, unitsLeft, unitsOf,
 } from './queries.js';
 import { addUnitTo, canPay, discardCard, drawFrom, gainRes, pay, removeCity, removeUnits } from './core.js';
 import { chooseMany, confirm } from './prompts.js';
 import { plural } from './text.js';
+import { sacrificeForEvent } from './civs.js';
 import { barbarianMove, barbarianSpawn } from './barbarians.js';
 import { pirateSpawn } from './pirates.js';
 import { bySize, cityOption, eventMoodLoss, exhaustedLand, pickCity, placeSettler, victim } from './eventTools.js';
@@ -82,6 +83,10 @@ const EFFECTS = {
     const s = g.s;
     if (hasAdv(s, p, 'irrigation')) {
       g.log('Irrigation protects against the Famine.');
+      return;
+    }
+    if (hasCivAdv(s, p, 'aqueducts')) {
+      g.log('The Aqueducts protect against the Famine.');
       return;
     }
     const pl = s.players[p];
@@ -200,20 +205,26 @@ export function* resolveEvent(g, p) {
   }
   if (!cardId) cardId = drawFrom(g, 'event');
   if (!cardId) return;
-  const card = EVENT_CARDS[cardId];
-  g.log(`Event for ${g.name(p)}: ${card.name}.`);
-  g.emit({ type: 'event', player: p, card: cardId });
-  // Make the prompt visible before anything resolves.
-  yield g.ask({
-    player: p,
-    kind: 'event',
-    title: card.name,
-    text: card.text,
-    icon: card.icon,
-    options: [{ id: 'ok', label: 'Continue' }],
-    default: 'ok',
-  });
-
+  let card = EVENT_CARDS[cardId];
+  for (;;) {
+    g.log(`Event for ${g.name(p)}: ${card.name}.`);
+    g.emit({ type: 'event', player: p, card: cardId });
+    // Make the prompt visible before anything resolves.
+    yield g.ask({
+      player: p,
+      kind: 'event',
+      title: card.name,
+      text: card.text,
+      icon: card.icon,
+      options: [{ id: 'ok', label: 'Continue' }],
+      default: 'ok',
+    });
+    // Human Sacrifice may cancel the card and draw another one, until the Captives run out.
+    const next = yield* sacrificeForEvent(g, p, cardId);
+    if (!next) break;
+    cardId = next;
+    card = EVENT_CARDS[cardId];
+  }
   switch (card.icon) {
     case 'gold_mine':
       gainRes(g, p, { gold: 2 });

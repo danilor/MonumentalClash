@@ -3,8 +3,8 @@ import { C, HEX_W, PLAYER_COLORS, W } from './theme.js';
 import { Button, txt, icon, resRow, setupCamera } from './widgets.js';
 import { TERRAIN_VARIANTS } from './textures.js';
 
-const PIECES = ['u_infantry', 'u_cavalry', 'u_elephant', 'u_settler', 'u_ship', 'u_pirate', 'u_barb', 'b_city', 'b_academy', 'b_fortress', 'b_market', 'b_port', 'b_temple', 'ic_wonder'];
-const MAP_WIDTH = { b_city: 46, b_academy: 18, b_fortress: 18, b_market: 18, b_port: 18, b_temple: 18, ic_wonder: 17 }; // about their size on the board
+const PIECES = ['u_infantry', 'u_cavalry', 'u_elephant', 'u_settler', 'u_ship', 'u_pirate', 'u_barb', 'b_city', 'b_academy', 'b_fortress', 'b_market', 'b_port', 'b_temple', 'b_obelisk', 'b_observatory', 'ic_wonder'];
+const MAP_WIDTH = { b_city: 46, b_academy: 18, b_fortress: 18, b_market: 18, b_port: 18, b_temple: 18, b_obelisk: 18, b_observatory: 18, ic_wonder: 17 }; // about their size on the board
 
 /** Developer sheet: ?debug=textures shows every generated texture. */
 export class DebugScene extends Phaser.Scene {
@@ -23,7 +23,7 @@ export class DebugScene extends Phaser.Scene {
       }
     }
     icon(this, 'hex_hidden', x, 70, HEX_W);
-    const keys = ['ic_food', 'ic_wood', 'ic_ore', 'ic_ideas', 'ic_gold', 'ic_mood', 'ic_culture', 'mood_happy', 'mood_neutral', 'mood_angry', 'ic_swords', 'ic_explore', 'ic_boat', 'ic_exhaust', 'ic_action', 'ic_action_off', 'ic_card'];
+    const keys = ['ic_food', 'ic_wood', 'ic_ore', 'ic_ideas', 'ic_gold', 'ic_mood', 'ic_culture', 'ic_captive', 'mood_happy', 'mood_neutral', 'mood_angry', 'ic_swords', 'ic_explore', 'ic_boat', 'ic_exhaust', 'ic_action', 'ic_action_off', 'ic_card'];
     keys.forEach((k, i) => icon(this, k, 50 + i * 56, 150, 44));
 
     // units and buildings: large, then at board size in each owner colour

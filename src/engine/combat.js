@@ -1,9 +1,9 @@
 // Land and naval battles, plus city capture.
-import { BARBARIAN, CLASH_BONUS, COMBAT_DIE, PIRATE, SHIP_CAPACITY, STACK_LIMIT } from './data/constants.js';
+import { BARBARIAN, CLASH_BONUS, COMBAT_DIE, PIRATE, STACK_LIMIT } from './data/constants.js';
 import { ACTION_CARDS, COMBAT_EFFECTS } from './data/cards.js';
 import { randInt } from './rng.js';
 import {
-  unitById, unitsAt, armyAt, shipsAt, cityAt, citiesOf, hasAdv, hasBuilding, playerOwnsWonder,
+  unitById, unitsAt, armyAt, navyAt, cityAt, citiesOf, hasAdv, hasBuilding, hasCivAdv, playerOwnsWonder, shipCap,
   citySize, settlementsLeft, buildingsLeft, unitsLeft, allOwners, nbrs, isLand, isNpc,
 } from './queries.js';
 import {
@@ -13,6 +13,8 @@ import { choose, confirm } from './prompts.js';
 import { onBattleEnd } from './objectives.js';
 import { pirateBounty } from './pirates.js';
 import { countList, plural } from './text.js';
+import { battleSpoils, noteLoss, tribalWarfare } from './civCombat.js';
+import { stelaBonus } from './civs.js';
 
 const MAX_ROUNDS = 40;
 const ARMY_NAMES = { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], elephant: ['Elephant', 'Elephants'] };
@@ -165,7 +167,7 @@ function tally(res, owner, kind, n = 1) {
   k[kind] += n;
 }
 
-/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship). Settlers go first, then Infantry, Cavalry and Elephants. */
+/** Remove land units that no longer fit on the Ships in a sea hex (2 per Ship, 3 with Longships). Settlers go first, then Infantry, Cavalry and Elephants. */
 export function trimCargo(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return [];
@@ -173,7 +175,7 @@ export function trimCargo(g, hex) {
   for (const owner of allOwners(s)) {
     const cargo = unitsAt(s, hex).filter((u) => u.owner === owner && u.type !== 'ship');
     if (!cargo.length) continue;
-    const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
+    const cap = navyAt(s, hex, owner).length * shipCap(s, owner);
     if (cargo.length <= cap) continue;
     cargo.sort((a, b) => (LEAVE_ORDER[a.type] ?? 1) - (LEAVE_ORDER[b.type] ?? 1));
     const drop = cargo.slice(0, cargo.length - cap).map((u) => u.id);
@@ -189,7 +191,7 @@ export function* trimCargoChoice(g, hex) {
   const s = g.s;
   if (!hex || s.map.hexes[hex].terrain !== 'sea') return;
   for (const { idx: owner } of s.players) {
-    const cap = shipsAt(s, hex, owner).length * SHIP_CAPACITY;
+    const cap = navyAt(s, hex, owner).length * shipCap(s, owner);
     const cargo = () => unitsAt(s, hex).filter((u) => u.owner === owner && u.type !== 'ship');
     while (cargo().length > cap && new Set(cargo().map((u) => u.type)).size > 1) {
       const present = new Set(cargo().map((u) => u.type));
@@ -244,8 +246,9 @@ export function* captureCity(g, city, by, info = {}) {
       removedPieces = size;
       destroyed = true;
     } else {
+      const keeps = (type) => type === 'obelisk' || (type === 'port' && hasCivAdv(s, old, 'city_independence'));
       for (const [type, color] of Object.entries(city.buildings)) {
-        if (color !== old) continue;
+        if (color !== old || keeps(type)) continue;
         if (buildingsLeft(s, by, type) > 0) city.buildings[type] = by;
         else {
           delete city.buildings[type];
@@ -266,9 +269,32 @@ export function* captureCity(g, city, by, info = {}) {
   } else {
     city.owner = by;
     city.mood = 'angry';
+    delete city.druid;
+    if (hasCivAdv(s, by, 'provinces')) yield* provinces(g, by, city);
   }
   yield* settlerCompensation(g, old, city);
+  if (!destroyed && by !== BARBARIAN) yield* stelaBonus(g, by);
   return { gold: gold + removedPieces, destroyed };
+}
+
+/** Provinces: a city just captured may be made Neutral, or Happy for 1 Culture. */
+function* provinces(g, p, city) {
+  const s = g.s;
+  const canHappy = canPay(s, p, { culture: 1 }, { noArena: true });
+  const options = [{ id: 'angry', label: 'Leave it Angry' }, { id: 'neutral', label: 'Make it Neutral' }];
+  if (canHappy) options.push({ id: 'happy', label: 'Make it Happy (1 Culture)' });
+  const pick = yield* choose(g, p, {
+    kind: 'provinces',
+    title: 'Provinces',
+    text: `The city at ${city.hex} is Angry after its capture. Calm it?`,
+    options,
+    default: canHappy && s.players[p].culture >= 3 ? 'happy' : 'neutral',
+  });
+  if (pick === 'happy' && canHappy) {
+    applyPayment(g, p, planPayment(s, p, { culture: 1 }, { noArena: true }));
+    city.mood = 'happy';
+  } else if (pick !== 'angry') city.mood = 'neutral';
+  g.log(`The city at ${city.hex} is ${city.mood} (Provinces).`);
 }
 
 function* maybeFanaticism(g, loser, city) {
@@ -307,7 +333,7 @@ export function* battle(g, ctx) {
   const defCity = city && city.owner === D ? city : null;
   const fortress = !!(defCity && hasBuilding(defCity, 'fortress'));
   const atkLive = () => ctx.units.filter((id) => unitById(s, id));
-  const defLive = () => (land ? armyAt(s, hex, D) : shipsAt(s, hex, D)).map((u) => u.id);
+  const defLive = () => (land ? armyAt(s, hex, D) : navyAt(s, hex, D)).map((u) => u.id);
   const defSettlers = () => (land ? unitsAt(s, hex).filter((u) => u.owner === D && u.type === 'settler').map((u) => u.id) : []);
 
   const res = {
@@ -317,7 +343,7 @@ export function* battle(g, ctx) {
     kills: {}, fortress, cityId: defCity ? defCity.id : null,
     citySize: defCity ? citySize(defCity) : 0, cityWonders: defCity ? defCity.wonders.length : 0,
     defHadSettlers: defSettlers().length > 0,
-    infKilled: {}, defection: {},
+    infKilled: {}, defection: {}, lost: {},
   };
   g.emit({ type: 'battle_start', domain: ctx.domain, hex, from: ctx.from, attacker: A, defender: D, atk: [...atkLive()], def: defLive() });
   g.log(`Battle at ${hex}: ${g.name(A)} attacks ${g.name(D)}.`);
@@ -327,6 +353,7 @@ export function* battle(g, ctx) {
 
   if (A === BARBARIAN && defCity && playerOwnsWonder(s, D, 'great_wall')) {
     // The Great Wall defeats Barbarian attackers outright.
+    noteLoss(s, res, A, atkLive());
     removeUnits(g, atkLive());
     res.auto = true;
     res.winner = winner = D;
@@ -392,6 +419,7 @@ export function* battle(g, ctx) {
     yield* trimCargoChoice(g, hex);
     yield* trimCargoChoice(g, ctx.from);
   }
+  battleSpoils(g, res);
   g.emit({ type: 'battle_end', hex, winner, retreated: res.retreated, captured: res.captured });
   yield* onBattleEnd(g, res);
   return res;
@@ -403,7 +431,7 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
   const D = ctx.defender;
   const hex = ctx.hex;
   const atkLive = () => ctx.units.filter((id) => unitById(s, id));
-  const defLive = () => (land ? armyAt(s, hex, D) : shipsAt(s, hex, D)).map((u) => u.id);
+  const defLive = () => (land ? armyAt(s, hex, D) : navyAt(s, hex, D)).map((u) => u.id);
   const defSettlers = () => unitsAt(s, hex).filter((u) => u.owner === D && u.type === 'settler').map((u) => u.id);
   const sideOf = (p) => (p === A ? 'A' : 'D');
   const owners = { A, D };
@@ -466,6 +494,11 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
   }
 
   const arenaUsed = { A: false, D: false };
+  // Tribal Warfare adds to the CV of every round of a Land battle against a player
+  const tribal = {
+    A: land ? tribalWarfare(s, A, D, hex) : 0,
+    D: land ? tribalWarfare(s, D, A, hex) : 0,
+  };
   let winner = null;
   let round = 0;
   const startDef = res.defStart;
@@ -479,14 +512,13 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     const fortActive = fortress && round === 1;
 
     // 1) cards, attacker first
-    const played = { A: null, D: null };
-    for (const side of ['A', 'D']) {
+    const cardInfo = (side) => {
       const p = owners[side];
       const ids = side === 'A' ? aIds : dIds;
       const foeIds = side === 'A' ? dIds : aIds;
       const foeOwner = side === 'A' ? D : A;
       const armyHex = side === 'A' ? ctx.from || hex : hex;
-      const info = {
+      return {
         units: ids.length,
         infantry: infantryIn(s, ids),
         enemyFortress: side === 'A' && fortress,
@@ -502,7 +534,65 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
         foeInfantry: land && (infantryIn(s, foeIds) > 0 || (res.infKilled[foeOwner] || 0) > 0),
         canDisengage: land && !ctx.inPlace && !!ctx.from,
       };
-      const opts = combatCardOptions(g, p, ctx, side === 'A' ? 'attacker' : 'defender', info);
+    };
+    const cardRole = (side) => (side === 'A' ? 'attacker' : 'defender');
+
+    // Fireworks: 1 Ore before the first round stops the opponent's Combat card
+    const stopped = { A: false, D: false };
+    if (round === 1) {
+      for (const side of ['A', 'D']) {
+        const p = owners[side];
+        const foeSide = side === 'A' ? 'D' : 'A';
+        if (!hasCivAdv(s, p, 'fireworks') || !canPay(s, p, { ore: 1 })) continue;
+        if (!combatCardOptions(g, owners[foeSide], ctx, cardRole(foeSide), cardInfo(foeSide)).length) continue;
+        const use = yield* confirm(g, p, {
+          kind: 'fireworks',
+          title: 'Fireworks',
+          text: `Pay 1 Ore to stop ${g.name(owners[foeSide])} playing a Combat card in this round?`,
+          yes: 'Pay 1 Ore',
+          no: 'No',
+          default: true,
+        });
+        if (use) {
+          applyPayment(g, p, planPayment(s, p, { ore: 1 }));
+          stopped[foeSide] = true;
+          g.log(`${g.name(p)} sets off Fireworks: ${g.name(owners[foeSide])} cannot play a Combat card this round.`);
+        }
+      }
+    }
+    // Spartans: an attacker facing fewer Army units may not play Action cards
+    if (land && hasCivAdv(s, D, 'spartans') && dIds.length < aIds.length) stopped.A = true;
+
+    // Immortals: Culture spent before a round adds +1 CV per token
+    const immortal = { A: 0, D: 0 };
+    for (const side of ['A', 'D']) {
+      const p = owners[side];
+      if (!land || !hasCivAdv(s, p, 'immortals')) continue;
+      const most = Math.min(4, s.players[p].culture);
+      if (most <= 0) continue;
+      const own = side === 'A' ? aIds.length : dIds.length;
+      const foe = side === 'A' ? dIds.length : aIds.length;
+      const ans = yield* choose(g, p, {
+        kind: 'immortals',
+        title: 'Immortals',
+        text: `Spend Culture for +1 CV each in round ${round}?`,
+        options: Array.from({ length: most + 1 }, (_, n) => ({ id: String(n), label: n ? `Spend ${n} Culture (+${n} CV)` : 'Spend nothing' })),
+        default: String(foe >= own ? Math.min(most, 2) : 0),
+      });
+      const n = Math.max(0, Math.min(most, Number(ans) || 0));
+      if (n) {
+        applyPayment(g, p, planPayment(s, p, { culture: n }, { noArena: true }));
+        immortal[side] = n;
+        g.log(`${g.name(p)} spends ${n} Culture for +${n} CV (Immortals).`);
+      }
+    }
+
+    const played = { A: null, D: null };
+    for (const side of ['A', 'D']) {
+      const p = owners[side];
+      if (stopped[side]) continue;
+      const info = cardInfo(side);
+      const opts = combatCardOptions(g, p, ctx, cardRole(side), info);
       if (!opts.length) continue;
       const ans = yield* choose(g, p, {
         kind: 'combat_card',
@@ -582,6 +672,31 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     const armies = { A: land ? armyIn(s, aIds) : {}, D: land ? armyIn(s, dIds) : {} };
     const rolls = { A: rollSide(s, nA, armies.A), D: rollSide(s, nD, armies.D) };
     const notes = [];
+    // Horsemanship: in round 1 an Army with Cavalry may reroll one die for 1 Culture (free with Rituals)
+    if (land && round === 1) {
+      for (const side of ['A', 'D']) {
+        const p = owners[side];
+        const r = rolls[side];
+        if (!hasCivAdv(s, p, 'horsemanship') || !armies[side].cavalry || !r.dice.length) continue;
+        const free = hasAdv(s, p, 'rituals');
+        if (!free && !canPay(s, p, { culture: 1 }, { noArena: true })) continue;
+        const low = r.dice.reduce((lo, d) => (d.v < lo.v ? d : lo), r.dice[0]);
+        const use = yield* confirm(g, p, {
+          kind: 'horsemanship',
+          title: 'Horsemanship',
+          text: `Reroll your lowest die (a ${low.v}) for ${free ? 'free' : '1 Culture'}?`,
+          yes: 'Reroll',
+          no: 'Keep the roll',
+          default: low.v <= 3,
+        });
+        if (!use) continue;
+        if (!free) applyPayment(g, p, planPayment(s, p, { culture: 1 }, { noArena: true }));
+        const [v, icon] = rollDie(s);
+        r.dice[r.dice.indexOf(low)] = { v, icon };
+        Object.assign(r, scoreDice(r.dice, armies[side]));
+        notes.push(`Horsemanship: ${g.name(p)} rerolls a ${low.v} and gets a ${v}.`);
+      }
+    }
     for (const side of ['A', 'D']) {
       const r = rolls[side];
       if (mods[side].confuse) {
@@ -600,12 +715,23 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
         notes.push(`Sabotaged Supplies: ${g.name(owners[side])} loses ${plural(counted, 'point')} (-1 per die${counted < r.dice.length ? ' that counts' : ''}).`);
       }
     }
+    // Persian Elephants: in round 1 each Elephant cancels the bonus of one enemy Cavalry
+    if (land && round === 1) {
+      for (const side of ['A', 'D']) {
+        const foe = side === 'A' ? 'D' : 'A';
+        if (!hasCivAdv(s, owners[side], 'persian_elephants')) continue;
+        const n = Math.min(armies[side].elephant || 0, rolls[foe].cavalry / CLASH_BONUS.cavalry);
+        if (n <= 0) continue;
+        rolls[foe].cavalry -= n * CLASH_BONUS.cavalry;
+        notes.push(`Persian Elephants: ${g.name(owners[side])} cancels the bonus of ${n} enemy Cavalry.`);
+      }
+    }
     for (const line of notes) g.log(line);
     const rollA = rolls.A;
     const rollD = rolls.D;
     const cv = {
-      A: rollA.sum + rollA.bonus + rollA.cavalry + mods.A.cv + steel.A,
-      D: rollD.sum + rollD.bonus + rollD.cavalry + mods.D.cv + steel.D,
+      A: rollA.sum + rollA.bonus + rollA.cavalry + mods.A.cv + steel.A + tribal.A + immortal.A,
+      D: rollD.sum + rollD.bonus + rollD.cavalry + mods.D.cv + steel.D + tribal.D + immortal.D,
     };
     if (land && round === 1 && city && hasBuilding(city, 'temple')) {
       if (A !== BARBARIAN && hasAdv(s, A, 'fanaticism')) cv.A += 2;
@@ -645,6 +771,35 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     if (!land && round === 1 && hasAdv(s, D, 'warships')) cancelD += 1;
     let cancelA = mods.A.cancel + rollA.elephants;
     if (round === 1 && hasAdv(s, A, 'warships') && (!land || ctx.landed)) cancelA += 1;
+    // Biremes: one more hit in the first round of a naval battle against an opponent without Warships
+    if (!land && round === 1) {
+      if (hasCivAdv(s, A, 'biremes') && !hasAdv(s, D, 'warships')) raw.A += 1;
+      if (hasCivAdv(s, D, 'biremes') && !hasAdv(s, A, 'warships')) raw.D += 1;
+    }
+    // Warbeasts: an Elephant die of 1 or 2 whose hit would be wasted adds its value to the CV instead
+    if (land) {
+      for (const side of ['A', 'D']) {
+        if (!hasCivAdv(s, owners[side], 'warbeasts')) continue;
+        const r = side === 'A' ? rollA : rollD;
+        const spare = Math.max(0, (side === 'A' ? cancelA : cancelD) - (side === 'A' ? raw.D : raw.A));
+        const dice = r.dice.filter((d) => d.ignored && d.v <= 2).sort((x, y) => y.v - x.v).slice(0, spare);
+        if (!dice.length) continue;
+        let add = 0;
+        for (const d of dice) {
+          d.ignored = false;
+          add += d.v;
+        }
+        r.elephants -= dice.length;
+        if (side === 'A') cancelA -= dice.length;
+        else cancelD -= dice.length;
+        cv[side] += add;
+        raw.A = Math.floor(cv.A / 5);
+        raw.D = Math.floor(cv.D / 5);
+        const line = `Warbeasts: ${g.name(owners[side])} adds ${add} to the CV instead of cancelling ${plural(dice.length, 'hit')}.`;
+        notes.push(line);
+        g.log(line);
+      }
+    }
     // Boarding Party sinks one more Ship when the CV at least matches the enemy's; nothing can cancel it
     const boardA = mods.A.board && cv.A >= cv.D ? 1 : 0;
     const boardD = mods.D.board && cv.D >= cv.A ? 1 : 0;
@@ -657,6 +812,8 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
       const n = ids.filter((id) => unitById(s, id)?.type === 'infantry').length;
       if (n) res.infKilled[owner] = (res.infKilled[owner] || 0) + n;
     }
+    noteLoss(s, res, A, killA);
+    noteLoss(s, res, D, killD);
     removeUnits(g, killA);
     removeUnits(g, killD);
     res.atkLost += killA.length;
@@ -688,8 +845,8 @@ function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
     }
     g.emit({
       type: 'battle_round', hex, round, domain: ctx.domain,
-      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, cavalry: rollA.cavalry, elephants: rollA.elephants, mod: mods.A.cv + steel.A, card: played.A, lost: killA.length },
-      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, cavalry: rollD.cavalry, elephants: rollD.elephants, mod: mods.D.cv + steel.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
+      a: { owner: A, dice: rollA.dice, cv: cv.A, hits: raw.A, bonus: rollA.bonus, cavalry: rollA.cavalry, elephants: rollA.elephants, mod: mods.A.cv + steel.A + tribal.A + immortal.A, card: played.A, lost: killA.length },
+      d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw.D, bonus: rollD.bonus, cavalry: rollD.cavalry, elephants: rollD.elephants, mod: mods.D.cv + steel.D + tribal.D + immortal.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
       cancelA, cancelD, notes, extraA: boardA, extraD: boardD,
     });
     g.log(`Round ${round}: ${g.name(A)} CV ${cv.A} vs ${g.name(D)} CV ${cv.D}; losses ${killA.length} / ${killD.length}.`);

@@ -1,13 +1,15 @@
 // Shared helpers for the test suite and the simulation script.
 import { Game } from '../src/engine/game.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
-import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, PIRATE, RESOURCES, STACK_LIMIT, SHIP_CAPACITY } from '../src/engine/data/constants.js';
+import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, PIRATE, RESOURCES, STACK_LIMIT } from '../src/engine/data/constants.js';
 import { ACTION_DECK_LIST } from '../src/engine/data/cards.js';
 import { OBJECTIVE_CARD_LIST } from '../src/engine/data/cards.js';
 import { WONDER_IDS } from '../src/engine/data/wonders.js';
-import { GROUPS } from '../src/engine/data/advances.js';
+import { ADVANCES, GROUPS } from '../src/engine/data/advances.js';
+import { CIVS } from '../src/engine/data/civs.js';
+import { CAPTIVE_LIMIT, grantCivAdvances } from '../src/engine/civs.js';
 import { randInt, seedFromString } from '../src/engine/rng.js';
-import { allOwners, isArmy, resLimit, totalAges } from '../src/engine/queries.js';
+import { allOwners, captivesOf, isArmy, resLimit, shipCapacityAt, totalAges } from '../src/engine/queries.js';
 
 export function makeRand(seed) {
   const st = { rng: seedFromString(String(seed)) };
@@ -41,6 +43,26 @@ export function checkInvariants(g) {
     if (govs.length > 1) bad(`${pl.name} has two governments`);
     if (govs.length === 1 && pl.government !== govs[0].id) bad(`${pl.name} government mismatch ${pl.government} vs ${govs[0].id}`);
     if (govs.length === 0 && pl.government) bad(`${pl.name} has a government without advances`);
+    if (!s.civs) {
+      if (pl.civ || pl.civAdv.length || pl.captives.length) bad(`${pl.name} has Civilization state without the module`);
+      continue;
+    }
+    const civ = CIVS[pl.civ];
+    if (!civ) { bad(`${pl.name} has no Civilization (${pl.civ})`); continue; }
+    if (s.players.filter((o) => o.civ === pl.civ).length > 1) bad(`${pl.name}: the Civilization ${pl.civ} is played twice`);
+    if (new Set(pl.civAdv).size !== pl.civAdv.length) bad(`${pl.name} has duplicate Civilization Advances`);
+    for (const id of pl.civAdv) {
+      const a = civ.advances.find((x) => x.id === id);
+      if (!a) bad(`${pl.name} (${pl.civ}) has the foreign Civilization Advance ${id}`);
+      // A Government may be given up later (its cubes move), but the Civilization Advance stays.
+      else if (a.trigger === 'government' ? !pl.government : !pl.advances.includes(a.trigger) && !GROUPS[ADVANCES[a.trigger].group].gov) bad(`${pl.name} has ${id} without ${a.trigger}`);
+    }
+    for (const a of civ.advances) {
+      if ((a.trigger === 'government' ? pl.government : pl.advances.includes(a.trigger)) && !pl.civAdv.includes(a.id)) bad(`${pl.name} lacks ${a.id} although ${a.trigger} is theirs`);
+    }
+    if (pl.captives.length > CAPTIVE_LIMIT) bad(`${pl.name} holds ${pl.captives.length} Captives`);
+    if (pl.captives.length && !pl.civAdv.includes('captives')) bad(`${pl.name} holds Captives without the Advance`);
+    for (const c of pl.captives) if (!isArmy(c)) bad(`${pl.name} holds a ${c.type} Captive`);
   }
 
   const owners = {};
@@ -68,10 +90,12 @@ export function checkInvariants(g) {
   }
   for (const [hex, n] of Object.entries(cargo)) {
     if (!(shipsAtHex[hex] > 0)) bad(`land units at sea ${hex} without ships`);
-    else if (n > shipsAtHex[hex] * SHIP_CAPACITY) bad(`too much cargo at ${hex}: ${n} on ${shipsAtHex[hex]} ships`);
+    else if (n > shipCapacityAt(s, hex)) bad(`too much cargo at ${hex}: ${n} on ${shipsAtHex[hex]} ships`);
   }
   for (const [k, n] of Object.entries(stack)) if (n > STACK_LIMIT) bad(`stack of ${n} at ${k}`);
-  for (const [hex, set] of Object.entries(owners)) if (set.size > 1) bad(`mixed owners at ${hex}: ${[...set]}`);
+  // Carthage's Pirate Allies share a space with Pirate Ships.
+  const sharing = (set) => set.size === 2 && set.has(PIRATE) && [...set].some((o) => o !== PIRATE && s.civs && s.players[o] && s.players[o].civAdv.includes('pirate_allies'));
+  for (const [hex, set] of Object.entries(owners)) if (set.size > 1 && !sharing(set)) bad(`mixed owners at ${hex}: ${[...set]}`);
   for (const [k, n] of Object.entries(count)) {
     const [o, type] = k.split(':');
     const lim = Number(o) === BARBARIAN
@@ -79,16 +103,19 @@ export function checkInvariants(g) {
       : Number(o) === PIRATE
         ? { ship: PIECE_LIMITS.pirateShips }[type] ?? 0
         : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
-    if (n > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
+    // Captives are pieces that left the board for their captor's hand.
+    if (n + captivesOf(s, Number(o), type) > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
   }
 
   const wonders = new Map();
   const cityHexes = new Set();
   const perOwner = {};
   const bcount = {};
+  // Egypt's Flood Plains found cities on Barren land and Huns' Nomads move them there.
+  const barrenOk = s.civs && s.players.some((pl) => pl.civAdv.includes('flood_plains') || pl.civAdv.includes('nomads'));
   for (const c of s.cities) {
     const h = s.map.hexes[c.hex];
-    if (!h || h.terrain === null || h.terrain === 'sea' || h.terrain === 'barren') bad(`city ${c.id} on ${h && h.terrain} ${c.hex}`);
+    if (!h || h.terrain === null || h.terrain === 'sea' || (h.terrain === 'barren' && !barrenOk)) bad(`city ${c.id} on ${h && h.terrain} ${c.hex}`);
     if (cityHexes.has(c.hex)) bad(`two cities at ${c.hex}`);
     cityHexes.add(c.hex);
     perOwner[c.owner] = (perOwner[c.owner] || 0) + 1;
@@ -136,6 +163,27 @@ export function checkInvariants(g) {
   return errs;
 }
 
+/**
+ * Give player p every Advance (one whole Government, every other category) with the Civilization Advances that come with
+ * them, and full stocks: a table where every power of a people is within reach of random play.
+ */
+export function enrich(g, p, { gov = 'democracy' } = {}) {
+  const s = g.s;
+  const pl = s.players[p];
+  for (const [gid, group] of Object.entries(GROUPS)) {
+    if (group.gov && gid !== gov) continue;
+    for (const a of group.advances) {
+      if (pl.advances.includes(a.id)) continue;
+      pl.advances.push(a.id);
+      grantCivAdvances(g, p, a.id);
+    }
+  }
+  pl.government = gov;
+  for (const r of RESOURCES) pl.res[r] = resLimit(s, p, r);
+  pl.mood = 6;
+  pl.culture = 6;
+}
+
 /** Answer a prompt at random (used for fuzzing). */
 export function randomAnswer(rand, prompt) {
   if (prompt.multi) {
@@ -153,12 +201,18 @@ const WEIGHT = { end: 0.5, move: 1.2, advance: 2, collect: 1.5, recruit: 1.5, fo
 
 /**
  * Play a whole game with a random chooser. `chooser(g, p, list, rand)` may be supplied to override the choice.
- * `ages` sets the game length (the default length when omitted) and `opponents` the number of computer players.
+ * `ages` sets the game length (the default length when omitted), `opponents` the number of computer players and
+ * `civs` switches the Civilizations module on (an array names the peoples of the first seats). `setup(g)` may change
+ * the table before the first turn.
  * Returns { g, steps, rejected, errors }.
  */
-export function playRandomGame({ seed = 'fuzz', maxSteps = 4000, check = true, chooser = null, pending = false, ages, opponents = 1 } = {}) {
+export function playRandomGame({ seed = 'fuzz', maxSteps = 4000, check = true, chooser = null, pending = false, ages, opponents = 1, civs = false, setup = null } = {}) {
   const rand = makeRand(`rand:${seed}`);
-  const g = Game.create({ seed: String(seed), humans: Array.from({ length: opponents + 1 }, (_, i) => i === 0), ages, opponents });
+  const g = Game.create({
+    seed: String(seed), humans: Array.from({ length: opponents + 1 }, (_, i) => i === 0), ages, opponents,
+    civilizations: !!civs, civs: Array.isArray(civs) ? civs : undefined,
+  });
+  if (setup) setup(g);
   const answer = (_g, prompt) => randomAnswer(rand, prompt);
   g.policy = g.s.players.map((_, i) => (pending && i === 0 ? null : answer));
   g.begin();

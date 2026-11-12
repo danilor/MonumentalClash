@@ -9,6 +9,8 @@ import { open, hexPos, browserAvailable } from './browser.mjs';
 import { H, HEX_W, LAYOUT, S, W } from '../src/ui/theme.js';
 import { REVEAL } from '../src/ui/diceroll.js';
 import { BARBARIAN } from '../src/engine/data/constants.js';
+import { ADVANCES, GROUPS } from '../src/engine/data/advances.js';
+import { CIVS, GOVERNMENT_TRIGGER } from '../src/engine/data/civs.js';
 import { addUnit } from '../src/engine/state.js';
 import { nbrs, turnOrder } from '../src/engine/queries.js';
 import { act, capitalOf, fresh, give } from './scenario.mjs';
@@ -766,6 +768,95 @@ test('a real battle: the window shows the dice the engine rolled, and the game e
     assert.ok(windows >= 1, 'the battle opened a window');
     assert.equal(await app.eval(() => window.__done), true);
     assert.equal(await app.eval(() => JSON.stringify(window.__game.s)), staged.after, 'the dice that were shown did not change what the engine decided');
+    assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
+  } finally {
+    await app.close();
+  }
+});
+
+test('Civilizations: a switch on the title screen, a different people for every player, and the Civilization and Advances windows', { skip, timeout: 240000 }, async () => {
+  const app = await open('', { storage: { 'coc.speed': 'instant', 'coc.seenHelp': '1' } });
+  const table = () => app.eval(() => ({ civs: window.__game.s.civs, peoples: window.__game.s.players.map((p) => p.civ) }));
+  const names = Object.values(CIVS).map((c) => c.name);
+  const menu = async (label) => {
+    await app.click(1234, 20, { settle: 400 });
+    await clickLabel(app, label);
+  };
+  /** The gold stars of the topmost window: one for each Advance that has a Civilization Advance hanging on it. */
+  const stars = () =>
+    app.eval(() => {
+      let n = 0;
+      const walk = (list) => {
+        for (const o of list) {
+          if (o.type === 'Star') n += 1;
+          if (o.list) walk(o.list);
+        }
+      };
+      walk(window.__ctl.scene.modals.at(-1).content.list);
+      return n;
+    });
+  try {
+    await waitScene(app, 'Menu');
+    assert.ok((await sceneTexts(app, 'Menu')).includes('Civilizations'));
+    assert.deepEqual(await stepperChoice(app, 'civs'), { value: 1, text: 'On' }, 'the module is on to begin with');
+    await markGame(app);
+    await clickLabel(app, 'New game');
+    await waitNewGame(app);
+    const { civs, peoples } = await table();
+    assert.equal(civs, true);
+    assert.ok(peoples.every((id) => CIVS[id]) && new Set(peoples).size === peoples.length, `every player has a different people: ${peoples}`);
+    const civ = CIVS[peoples[0]];
+
+    // The player card has a button named after the people; it opens the window with the four Advances.
+    await clickLabel(app, civ.name);
+    assert.equal(await modals(app), 1);
+    const texts = await modalTexts(app);
+    for (const adv of civ.advances) {
+      assert.ok(texts.includes(adv.name), `${adv.name} is listed in the Civilization window: ${texts.join(' | ')}`);
+      assert.ok(texts.includes(adv.text), `${adv.name} is explained`);
+      const trigger = adv.trigger === GOVERNMENT_TRIGGER ? 'any Government Advance' : ADVANCES[adv.trigger].name;
+      assert.ok(texts.includes(`Comes with ${trigger}`), `${adv.name} says what it comes with`);
+    }
+    await app.key('Escape');
+    assert.equal(await modals(app), 0);
+
+    // In the Advances window a gold star marks every Advance that would also give the player one of the four.
+    await clickLabel(app, 'Advance');
+    const gates = Object.values(ADVANCES).filter((a) => civ.advances.some((v) => v.trigger === a.id || (v.trigger === GOVERNMENT_TRIGGER && GROUPS[a.group].gov))).length;
+    assert.equal(await stars(), gates, 'one star for each Advance that has a Civilization Advance hanging on it');
+    await app.key('Escape');
+    assert.equal(await modals(app), 0);
+
+    // The switch is remembered, yet the game in progress keeps its peoples: Continue and Restart do not read the switch.
+    await menu('Main menu');
+    await waitScene(app, 'Menu');
+    await pressStepper(app, 'civs', 'minus', 2); // the second click meets the disabled button
+    assert.deepEqual(await stepperChoice(app, 'civs'), { value: 0, text: 'Off' });
+    assert.equal(await app.eval(() => window.localStorage.getItem('coc.civs')), '0', 'the choice is remembered');
+    await markGame(app);
+    await clickLabel(app, 'Continue game');
+    await waitNewGame(app);
+    assert.deepEqual(await table(), { civs: true, peoples }, 'the saved game keeps its peoples');
+    await markGame(app);
+    await menu('Restart game');
+    await clickLabel(app, 'Restart');
+    await waitNewGame(app);
+    const again = await table();
+    assert.equal(again.civs, true, 'Restart keeps the module of the game');
+    assert.ok(again.peoples.every((id) => CIVS[id]));
+
+    await menu('Main menu');
+    await waitScene(app, 'Menu');
+    await markGame(app);
+    await clickLabel(app, 'New game');
+    await clickLabel(app, 'Start new game');
+    await waitNewGame(app);
+    const plain = await table();
+    assert.equal(plain.civs, false, 'a new game follows the switch');
+    assert.ok(plain.peoples.every((id) => !id), 'nobody has a people in the base game');
+    assert.ok(!(await buttons(app)).some((b) => names.includes(b.label)), 'no civilization button on the player card');
+    await clickLabel(app, 'Advance');
+    assert.equal(await stars(), 0, 'no stars in the Advances window of the base game');
     assert.deepEqual(app.problems, [], 'nothing was reported in the browser console');
   } finally {
     await app.close();

@@ -1,11 +1,13 @@
 // The heads-up display: top bar, player cards, bottom bar, message log, toasts and banners.
 import { GROUPS } from '../engine/data/advances.js';
+import { CIVS } from '../engine/data/civs.js';
 import { armyOf, citiesOf, resLimit, totalAges, unitsOf } from '../engine/queries.js';
 import { scoreOf } from '../engine/scoring.js';
 import { roman } from '../engine/game.js';
 import { C, H, PLAYER_COLORS, PLAYER_HEX, RES_ORDER, TXT, W, LAYOUT, logColor, seatLabel, turnLabel } from './theme.js';
 import { freeMoveText, placeWords, worldEffects } from './info.js';
 import { Button, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
+import { civExtras, civSummary } from './civdialog.js';
 
 const CARD_W = LAYOUT.left - 16;
 const CARD_H = 306;
@@ -15,6 +17,14 @@ const CARD_H_MIN = 99; // the smaller cards of a table of four
 const CARD_H_MAX = 150;
 export const RIGHT_X = W - LAYOUT.right;
 export const LOG_Y = 478;
+
+/** The score breakdown shown when pointing at a player's victory points. */
+function scoreTip(s, p) {
+  const pt = scoreOf(s, p).parts;
+  const lines = ['Victory points so far', `Settlements and buildings: ${pt.core}`, `Advances (1 per 2): ${pt.advances}`, `Objectives (2 each): ${pt.objectives}`, `Wonders: ${pt.wonders}`, `Events and bonuses: ${pt.events}`];
+  if (pt.civ !== undefined) lines.push(`Captives, tokens and Runestones: ${pt.civ}`);
+  return lines.join('\n');
+}
 
 export class Hud {
   constructor(scene, ctl) {
@@ -177,7 +187,7 @@ export class Hud {
     const cards = pl.hand;
     const body = hitBox(sc, x, y, CARD_W, h);
     body.on('pointerdown', open);
-    tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}\nCards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)\nNext Event in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}.\nClick for the Advances, Wonders, Objectives and score.`);
+    tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}\n${s.civs ? `${civSummary(g.s, p)}\n` : ''}Cards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)\nNext Event in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}.\nClick for the Advances, Wonders, Objectives and score.`);
     c.add(body);
 
     const sw = sc.add.graphics();
@@ -188,17 +198,15 @@ export class Hud {
     c.add(sw);
     const nameText = txt(sc, x + 36, y + 17, seatLabel(s, p), { size: 16, bold: true, origin: [0, 0.5] });
     c.add(nameText);
-    c.add(txt(sc, x + 36 + nameText.width + 5, y + 18, '(computer)', { size: 11, origin: [0, 0.5], color: TXT.muted }));
+    const civName = s.civs && CIVS[pl.civ] ? ` · ${CIVS[pl.civ].name}` : '';
+    c.add(txt(sc, x + 36 + nameText.width + 5, y + 18, `(computer${civName})`, { size: 11, origin: [0, 0.5], color: TXT.muted }));
     const vp = sc.add.graphics();
     drawPanel(vp, x + CARD_W - 66, y + 6, 58, 22, { fill: 0x2a2310, border: C.gold, radius: 11, line: 1.5 });
     c.add(vp);
     c.add(txt(sc, x + CARD_W - 37, y + 17, `${score.total} VP`, { size: 13, bold: true, origin: 0.5, color: TXT.gold }));
     const vpHit = hitBox(sc, x + CARD_W - 66, y + 6, 58, 22);
     vpHit.on('pointerdown', open);
-    tip(vpHit, () => {
-      const pt = scoreOf(g.s, p).parts;
-      return `Victory points so far\nSettlements and buildings: ${pt.core}\nAdvances (1 per 2): ${pt.advances}\nObjectives (2 each): ${pt.objectives}\nWonders: ${pt.wonders}\nEvents and bonuses: ${pt.events}`;
-    });
+    tip(vpHit, () => scoreTip(g.s, p));
     c.add(vpHit);
 
     const cell = (CARD_W - 12) / 5;
@@ -218,7 +226,7 @@ export class Hud {
     const army = armyOf(s, p).length;
     const settlers = unitsOf(s, p, 'settler').length;
     const ships = unitsOf(s, p, 'ship').length;
-    c.add(txt(sc, x + 14, y + 72 + 3 * e, `Mood ${pl.mood}   Culture ${pl.culture}   Cities ${cities}   Adv. ${pl.advances.length}`, { size: 11, origin: [0, 0.5], color: TXT.text }));
+    c.add(txt(sc, x + 14, y + 72 + 3 * e, `Mood ${pl.mood}   Culture ${pl.culture}   Cities ${cities}   Adv. ${pl.advances.length}${s.civs ? `+${pl.civAdv.length}` : ''}`, { size: 11, origin: [0, 0.5], color: TXT.text }));
     c.add(txt(sc, x + 14, y + 87 + 4 * e, `Army ${army}   Settlers ${settlers}   Ships ${ships}`, { size: 11, origin: [0, 0.5], color: TXT.muted }));
   }
 
@@ -247,11 +255,7 @@ export class Hud {
     c.add(vp);
     c.add(txt(sc, x + CARD_W - 37, y + 22, `${score.total} VP`, { size: 14, bold: true, origin: 0.5, color: TXT.gold }));
     const vpHit = hitBox(sc, x + CARD_W - 66, y + 9, 58, 26);
-    tip(vpHit, () => {
-      const sc2 = scoreOf(g.s, p);
-      const pt = sc2.parts;
-      return `Victory points so far\nSettlements and buildings: ${pt.core}\nAdvances (1 per 2): ${pt.advances}\nObjectives (2 each): ${pt.objectives}\nWonders: ${pt.wonders}\nEvents and bonuses: ${pt.events}`;
-    });
+    tip(vpHit, () => scoreTip(g.s, p));
     c.add(vpHit);
 
     const gov = pl.government ? GROUPS[pl.government].name : 'none yet';
@@ -286,7 +290,7 @@ export class Hud {
     const army = armyOf(s, p).length;
     const settlers = unitsOf(s, p, 'settler').length;
     const ships = unitsOf(s, p, 'ship').length;
-    c.add(txt(sc, x + 14, y + 148, `Cities ${cities}    Advances ${pl.advances.length}`, { size: 13, origin: [0, 0.5], color: TXT.text }));
+    c.add(txt(sc, x + 14, y + 148, `Cities ${cities}    Advances ${pl.advances.length}${s.civs ? ` (+${pl.civAdv.length} civ.)` : ''}`, { size: 13, origin: [0, 0.5], color: TXT.text }));
     c.add(txt(sc, x + 14, y + 168, `Army ${army}   Settlers ${settlers}   Ships ${ships}`, { size: 13, origin: [0, 0.5], color: TXT.text }));
 
     // cards
@@ -322,8 +326,13 @@ export class Hud {
     tip(evHit, 'Every 3 Advances trigger an Event card for that player:\nsome help, some hurt (barbarians, pirates, unrest, exhausted land...).');
     c.add(evHit);
 
-    const btn = new Button(sc, x + 10, y + 258, CARD_W - 20, 32, 'Overview', () => this.ctl.dialogs.overview(p), { size: 14, style: 'ghost', tip: 'Advances, wonders, objectives and score breakdown' });
-    c.add(btn);
+    const civ = s.civs ? CIVS[pl.civ] : null;
+    const half = (CARD_W - 26) / 2;
+    c.add(new Button(sc, x + 10, y + 258, civ ? half : CARD_W - 20, 32, 'Overview', () => this.ctl.dialogs.overview(p), { size: 14, style: 'ghost', tip: 'Advances, wonders, objectives and score breakdown' }));
+    if (civ) {
+      const civTip = () => [civSummary(this.ctl.g.s, p), ...civExtras(this.ctl.g.s, p), 'Click for the four Advances of this civilization.'].join('\n');
+      c.add(new Button(sc, x + 16 + half, y + 258, half, 32, civ.name, () => this.ctl.dialogs.civilization(p), { size: 14, style: 'ghost', tip: civTip }));
+    }
   }
 
   updateLog() {

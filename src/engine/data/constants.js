@@ -11,13 +11,17 @@ export const RESOURCES = ['food', 'wood', 'ore', 'ideas', 'gold'];
 export const BASE_RESOURCES = ['food', 'wood', 'ore'];
 export const MOODS = ['angry', 'neutral', 'happy'];
 
-export const BUILDINGS = ['academy', 'fortress', 'market', 'port', 'temple'];
+export const BUILDINGS = ['academy', 'fortress', 'market', 'port', 'temple', 'obelisk', 'observatory'];
+// The Civilizations module adds these two Buildings (5 pieces each); they can only be built when it is in play.
+export const CIV_BUILDINGS = ['obelisk', 'observatory'];
 export const BUILDING_ADVANCE = {
   academy: 'writing',
   fortress: 'tactics',
   market: 'bartering',
   port: 'fishing',
   temple: 'myths',
+  obelisk: 'arts',
+  observatory: 'math',
 };
 
 // The human sits in seat 0, the computer players in the seats after, clockwise around the table.

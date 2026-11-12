@@ -5,15 +5,19 @@ import { Game } from '../src/engine/game.js';
 import { attachAI, chooseAction } from '../src/ai/index.js';
 import { armyAt, bfs, nbrs } from '../src/engine/queries.js';
 import { COMBAT_DIE } from '../src/engine/data/constants.js';
+import { CIV_ADVANCES, CIV_OF_ADVANCE, GOVERNMENT_TRIGGER } from '../src/engine/data/civs.js';
 import { randInt, roll } from '../src/engine/rng.js';
 import { checkInvariants } from './harness.mjs';
 
 const auto = (_g, prompt) => prompt.default;
 
-/** A started game (two players, or `opponents` + 1) where player `first` moves first and every question is answered with its default. */
-export function fresh(seed = 'scenario', { ages, opponents = 1, first = 0 } = {}) {
+/**
+ * A started game (two players, or `opponents` + 1) where player `first` moves first and every question is answered with its default.
+ * `civs` switches the Civilizations module on: `true` deals the peoples, an array names the people of the first seats.
+ */
+export function fresh(seed = 'scenario', { ages, opponents = 1, first = 0, civs } = {}) {
   const seats = Array.from({ length: opponents + 1 }, () => true);
-  const g = Game.create({ seed, humans: seats, ages, opponents });
+  const g = Game.create({ seed, humans: seats, ages, opponents, civilizations: !!civs, civs: Array.isArray(civs) ? civs : undefined });
   g.s.first = first;
   g.s.current = first;
   g.policy = seats.map(() => auto);
@@ -58,6 +62,17 @@ export function addCityAt(g, p, hex, mood = 'neutral') {
   const city = { id: `t${g.s.nextId++}`, owner: p, hex, mood, buildings: {}, wonders: [], port: null };
   g.s.cities.push(city);
   return city;
+}
+
+/** Give p these Civilization Advances (and the Advances that trigger them, so the table stays consistent); they must belong to p's people. */
+export function giveCiv(g, p, ...ids) {
+  const pl = g.s.players[p];
+  for (const id of ids) {
+    assert.equal(CIV_OF_ADVANCE[id], pl.civ, `${id} is not an Advance of ${pl.civ}`);
+    if (!pl.civAdv.includes(id)) pl.civAdv.push(id);
+    const trigger = CIV_ADVANCES[id].trigger;
+    if (trigger !== GOVERNMENT_TRIGGER && !pl.advances.includes(trigger)) pl.advances.push(trigger);
+  }
 }
 
 /** Turn the unexplored hexes around `hex` into Plains so a scenario can put units and cities there. Returns { k, d } pairs. */
@@ -157,10 +172,12 @@ export function readCsv(name) {
   return rows.filter((r) => r.some((x) => x.trim()));
 }
 
-/** Computer players play a whole game (two of them, or `opponents` + 1); invariants are checked after every action. `prepare(g)` may set the table up before the first turn, `turn(g, p)` before each turn of player p. */
-export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1, prepare, turn } = {}) {
+/** Computer players play a whole game (two of them, or `opponents` + 1); invariants are checked after every action. `prepare(g)` may set the table up before the first turn, `turn(g, p)` before each turn of player p. `civs` plays with the Civilizations module (`true`, or an array naming the peoples). */
+export function playAIGame(seed, { maxTurns = 400, ages, opponents = 1, prepare, turn, civs } = {}) {
   const seats = opponents + 1;
-  const g = Game.create({ seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents });
+  const g = Game.create({
+    seed: String(seed), humans: Array.from({ length: seats }, () => false), ages, opponents, civilizations: !!civs, civs: Array.isArray(civs) ? civs : undefined,
+  });
   for (let p = 0; p < seats; p++) attachAI(g, p);
   if (prepare) prepare(g);
   g.begin();

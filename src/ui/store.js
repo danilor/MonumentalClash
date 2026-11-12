@@ -31,9 +31,13 @@ export const SPEED_KEY = 'coc.speed';
 export const SEEN_HELP_KEY = 'coc.seenHelp';
 export const AGES_KEY = 'coc.ages';
 export const OPPONENTS_KEY = 'coc.opponents';
+export const CIVS_KEY = 'coc.civs';
 
 /** The game length chosen last time on the title screen (the default when nothing usable is stored). */
 export const readAges = () => normalizeAges(store.get(AGES_KEY));
+
+/** Whether the Civilizations module was on the last time the title screen was used (it is on until switched off). */
+export const readCivs = () => store.get(CIVS_KEY) !== '0';
 
 /** The number of computer opponents chosen last time on the title screen (the default when nothing usable is stored). */
 export const readOpponents = () => normalizeOpponents(store.get(OPPONENTS_KEY));

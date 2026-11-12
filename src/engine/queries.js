@@ -2,7 +2,7 @@
 import { neighborKeys, parse, distance } from './hex.js';
 import {
   BARBARIAN, PIRATE, PIECE_LIMITS, FOOD_LIMIT_BASE, MAX_CITY_SIZE, MAX_RESOURCE, SHIP_CAPACITY, STACK_LIMIT, ARMY_TYPES,
-  DEFAULT_AGES, MIN_AGES, MAX_AGES, DEFAULT_OPPONENTS, MIN_OPPONENTS, MAX_OPPONENTS,
+  DEFAULT_AGES, MIN_AGES, MAX_AGES, DEFAULT_OPPONENTS, MIN_OPPONENTS, MAX_OPPONENTS, BUILDINGS, CIV_BUILDINGS,
 } from './data/constants.js';
 
 export const isBarbarian = (o) => o === BARBARIAN;
@@ -87,6 +87,8 @@ export const citySize = (c) => 1 + Object.keys(c.buildings).length + c.wonders.l
 /** No city may grow past size 5, nor past the number of cities its owner holds. */
 export const citySizeCap = (s, p) => Math.min(MAX_CITY_SIZE, citiesOf(s, p).length);
 export const hasBuilding = (c, type) => c.buildings[type] !== undefined;
+/** The Buildings that can be built in this game: the Obelisk and the Observatory belong to the Civilizations module. */
+export const buildingsIn = (s) => (s.civs ? BUILDINGS : BUILDINGS.filter((b) => !CIV_BUILDINGS.includes(b)));
 export const isPortCity = (c) => c.port !== null && c.buildings.port !== undefined;
 export const cityHasWonder = (c, id) => c.wonders.some((w) => w.id === id);
 export const playerOwnsWonder = (s, p, id) => citiesOf(s, p).some((c) => cityHasWonder(c, id));
@@ -100,9 +102,22 @@ export const isArmy = (u) => ARMY_TYPES.includes(u.type);
 export const armyOf = (s, p) => s.units.filter((u) => u.owner === p && isArmy(u));
 export const armyAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.owner === owner && isArmy(u));
 export const shipsAt = (s, k, owner) => s.units.filter((u) => u.hex === k && u.type === 'ship' && (owner === undefined || u.owner === owner));
+/** Carthage's Pirate Allies: the player whose unit shares space `k` and who has that Advance (their Pirate Ships there count as theirs). */
+export function pirateMaster(s, k) {
+  if (!s.civs) return null;
+  const u = s.units.find((x) => x.hex === k && !isNpc(x.owner) && hasCivAdv(s, x.owner, 'pirate_allies'));
+  return u ? u.owner : null;
+}
+const isPirateShip = (u) => u.owner === PIRATE && u.type === 'ship';
+/** The Pirate Ships that player `p` controls right now. */
+export const controlledPirates = (s, p, k) => s.units.filter((u) => isPirateShip(u) && (k === undefined || u.hex === k) && pirateMaster(s, u.hex) === p);
+/** The Pirate Ships nobody controls: the only ones the Pirate rules still apply to. */
+export const freePirates = (s) => s.units.filter((u) => isPirateShip(u) && pirateMaster(s, u.hex) === null);
+/** A player's Ships on a space, with the Pirate Ships that count as theirs (Pirate Allies) first: those are lost before the real Ships. */
+export const navyAt = (s, k, p) => [...(p === PIRATE ? [] : controlledPirates(s, p, k)), ...shipsAt(s, k, p)];
 /** Whether Pirate Ships stop Resources being Collected from, and Trade Routes starting from or going through, a Sea space. */
 export const pirateBlocked = (s, k) =>
-  isSea(s, k) && s.units.some((u) => u.owner === PIRATE && (u.hex === k || neighborKeys(u.hex).includes(k)));
+  isSea(s, k) && freePirates(s).some((u) => u.hex === k || neighborKeys(u.hex).includes(k));
 export const unitOwnerAt = (s, k) => {
   const u = s.units.find((x) => x.hex === k);
   return u ? u.owner : null;
@@ -116,20 +131,29 @@ export function occupantOf(s, k) {
   return c ? c.owner : null;
 }
 export const cargoAt = (s, k) => s.units.filter((u) => u.hex === k && u.type !== 'ship');
-export const shipCapacityAt = (s, k) => shipsAt(s, k).length * SHIP_CAPACITY;
+/** How many Land units each of a player's Ships carries: 2, or 3 with the Vikings' Longships. */
+export const shipCap = (s, p) => (hasCivAdv(s, p, 'longships') ? SHIP_CAPACITY + 1 : SHIP_CAPACITY);
+export const shipCapacityAt = (s, k) => shipsAt(s, k).reduce((n, u) => n + shipCap(s, u.owner), 0);
 
 // ------------------------------------------------------------- players
 export const owns = (s, p, adv) => s.players[p].advances.includes(adv);
+/** The Civilization a player plays (null without the Civilizations module, and for the Barbarians and Pirates). */
+export const civOf = (s, p) => (isNpc(p) ? null : s.players[p].civ ?? null);
+/** Whether a player holds one of their Civilization Advances (a separate list from their ordinary Advances). */
+export const hasCivAdv = (s, p, id) => !isNpc(p) && !!s.players[p].civAdv?.includes(id);
+// Egypt's Man God: each Theocracy Advance also gives the Autocracy Advance directly to its left.
+const MAN_GOD = { nationalism: 'dogma', totalitarianism: 'devotion', absolute_power: 'conversion', forced_labor: 'fanaticism' };
 /** Whether p may use an Advance right now (owned, or borrowed through the Great Library this turn). */
 export function hasAdv(s, p, adv) {
   if (isNpc(p)) return false;
   if (s.players[p].advances.includes(adv)) return true;
+  if (MAN_GOD[adv] && hasCivAdv(s, p, 'man_god') && s.players[p].advances.includes(MAN_GOD[adv])) return true;
   return !!(s.turn && s.turn.player === p && s.turn.libAdv === adv);
 }
 
 export function resLimit(s, p, res) {
   if (res === 'food') return hasAdv(s, p, 'storage') ? MAX_RESOURCE : FOOD_LIMIT_BASE;
-  if (res === 'ideas' && owns(s, p, 'dogma')) return 2;
+  if (res === 'ideas' && owns(s, p, 'dogma') && !hasCivAdv(s, p, 'ziggurats')) return 2;
   return MAX_RESOURCE;
 }
 
@@ -140,15 +164,19 @@ export function advanceCount(s, p) {
 // ------------------------------------------------------------- supply
 export const settlementsLeft = (s, p) =>
   (p === BARBARIAN ? PIECE_LIMITS.barbarianSettlements : PIECE_LIMITS.settlements) - s.cities.filter((c) => c.owner === p).length;
+/** Pieces of a building type still in a player's supply: Runestones keeps Obelisks out of it as completed Objectives. */
 export const buildingsLeft = (s, p, type) =>
-  PIECE_LIMITS.buildings - s.cities.filter((c) => c.buildings[type] === p).length;
+  PIECE_LIMITS.buildings - s.cities.filter((c) => c.buildings[type] === p).length - (type === 'obelisk' && !isNpc(p) ? s.players[p].runes || 0 : 0);
+/** Army units of `owner` that Aztec players hold as Captives (they are off the board and out of their owner's supply). */
+export const captivesOf = (s, owner, type) =>
+  s.players.reduce((n, pl) => n + (pl.captives || []).filter((c) => c.owner === owner && (!type || c.type === type)).length, 0);
 export function unitsLeft(s, p, type) {
   const limits = isPirate(p)
     ? { ship: PIECE_LIMITS.pirateShips }
     : p === BARBARIAN
       ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }
       : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers };
-  return limits[type] - s.units.filter((u) => u.owner === p && u.type === type).length;
+  return limits[type] - s.units.filter((u) => u.owner === p && u.type === type).length - captivesOf(s, p, type);
 }
 
 // ----------------------------------------------------------- distances

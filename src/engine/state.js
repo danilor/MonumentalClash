@@ -2,6 +2,7 @@ import { REGION_TILES, REGION_OFFSETS, BOARDS, turnOffset } from './data/blocks.
 import { ACTION_DECK_LIST, OBJECTIVE_CARD_LIST, EVENT_CARD_LIST } from './data/cards.js';
 import { WONDER_IDS } from './data/wonders.js';
 import { START_ADVANCES } from './data/advances.js';
+import { CIVS, CIV_ORDER } from './data/civs.js';
 import { BARBARIAN } from './data/constants.js';
 import { key } from './hex.js';
 import { normalizeAges, normalizeOpponents } from './queries.js';
@@ -16,14 +17,23 @@ export const defaultName = (i, count) => (i === 0 ? 'You' : count === 2 ? 'Compu
 
 /** Bring a state saved by an older version up to date. Safe to call on a current state. */
 export function upgradeState(s) {
-  if ((s.version || 1) >= STATE_VERSION) return s;
-  for (const c of s.cities) {
-    if (c.owner === V1_BARBARIAN) c.owner = BARBARIAN;
-    for (const type of Object.keys(c.buildings)) if (c.buildings[type] === V1_BARBARIAN) c.buildings[type] = BARBARIAN;
-    for (const w of c.wonders) if (w.builder === V1_BARBARIAN) w.builder = BARBARIAN;
+  if ((s.version || 1) < STATE_VERSION) {
+    for (const c of s.cities) {
+      if (c.owner === V1_BARBARIAN) c.owner = BARBARIAN;
+      for (const type of Object.keys(c.buildings)) if (c.buildings[type] === V1_BARBARIAN) c.buildings[type] = BARBARIAN;
+      for (const w of c.wonders) if (w.builder === V1_BARBARIAN) w.builder = BARBARIAN;
+    }
+    for (const u of s.units) if (u.owner === V1_BARBARIAN) u.owner = BARBARIAN;
+    s.version = STATE_VERSION;
   }
-  for (const u of s.units) if (u.owner === V1_BARBARIAN) u.owner = BARBARIAN;
-  s.version = STATE_VERSION;
+  // Games saved before the Civilizations module have no Civilization: they play on without one.
+  s.civs = !!s.civs;
+  for (const p of s.players) {
+    p.civ ??= null;
+    p.civAdv ??= [];
+    p.captives ??= [];
+    p.runes ??= 0;
+  }
   return s;
 }
 
@@ -60,13 +70,31 @@ export function newPlayer(idx, name, human) {
     goldLast: false, // collected Gold on their last turn (Tax Grievances)
     philosopher: 0, // Great Philosopher: extra Ideas on the first Collect of each turn
     ideasRound: 0, // Ideas gained since the start of the round (Intellectual Renaissance)
+    civ: null, // Civilization id (only with the Civilizations module)
+    civAdv: [], // Civilization Advances gained so far (kept apart from `advances`: no cubes, no Government effects)
+    captives: [], // Aztec Captives: { owner, type } of the Army units held (at most 4)
+    runes: 0, // Runestones: Obelisk pieces kept as completed 1 VP Objectives
     stats: { battlesWon: 0, battlesLost: 0, citiesCaptured: 0, influenced: 0 },
   };
 }
 
 /**
+ * Deal every player a different Civilization. `wanted` (optional) names the Civilization of some seats; the others are
+ * drawn from their own seeded stream, so switching the module on never changes the map, the decks or the dice.
+ */
+function dealCivs(s, wanted = []) {
+  const taken = new Set();
+  s.players.forEach((p, i) => {
+    if (CIVS[wanted[i]] && !taken.has(wanted[i])) taken.add((p.civ = wanted[i]));
+  });
+  const deck = shuffle({ rng: seedFromString(`${s.seed}:civilizations`) }, [...CIV_ORDER]).filter((id) => !taken.has(id));
+  for (const p of s.players) if (!p.civ) p.civ = deck.shift();
+}
+
+/**
  * Options: seed, ages, opponents (computer players, 1 to 3: the board grows with the table), names, humans.
- * Without `opponents`, the length of `humans` sets the table size.
+ * Without `opponents`, the length of `humans` sets the table size. `civilizations` switches the Civilizations module on
+ * (each player gets a different people with its own Advances); `civs` may name the people of some seats.
  */
 export function createState(opts = {}) {
   const seed = opts.seed ?? Math.floor(Math.random() * 1e9);
@@ -101,7 +129,9 @@ export function createState(opts = {}) {
     log: [],
     winner: null,
     final: null,
+    civs: !!(opts.civilizations || opts.civs),
   };
+  if (s.civs) dealCivs(s, opts.civs);
 
   // Regions: one start tile per player, and the face-down tiles drawn from the 16.
   const tileIds = shuffle(s, REGION_TILES.map((t) => t.id)).slice(0, board.hidden.length);

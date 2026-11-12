@@ -7,7 +7,7 @@ import { DEFAULT_AGES, MAX_AGES, MAX_OPPONENTS, MIN_AGES, MIN_OPPONENTS } from '
 import { normalizeOpponents, totalAges } from '../engine/queries.js';
 import { startController } from './controller.js';
 import { C, H, HEX_TEX_W, HEX_W, PLAYER_NAMES, S, TXT, W } from './theme.js';
-import { AGES_KEY, OPPONENTS_KEY, SAVE_KEY, SEEN_HELP_KEY, readAges, readOpponents, readSave, store } from './store.js';
+import { AGES_KEY, CIVS_KEY, OPPONENTS_KEY, SAVE_KEY, SEEN_HELP_KEY, readAges, readCivs, readOpponents, readSave, store } from './store.js';
 import { Button, Stepper, hitBox, icon, setupCamera, tip, txt } from './widgets.js';
 import { confirmModal } from './modals.js';
 import { helpDialog } from './help.js';
@@ -88,6 +88,8 @@ export class MenuScene extends Phaser.Scene {
     this.opponentsRow(y);
     y += 38;
     this.lengthRow(y);
+    y += 38;
+    this.civsRow(y);
     y += 36;
     this.summary = txt(this, W / 2, y + 8, '', { size: 13, color: TXT.muted, origin: 0.5, stroke: '#000000', strokeThickness: 3 });
     this.showSummary();
@@ -122,6 +124,12 @@ export class MenuScene extends Phaser.Scene {
     this.ages = this.stepRow(y, 'Game length', help, readAges(), MIN_AGES, MAX_AGES, (v) => store.set(AGES_KEY, String(v)), (v) => `${v} Ages`);
   }
 
+  /** "Civilizations [-] On [+]": whether every player is dealt a people with four Advances of its own. The choice is remembered. */
+  civsRow(y) {
+    const help = 'The Civilizations module: every player gets a different one of 15 historic peoples, with a power for each of four Advances,\nplus the Obelisk and Observatory buildings. Switch it off to play the base game.';
+    this.civs = this.stepRow(y, 'Civilizations', help, readCivs() ? 1 : 0, 0, 1, (v) => store.set(CIVS_KEY, String(v)), (v) => (v ? 'On' : 'Off'));
+  }
+
   showSummary() {
     const board = ['standard', 'larger', 'largest'][this.opponents.value - MIN_OPPONENTS];
     this.summary.setText(`${this.opponents.value + 1} players on the ${board} board`);
@@ -132,7 +140,7 @@ export class MenuScene extends Phaser.Scene {
       const ok = await confirmModal({ scene: this }, { title: 'New game?', text: 'Your saved game will be replaced by a new one.', yes: 'Start new game', no: 'Cancel', yesStyle: 'danger' });
       if (!ok) return;
     }
-    this.scene.start('Game', { fresh: true, ages: this.ages.value, opponents: this.opponents.value });
+    this.scene.start('Game', { fresh: true, ages: this.ages.value, opponents: this.opponents.value, civilizations: !!this.civs.value });
   }
 }
 
@@ -169,9 +177,11 @@ export class GameScene extends Phaser.Scene {
       window.__seedUsed = true;
       // ?opponents=N (1 to 3) picks the table size for a seeded game, like ?seed=N picks the seed.
       const opponents = normalizeOpponents(data?.opponents ?? (query().has('opponents') ? query().get('opponents') : readOpponents()));
+      // ?civs=1 switches the Civilizations module on for a seeded game, which is played without it otherwise.
+      const civilizations = data?.civilizations ?? (query().has('civs') ? query().get('civs') !== '0' : query().has('seed') ? false : readCivs());
       g = Game.create({
         seed, opponents, names: PLAYER_NAMES.slice(0, opponents + 1), humans: Array.from({ length: opponents + 1 }, (_, i) => i === 0),
-        ages: data?.ages ?? readAges(),
+        ages: data?.ages ?? readAges(), civilizations,
       });
     }
     const firstVisit = !store.get(SEEN_HELP_KEY) && !query().has('seed');

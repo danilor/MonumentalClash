@@ -6,6 +6,7 @@ import { cityAt, isArmy, resLimit } from '../engine/queries.js';
 import { battleOdds } from './odds.js';
 import { advanceValue, DEFAULTS, evaluate, wonderPlan } from './eval.js';
 import { GROUPS, ADVANCES } from '../engine/data/advances.js';
+import { ACTION_CARDS } from '../engine/data/cards.js';
 
 // Best first: cards that cancel hits or add a lot of CV come before the situational and the small ones.
 const CARD_RANK = [
@@ -16,7 +17,18 @@ const cardRank = (effect) => {
   const i = CARD_RANK.indexOf(effect);
   return i < 0 ? CARD_RANK.length : i;
 };
-const BUILDING_ORDER = { temple: 0.4, academy: 0.5, port: 0.2, fortress: 0.3, market: 0.25 };
+const BUILDING_ORDER = { temple: 0.4, academy: 0.5, port: 0.2, fortress: 0.3, market: 0.25, obelisk: 0.35, observatory: 0.45 };
+
+// Events whose effect hurts the player who draws them (Human Sacrifice may cancel one for a Captive).
+const HARMFUL_EVENTS = new Set([
+  'plague', 'epidemic', 'famine', 'flood', 'earthquake', 'civil_war', 'uprising', 'barbarian_incursion', 'severe_famine',
+  'epidemic_city', 'social_unrest', 'pirate_raids', 'earthquake_city', 'civil_revolt', 'drought', 'migrating_tribes',
+  'slave_revolt', 'tax_grievances', 'dark_age', 'locusts', 'iconoclasm', 'feuding_warlords', 'typhoon', 'steppe_scourge',
+  'sanitation_crisis', 'provincial_rebellion', 'corrupt_officials',
+]);
+// Action cards that harm the opponent who plays them, and the cheap cards worth discarding to cancel one (Subterfuge).
+const HOSTILE_TOPS = new Set(['espionage', 'denial', 'spy_network']);
+const CHEAP_TOP = /^(ideas|food|wood|ore|gold|mood|culture)2$/;
 
 /** Per-resource preference used when choosing what to Collect. */
 export function resourceWeights(s, p) {
@@ -131,6 +143,15 @@ export function answerPrompt(g, prompt) {
       return prompt.default;
     }
 
+    case 'human_sacrifice':
+      return HARMFUL_EVENTS.has(prompt.card);
+
+    case 'subterfuge': {
+      if (!HOSTILE_TOPS.has(ACTION_CARDS[prompt.card]?.top)) return 'no';
+      const cheap = prompt.options.find((o) => o.card && CHEAP_TOP.test(ACTION_CARDS[o.card].top));
+      return cheap ? cheap.id : 'no';
+    }
+
     default:
       return prompt.default;
   }
@@ -147,7 +168,8 @@ export function chooseAction(g, p, opts = {}) {
   const rand = opts.rand || Math.random;
   const s = g.s;
   const t = s.turn;
-  const list = enumerateActions(g, p, { weights: resourceWeights(s, p) }).filter((c) => c.cat !== 'end');
+  // The Calendar only reorders the Event deck, which a one-ply evaluation cannot see: the computer leaves it alone.
+  const list = enumerateActions(g, p, { weights: resourceWeights(s, p) }).filter((c) => c.cat !== 'end' && c.cat !== 'calendar');
   const fork = g.sandbox(p, rand);
   const base = evaluate(s, p, cfg);
   const left = t.actionsLeft;

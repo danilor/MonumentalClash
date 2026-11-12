@@ -2,11 +2,12 @@
 import { BARBARIAN, PIECE_LIMITS, STACK_LIMIT } from './data/constants.js';
 import { addCity } from './state.js';
 import {
-  allHexKeys, armyAt, bfs, cityAt, citiesOf, citySize, foesOf, hexDistance, isArmy, isLand, nbrs, settlementsLeft, unitById,
-  unitsAt, unitsLeft,
+  allHexKeys, armyAt, bfs, cityAt, citiesOf, citySize, foesOf, hasCivAdv, hexDistance, isArmy, isLand, nbrs, settlementsLeft,
+  unitById, unitsAt, unitsLeft,
 } from './queries.js';
-import { addUnitTo } from './core.js';
+import { addUnitTo, applyPayment, canPay, planPayment } from './core.js';
 import { choose, chooseMany, confirm } from './prompts.js';
+import { plural } from './text.js';
 import { battle } from './combat.js';
 
 export const barbarianCities = (s) => s.cities.filter((c) => c.owner === BARBARIAN);
@@ -186,6 +187,13 @@ export function* barbarianSpawn(g, p, opts = {}) {
   yield* reinforceChosenCity(g, p);
 }
 
+/** Whether a Barbarian spawn would put anything on the board for player `p` (Tribal Allies does not waste its use otherwise). */
+export function canSpawnBarbarians(s, p) {
+  if (!citiesOf(s, p).length) return false;
+  const settle = settlementsLeft(s, BARBARIAN) > 0 && unitsLeft(s, BARBARIAN, 'infantry') > 0 && spawnCandidates(s, p).cands.length > 0;
+  return settle || barbarianCities(s).some((c) => hasRoom(s, c.hex, 'infantry') || mountAllowed(s, c.hex, 'cavalry') || mountAllowed(s, c.hex, 'elephant'));
+}
+
 export function* barbarianMove(g, p) {
   const s = g.s;
   let cityMaps = [];
@@ -205,6 +213,7 @@ export function* barbarianMove(g, p) {
     yield* placeBarbarianSettlement(g, p);
     return;
   }
+  const steer = yield* hunnicSteering(g, p, armies.map((a) => a.from));
 
   while (armies.length) {
     // The player decides the order in which the armies move.
@@ -220,7 +229,7 @@ export function* barbarianMove(g, p) {
       army = armies.find((a) => a.from === hex) || armies[0];
     }
     armies.splice(armies.indexOf(army), 1);
-    yield* advanceBarbarianArmy(g, p, army, cityMaps);
+    yield* advanceBarbarianArmy(g, p, army, cityMaps, { steer });
     refresh();
   }
 
@@ -238,17 +247,72 @@ export function* barbarianMove(g, p) {
 }
 
 /**
- * Moves one Barbarian army a single space towards the nearest of the cities in `cityMaps`. With `auto` nobody is asked
- * to choose a target or a space. Returns the space the army ends on, or null when it was wiped out.
+ * Hunnic Tribes (Huns): when an Event makes the Barbarians move, 1 Gold or 1 Culture - paid once, however many armies there
+ * are - lets the Huns decide the direction each army takes. Returns whether the armies are steered (and the price is paid).
  */
-function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false } = {}) {
+function* hunnicSteering(g, p, hexes) {
   const s = g.s;
-  const from = army.from;
-  // Units that already moved (or died) in this step are not part of the army any more.
-  const group = army.ids.map((id) => unitById(s, id)).filter((u) => u && u.hex === from);
-  if (!group.length) return null;
+  if (!hasCivAdv(s, p, 'hunnic_tribes') || !hexes.length) return false;
+  const options = [];
+  if (canPay(s, p, { gold: 1 })) options.push({ id: 'gold', label: 'Pay 1 Gold' });
+  if (canPay(s, p, { culture: 1 })) options.push({ id: 'culture', label: 'Pay 1 Culture' });
+  if (!options.length) return false;
+  // Worth a token only when an army stands next to somebody's units or city, so that its direction decides a battle.
+  const contact = hexes.some((k) => nbrs(s, k).some((n) => isLand(s, n)
+    && (unitsAt(s, n).some((u) => u.owner !== BARBARIAN) || (cityAt(s, n) && cityAt(s, n).owner !== BARBARIAN))));
+  const pick = yield* choose(g, p, {
+    kind: 'hunnic_tribes',
+    title: 'Hunnic Tribes',
+    text: 'The Barbarians are about to move. Pay 1 Gold or 1 Culture to decide the direction each Barbarian army takes.',
+    options: [...options, { id: 'no', label: 'Let them march' }],
+    default: contact ? options[0].id : 'no',
+  });
+  if (!options.some((o) => o.id === pick)) return false;
+  applyPayment(g, p, planPayment(s, p, pick === 'gold' ? { gold: 1 } : { culture: 1 }));
+  g.log(`${g.name(p)} pays 1 ${pick} to steer the Barbarians (Hunnic Tribes).`);
+  return true;
+}
+
+/** Whether a Barbarian army may enter a space: a battle is fought there, or the stack has room for the group. */
+function enterable(s, group, n) {
+  const city = cityAt(s, n);
+  const enemy = unitsAt(s, n).some((u) => u.owner !== BARBARIAN) || (city && city.owner !== BARBARIAN);
+  return enemy || armyAt(s, n, BARBARIAN).length + group.length <= STACK_LIMIT;
+}
+
+/** The space a steered army enters: the Huns choose among every neighbouring land space. Null when it cannot move. */
+function* steeredStep(g, p, from, group) {
+  const s = g.s;
+  const open = nbrs(s, from).filter((n) => isLand(s, n) && enterable(s, group, n));
+  if (!open.length) return null;
+  const foes = foeCitiesOf(s, p);
+  const mine = citiesOf(s, p);
+  const away = (k, cities) => (cities.length ? Math.min(...cities.map((c) => hexDistance(c.hex, k))) : 0);
+  // Best first: a rival's units or city, then open ground nearer to the rivals and farther from the Huns' own cities.
+  const score = (k) => {
+    const there = unitsAt(s, k).filter((u) => u.owner !== BARBARIAN);
+    const city = cityAt(s, k);
+    const owner = there.length ? there[0].owner : city && city.owner !== BARBARIAN ? city.owner : null;
+    if (owner === p) return -100;
+    if (owner !== null) return 100 - there.length * 5;
+    return away(k, mine) - away(k, foes);
+  };
+  const ranked = open.slice().sort((a, b) => score(b) - score(a) || (a < b ? -1 : 1));
+  const pick = yield* choose(g, p, {
+    kind: 'pick_hex',
+    title: 'Hunnic Tribes',
+    text: `Choose the space the Barbarian army at ${from} enters.`,
+    options: ranked.map((k) => ({ id: k, label: k, hex: k })),
+    default: ranked[0],
+  });
+  return ranked.includes(pick) ? pick : ranked[0];
+}
+
+/** The space an unsteered army enters: one step towards the nearest of the cities in `cityMaps`. Null when it stays. */
+function* marchStep(g, p, from, group, cityMaps, auto) {
+  const s = g.s;
   const dists = cityMaps.map((cm) => ({ cm, d: dist(cm.map, from) })).filter((x) => x.d < Infinity);
-  if (!dists.length) return from;
+  if (!dists.length) return null;
   const best = Math.min(...dists.map((x) => x.d));
   const closest = dists.filter((x) => x.d === best);
   const target = auto ? closest[0].cm.city.id : yield* choose(g, p, {
@@ -260,11 +324,8 @@ function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false } = {}) {
   });
   const tcm = closest.find((x) => x.cm.city.id === target) || closest[0];
   const steps = nbrs(s, from).filter((n) => isLand(s, n) && dist(tcm.cm.map, n) === best - 1);
-  const open = steps.filter((n) => {
-    const enemy = unitsAt(s, n).some((u) => u.owner !== BARBARIAN) || (cityAt(s, n) && cityAt(s, n).owner !== BARBARIAN);
-    return enemy || armyAt(s, n, BARBARIAN).length + group.length <= STACK_LIMIT;
-  });
-  if (!open.length) return from;
+  const open = steps.filter((n) => enterable(s, group, n));
+  if (!open.length) return null;
   const dest = auto ? open[0] : yield* choose(g, p, {
     kind: 'pick_hex',
     title: 'Barbarians advance',
@@ -272,13 +333,54 @@ function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false } = {}) {
     options: open.map((k) => ({ id: k, label: k, hex: k })),
     default: open[0],
   });
-  const to = open.includes(dest) ? dest : open[0];
+  return open.includes(dest) ? dest : open[0];
+}
+
+/**
+ * Tribal Allies (Celts): the defender may pay 1 Food per attacking Barbarian unit to call the attack off.
+ * Returns true when it is cancelled (the payment is made).
+ */
+function* tribalAlliesCancel(g, defender, group, to) {
+  const s = g.s;
+  if (defender === BARBARIAN || !hasCivAdv(s, defender, 'tribal_allies')) return false;
+  const plan = planPayment(s, defender, { food: group.length });
+  if (!plan) return false;
+  const city = cityAt(s, to);
+  const cancel = yield* confirm(g, defender, {
+    kind: 'tribal_allies_cancel',
+    title: 'Tribal Allies',
+    text: `${plural(group.length, 'Barbarian unit')} attack${group.length === 1 ? 's' : ''} you at ${to}. Pay ${group.length} Food to call the attack off?`,
+    yes: `Pay ${group.length} Food`,
+    no: 'Let them attack',
+    default: (!!city && city.owner === defender) || group.length >= armyAt(s, to, defender).length,
+    hex: to,
+  });
+  if (!cancel) return false;
+  applyPayment(g, defender, plan);
+  g.log(`${g.name(defender)} buys off the Barbarian attack at ${to} (Tribal Allies).`);
+  return true;
+}
+
+/**
+ * Moves one Barbarian army a single space towards the nearest of the cities in `cityMaps`. With `auto` nobody is asked
+ * to choose a target or a space; with `steer` (Hunnic Tribes) the Huns choose the space instead. Returns the space the
+ * army ends on, or null when it was wiped out.
+ */
+function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false, steer = false } = {}) {
+  const s = g.s;
+  const from = army.from;
+  // Units that already moved (or died) in this step are not part of the army any more.
+  const group = army.ids.map((id) => unitById(s, id)).filter((u) => u && u.hex === from);
+  if (!group.length) return null;
+  const to = steer ? yield* steeredStep(g, p, from, group) : yield* marchStep(g, p, from, group, cityMaps, auto);
+  if (!to) return from;
   const occupants = unitsAt(s, to).filter((u) => u.owner !== BARBARIAN);
   const city = cityAt(s, to);
   const enemyCity = city && city.owner !== BARBARIAN ? city : null;
+  const defender = occupants.length ? occupants[0].owner : enemyCity ? enemyCity.owner : null;
+  if (defender !== null && (yield* tribalAlliesCancel(g, defender, group, to))) return from;
   g.emit({ type: 'barbarians', kind: 'move', from, hex: to });
-  if (occupants.length || enemyCity) {
-    const defender = occupants.length ? occupants[0].owner : enemyCity.owner;
+  if (defender !== null) {
     yield* battle(g, {
       domain: 'land', attacker: BARBARIAN, defender, hex: to, from,
       units: group.map((u) => u.id), settlers: [], carried: [], landed: false, inPlace: false,
@@ -306,8 +408,9 @@ export function* barbarianIncursion(g, p) {
     .filter((a) => a.d < Infinity)
     .sort((a, b) => a.d - b.d);
   if (!armies.length) g.log('No Barbarian army is in reach of a city.');
+  const steer = yield* hunnicSteering(g, p, armies.map((a) => a.from));
   for (const army of armies) {
-    yield* advanceBarbarianArmy(g, p, army, cityMaps, { auto: true });
+    yield* advanceBarbarianArmy(g, p, army, cityMaps, { auto: true, steer });
     refresh();
   }
 }
@@ -334,6 +437,7 @@ export function* barbarianFeud(g) {
     if (!strike) return;
     for (const u of strike.group) fought.add(u.id);
     const defender = strike.defenders[0].owner;
+    if (yield* tribalAlliesCancel(g, defender, strike.group, strike.to)) continue;
     g.emit({ type: 'barbarians', kind: 'move', from: strike.from, hex: strike.to });
     g.log(`Barbarian warlords strike ${g.name(defender)} at ${strike.to}.`);
     yield* battle(g, {
@@ -364,9 +468,10 @@ export function* steppeScourge(g, p) {
   g.emit({ type: 'barbarians', kind: 'spawn', hex: origin });
   g.log('Barbarian horsemen ride in from the steppes!');
   if (!safe.length) return;
+  const steer = yield* hunnicSteering(g, p, [origin]);
   let army = { from: origin, ids: armyAt(s, origin, BARBARIAN).map((u) => u.id) };
   for (let step = 0; step < 2; step++) {
-    const at = yield* advanceBarbarianArmy(g, p, army, [{ city: target, map }], { auto: true });
+    const at = yield* advanceBarbarianArmy(g, p, army, [{ city: target, map }], { auto: true, steer });
     if (!at || at === army.from) break;
     army = { from: at, ids: army.ids };
   }

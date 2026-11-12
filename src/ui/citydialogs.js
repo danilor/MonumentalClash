@@ -1,11 +1,12 @@
 // City dialogs: Construct, Recruit, Wonder, Happiness and Influence Culture.
-import { BUILDINGS, STACK_LIMIT } from '../engine/data/constants.js';
+import { BUILDINGS, PIRATE, STACK_LIMIT } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { ADVANCES } from '../engine/data/advances.js';
-import { cityCapacity, constructBlocked, happinessRoom, influenceBlocked, influenceTypes, rapidPrice, recruitBlocked, recruitCost, wonderBlocked } from '../engine/city.js';
+import { cityCapacity, constructBlocked, effMood, happinessRoom, influenceBlocked, influenceRange, influenceTypes, rapidPrice, recruitBlocked, recruitCost, wonderBlocked, zoroastrianTargets } from '../engine/city.js';
+import { canDraftShip, canMountHere, sizePay } from '../engine/civs.js';
 import { canPay, heldModifier, planPayment } from '../engine/core.js';
 import { TOP_EFFECTS } from '../engine/data/cards.js';
-import { armyAt, citiesOf, citySize, hasAdv, hasBuilding, isPortCity, seaNbrs, terrainOf } from '../engine/queries.js';
+import { armyAt, buildingsIn, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, isPortCity, seaNbrs, shipsAt, terrainOf } from '../engine/queries.js';
 import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TXT, costText } from './theme.js';
 import { Choice, Flow, confirmModal, optionModal } from './modals.js';
 import { Button, Checkbox, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
@@ -17,30 +18,37 @@ const STACK_DEPTH = 1100;
 const cityLine = (s, c) => `${TERRAIN[terrainOf(s, c.hex)]} city · size ${citySize(c)} · ${MOOD_NAME[c.mood]}`;
 
 /**
- * Cities in range of `city` for Influence Culture. `plain` is the fewest extra Culture tokens it takes on its own (null:
- * out of reach); `soft` is the same with the free +1 range of the Soft Power `card` (null: no card, or still out of reach).
- * `boost` is the cheaper of the two and `useCard` says whether that one needs the card.
+ * Targets of Influence Culture within reach of `origin` (a city of the player, a city holding their Buildings, or Settlers
+ * with Proselytism): cities with something to win over, and (Zoroastrianism) enemy Army Units. `plain` is the fewest extra
+ * Culture tokens it takes on its own (null: out of reach); `soft` is the same with the free +1 range of the Soft Power `card`
+ * (null: no card, or still out of reach). `boost` is the cheaper of the two and `useCard` says whether that one needs the card.
  */
-export function influenceTargets(s, city, { free = false, card = null } = {}) {
+export function influenceTargets(s, origin, { free = false, card = null } = {}) {
   const out = [];
   const cheapest = (target, extra) => {
     for (let boost = 0; boost <= 6; boost++) {
       if (!canPay(s, 0, { culture: boost + (free ? 1 : 0) })) break;
-      if (influenceBlocked(s, 0, city, target, boost, extra) === null) return boost;
+      if (influenceBlocked(s, 0, origin, target, boost, extra) === null) return boost;
     }
     return null;
   };
-  for (const target of s.cities) {
-    const types = influenceTypes(s, 0, target);
-    if (!types.length) continue;
+  const add = (target, types, unit) => {
     const plain = cheapest(target, 0);
     const soft = card ? cheapest(target, 1) : null;
-    if (plain === null && soft === null) continue;
+    if (plain === null && soft === null) return;
     const useCard = soft !== null && (plain === null || soft < plain);
-    out.push({ target, types, plain, soft, boost: useCard ? soft : plain, useCard });
+    out.push({ target, types, unit, plain, soft, boost: useCard ? soft : plain, useCard });
+  };
+  for (const target of s.cities) {
+    const types = influenceTypes(s, 0, target);
+    if (types.length) add(target, types, false);
   }
+  if (!origin.settlers) for (const u of zoroastrianTargets(s, 0)) add(u, [], true);
   return out;
 }
+
+const typeName = (b) => (b === 'druid' ? 'Culture token' : BUILDING_NAME[b]);
+const typeIcon = (b) => (b === 'druid' ? 'ic_culture' : BUILD_ICON[b]);
 
 /** "You have: ..." line with every token and resource the player holds. */
 export function haveLine(f, s) {
@@ -90,7 +98,9 @@ function constructDialog(ctl, city, opts = {}) {
   const s = ctl.g.s;
   const card = heldModifier(s, 0, 'construct');
   const rapid = !!card && !!opts.rapid;
-  const f = new Flow(ctl.scene, 580, { top: 80 });
+  const list = buildingsIn(s);
+  const cols = list.length > 5 ? 2 : 1;
+  const f = new Flow(ctl.scene, cols === 2 ? 1000 : 580, { top: 80 });
   f.text('A building costs 1 Food, 1 Wood and 1 Ore and uses one action. It makes the city one size larger.', { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
   let modal = null;
@@ -153,13 +163,16 @@ function constructDialog(ctl, city, opts = {}) {
     }
     submit(ctl, modal, action, err);
   };
-  const rows = BUILDINGS.map((b) => {
-    const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b)) ? null : `You need ${costText(price(b))}.`);
+  const colW = (f.inner - (cols - 1) * 12) / cols;
+  const ys = new Array(cols).fill(f.y);
+  const rows = list.map((b, i) => {
+    const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b), sizePay(s, 0, b)) ? null : `You need ${costText(price(b))}.`);
     const note = b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? ' State Religion: the Food is free this turn.' : '';
-    const row = new Choice(ctl.scene, f.pad, f.y, f.inner, {
+    const c = i % cols;
+    const row = new Choice(ctl.scene, f.pad + c * (colW + 12), ys[c], colW, {
       id: b,
       label: BUILDING_NAME[b],
-      desc: `${BUILDING_HELP[b].replace(/^[A-Za-z]+: /, '')}${note}${why ? `\nNot possible: ${why}` : ''}`,
+      desc: `${BUILDING_HELP[b].replace(/^[^:]+: /, '')}${note}${why ? `\nNot possible: ${why}` : ''}`,
       icon: BUILD_ICON[b],
       iconTint: PLAYER_COLORS[0],
       disabled: !!why,
@@ -167,9 +180,10 @@ function constructDialog(ctl, city, opts = {}) {
       onClick: () => pick(b),
     });
     f.add(row);
-    f.y += row.h + 8;
+    ys[c] += row.h + 8;
     return row;
   });
+  f.y = Math.max(...ys);
   f.gap(2);
   err = f.text(' ', { size: 13, color: TXT.bad, center: true, gap: 4 });
   f.buttons([{ label: 'Cancel', w: 130, fn: () => modal.close() }]);
@@ -181,19 +195,21 @@ function constructDialog(ctl, city, opts = {}) {
 function recruitDialog(ctl, city) {
   const g = ctl.g;
   const s = g.s;
-  const cap = cityCapacity(s, city);
+  const base = cityCapacity(s, city);
+  const ball = hasCivAdv(s, 0, 'ballcourts') && effMood(s, city) !== 'angry';
+  const cap = base + (ball ? 1 : 0);
   const port = isPortCity(city);
   const f = new Flow(ctl.scene, 580, { top: 80 });
-  f.text(`This city can recruit up to ${cap} unit${cap === 1 ? '' : 's'} in one action.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+  f.text(`This city can recruit up to ${base} unit${base === 1 ? '' : 's'} in one action${ball ? `, or ${cap} with Ballcourts (that costs 1 more Mood token)` : ''}.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
   const count = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
   let update = () => {};
   const army = Math.max(0, Math.min(cap, STACK_LIMIT - armyAt(s, city.hex, 0).length));
-  const market = hasBuilding(city, 'market');
+  const mounted = (type) => hasBuilding(city, 'market') || canMountHere(s, 0, type);
   const kinds = [
     ['infantry', 'u_infantry', '1 Food + 1 Ore', army],
-    ['cavalry', 'u_cavalry', market ? '1 Food + 1 Wood' : '1 Food + 1 Wood (this city needs a Market)', market ? army : 0],
-    ['elephant', 'u_elephant', market ? '2 Food' : '2 Food (this city needs a Market)', market ? army : 0],
+    ['cavalry', 'u_cavalry', mounted('cavalry') ? '1 Food + 1 Wood' : '1 Food + 1 Wood (this city needs a Market)', mounted('cavalry') ? army : 0],
+    ['elephant', 'u_elephant', mounted('elephant') ? '2 Food' : '2 Food (this city needs a Market)', mounted('elephant') ? army : 0],
     ['settler', 'u_settler', '2 Food', cap],
     ['ship', 'u_ship', port ? '2 Wood, appears on the Port\'s sea space' : '2 Wood (this city needs a Port)', port ? cap : 0],
   ];
@@ -207,15 +223,50 @@ function recruitDialog(ctl, city) {
     });
   }
   const opt = {};
+  const rowH = s.civs ? 26 : 28;
+  const drafts = ['draft', 'draftShip', 'draftCard']; // one Draft per Recruit
   const addOption = (key, label, tipText) => {
-    const cb = new Checkbox(ctl.scene, f.pad, f.y, label, false, () => update(), { w: f.inner, size: 13, tip: tipText });
+    const cb = new Checkbox(ctl.scene, f.pad, f.y, label, false, (v) => {
+      if (v && drafts.includes(key)) drafts.forEach((k) => k !== key && opt[k] && opt[k].set(false));
+      update();
+    }, { w: f.inner, h: rowH - 2, size: 13, tip: tipText });
     f.add(cb);
-    f.y += 28;
+    f.y += rowH;
     opt[key] = cb;
   };
-  if (hasAdv(s, 0, 'draft')) addOption('draft', `Draft: pay ${hasAdv(s, 0, 'civil_liberties') ? 2 : 1} Mood instead of the resources for one Infantry`, 'Draft lets you pay Mood tokens in place of the Food and Ore of one Infantry.');
+  const withs = [['mood', 'Mood']];
+  if (hasCivAdv(s, 0, 'mercenaries')) withs.push(['gold', 'Gold']);
+  if (hasCivAdv(s, 0, 'spartans')) withs.push(['culture', 'Culture']);
+  let payWith = 'mood';
+  const price = hasAdv(s, 0, 'civil_liberties') ? 2 : 1;
+  const priceText = () => `${price} ${withs.find(([id]) => id === payWith)[1]}`;
+  const relabel = () => {
+    if (opt.draft) opt.draft.label.setText(`Draft: pay ${priceText()} instead of the resources for one Infantry`);
+    if (opt.draftShip) opt.draftShip.label.setText(`Mercenaries: Draft a Ship for ${priceText()} instead of 2 Wood`);
+    if (opt.draftCard) opt.draftCard.label.setText(`Shogunate: Draft an Action card for ${priceText()} (it takes up a recruit)`);
+  };
+  const drafting = hasAdv(s, 0, 'draft');
+  if (drafting) addOption('draft', '', 'Draft lets you pay in place of the Food and Ore of one Infantry.');
+  if (drafting && canDraftShip(s, 0, city)) addOption('draftShip', '', 'Mercenaries: a city with a Port may Draft a Ship, paying the Draft price in place of its Wood.');
+  if (drafting && hasCivAdv(s, 0, 'shogunate')) addOption('draftCard', '', 'Shogunate: Draft can draw an Action card instead of recruiting a unit.');
+  let payBtn = null;
+  if (drafting && withs.length > 1) {
+    f.add(txt(ctl.scene, f.pad, f.y + 12, 'Pay the Draft price with', { size: 13, color: TXT.muted, origin: [0, 0.5] }));
+    payBtn = new Button(ctl.scene, f.pad + 190, f.y, 110, 24, 'Mood', () => {
+      payWith = withs[(withs.findIndex(([id]) => id === payWith) + 1) % withs.length][0];
+      payBtn.setLabel(withs.find(([id]) => id === payWith)[1]);
+      relabel();
+      update();
+    }, { size: 13, style: 'ghost', tip: 'Click to change what pays for the Draft (Mercenaries: Gold, the Spartans: Culture).' });
+    f.add(payBtn);
+    f.y += rowH;
+  }
+  relabel();
   if (hasAdv(s, 0, 'sanitation')) addOption('sanitation', 'Sanitation: pay 1 Mood instead of the Food for one Settler', 'Sanitation lets you pay a Mood token in place of the 2 Food of one Settler.');
   if (hasAdv(s, 0, 'nationalism')) addOption('nationalism', 'Nationalism: take the bonus as Culture instead of Mood', 'Recruiting Infantry, Cavalry, Elephants or Ships earns a token. Pick which one.');
+  if (port && hasCivAdv(s, 0, 'pirate_allies') && shipsAt(s, city.port).some((u) => u.owner === PIRATE)) {
+    addOption('attack', 'Pirate Allies: attack the Pirate Ships there (they share the space otherwise)', 'New Ships normally share the sea space with the Pirate Ships. Tick this to fight them instead.');
+  }
   f.gap(2);
   const costLabel = txt(ctl.scene, f.pad, f.y + 11, 'Cost', { size: 13, color: TXT.muted, origin: [0, 0.5] });
   f.add(costLabel);
@@ -230,28 +281,41 @@ function recruitDialog(ctl, city) {
     const units = { ...count };
     const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
     const fighters = units.infantry + units.cavalry + units.elephant + units.ship;
-    if (opt.draft) {
-      opt.draft.lock(units.infantry < 1);
-      if (units.infantry < 1) opt.draft.set(false);
-    }
-    if (opt.sanitation) {
-      opt.sanitation.lock(units.settler < 1);
-      if (units.settler < 1) opt.sanitation.set(false);
-    }
+    const lockOn = (key, flag) => {
+      if (!opt[key]) return;
+      opt[key].lock(flag);
+      if (flag) opt[key].set(false);
+    };
+    lockOn('draft', units.infantry < 1);
+    lockOn('draftShip', units.ship < 1);
+    lockOn('sanitation', units.settler < 1);
+    lockOn('attack', units.ship < 1);
     if (opt.nationalism) opt.nationalism.lock(fighters < 1);
+    const on = (key) => !!(opt[key] && opt[key].checked);
     action = { type: 'recruit', city: city.id, units };
-    if (opt.draft && opt.draft.checked) action.draft = true;
-    if (opt.sanitation && opt.sanitation.checked) action.sanitation = true;
-    if (opt.nationalism && opt.nationalism.checked && fighters > 0) action.nationalism = 'culture';
+    if (on('draft')) action.draft = true;
+    if (on('draftShip')) action.draftShip = true;
+    if (on('draftCard')) action.draftCard = true;
+    const drafted = drafts.some(on);
+    if (drafted && payWith !== 'mood') action.draftWith = payWith;
+    if (payBtn) payBtn.setDisabled(!drafted, 'Tick one of the Draft options first.');
+    if (on('sanitation')) action.sanitation = true;
+    if (on('nationalism') && fighters > 0) action.nationalism = 'culture';
+    if (on('attack') && units.ship > 0) action.attack = true;
+    const slots = total + (action.draftCard ? 1 : 0);
+    if (slots > base) action.ballcourts = true;
     const chk = recruitBlocked(g, 0, city, action);
-    const cost = chk.plan ? chk.plan : recruitCost(s, 0, units, { draft: action.draft ? 1 : 0, sanitation: action.sanitation ? 1 : 0 });
+    const cost = chk.plan ? chk.plan : recruitCost(s, 0, units, {
+      draft: action.draft ? 1 : 0, sanitation: action.sanitation ? 1 : 0, draftShip: action.draftShip ? 1 : 0, draftCard: action.draftCard ? 1 : 0,
+      draftWith: action.draftWith, ball: action.ballcourts ? 1 : 0,
+    });
     if (costRow) costRow.destroy();
-    costRow = resRow(ctl.scene, f.pad + 70, costY, total ? cost : {}, { size: 18, font: 14, gap: 12 });
+    costRow = resRow(ctl.scene, f.pad + 70, costY, slots ? cost : {}, { size: 18, font: 14, gap: 12 });
     f.add(costRow);
-    if (!total) note.setText('Choose how many units to recruit.').setColor(TXT.muted);
+    if (!slots) note.setText('Choose how many units to recruit.').setColor(TXT.muted);
     else if (chk.why) note.setText(chk.why).setColor(TXT.bad);
-    else note.setText(hasAdv(s, 0, 'medicine') ? 'Medicine will refund 1 of the resources you spend.' : 'Ready to recruit.').setColor(TXT.good);
-    if (ok) ok.setDisabled(!total || !!chk.why, chk.why || 'Choose at least one unit.');
+    else note.setText(`${action.ballcourts ? 'Ballcourts add 1 to the capacity for 1 Mood. ' : ''}${hasAdv(s, 0, 'medicine') ? 'Medicine will refund 1 of the resources you spend.' : 'Ready to recruit.'}`).setColor(TXT.good);
+    if (ok) ok.setDisabled(!slots || !!chk.why, chk.why || 'Choose at least one unit.');
   };
   [ok] = f.buttons([
     { label: 'Recruit', style: 'primary', w: 160, fn: () => submit(ctl, modal, action, note) },
@@ -371,44 +435,73 @@ function happinessDialog(ctl, city) {
 }
 
 // ---------------------------------------------------------------- influence
-async function influenceDialog(ctl, city) {
+/** `origin` is one of the player's cities, a city holding their Buildings (Hellenization) or their Settlers (Proselytism). */
+async function influenceDialog(ctl, origin) {
   const s = ctl.g.s;
   const card = heldModifier(s, 0, 'influence');
-  const targets = influenceTargets(s, city, { card });
+  const targets = influenceTargets(s, origin, { card });
   if (!targets.length) {
-    ctl.toast(s.turn.influenceSuccess ? 'Only one Influence success is possible per turn.' : 'No city in range has a building you can influence.', 'error');
+    ctl.toast(s.turn.influenceSuccess ? 'Only one Influence success is possible per turn.' : 'Nothing in range can be influenced.', 'error');
     return;
   }
-  const byId = new Map(targets.map((x) => [x.target.id, x]));
-  const range = citySize(city);
+  const byHex = new Map();
+  for (const e of targets) byHex.set(e.target.hex, [...(byHex.get(e.target.hex) || []), e]);
+  const range = influenceRange(s, 0, origin);
+  const noun = (e) => (e.unit ? `${ownerName(ctl.g, e.target.owner)} ${UNIT_NAME[e.target.type].toLowerCase()}` : `${ownerName(ctl.g, e.target.owner)} city`);
   const tagOf = ({ boost, useCard }) => (useCard ? (boost ? `Card, +${boost} Culture` : 'With card') : boost ? `+${boost} Culture` : 'In range');
-  const id = await ctl.mapPick({
+  const aim = targets.some((e) => e.unit) ? 'city or unit' : 'city';
+  const hexKey = await ctl.mapPick({
     title: 'Influence Culture',
-    text: `Click the city you want to influence. This city reaches ${range} space${range === 1 ? '' : 's'}${card ? `, or ${range + 1} if you play ${card.name}` : ''}; the tag on each city shows how many extra Culture tokens it takes to reach it.`,
+    text: `Click the ${aim} you want to influence. ${origin.settlers ? 'These Settlers reach' : 'This city reaches'} ${range} space${range === 1 ? '' : 's'}${card ? `, or ${range + 1} if you play ${card.name}` : ''}; the tag on each target shows how many extra Culture tokens it takes to reach it.`,
     options: [
-      ...targets.map((e) => ({ id: e.target.id, label: `${ownerName(ctl.g, e.target.owner)} city`, hex: e.target.hex, tag: tagOf(e) })),
+      ...[...byHex].map(([hex, list]) => {
+        const best = list.reduce((a, b) => (b.boost < a.boost ? b : a));
+        return { id: hex, label: list.length > 1 ? `${list.length} units` : noun(list[0]), hex, tag: tagOf(best) };
+      }),
       { id: '__cancel', label: 'Cancel' },
     ],
   });
-  if (id == null || id === '__cancel') return;
-  const entry = byId.get(id);
+  if (hexKey == null || hexKey === '__cancel') return;
+  const list = byHex.get(hexKey);
+  if (!list) return;
+  const kinds = list.filter((e, i) => list.findIndex((o) => o.target.type === e.target.type) === i);
+  let entry = kinds[0];
+  if (kinds.length > 1) {
+    const picked = await optionModal(ctl, {
+      title: 'Which unit?',
+      text: 'Several units share that space. Choose the one to influence.',
+      options: kinds.map((e) => ({ id: e.target.id, label: noun(e), icon: `u_${e.target.type}`, iconTint: PLAYER_COLORS[0] })),
+      closable: true,
+      cancel: 'Cancel',
+    });
+    if (picked == null) return;
+    entry = kinds.find((e) => e.target.id === picked);
+  }
   if (!entry) return;
   const { target, types } = entry;
+  const unitTarget = !!entry.unit;
   let useCard = entry.useCard;
   const boostNow = () => (useCard ? entry.soft : entry.plain);
+  const hellenization = hasCivAdv(s, 0, 'hellenization');
   const f = new Flow(ctl.scene, 580, { top: 80 });
-  f.text('Roll one die: a 5 or 6 wins over a building in that city. If the roll falls short you may spend Culture tokens to make up the difference. Only one success per turn.', { size: 13, color: TXT.muted, center: true, gap: 8 });
+  f.text(unitTarget
+    ? 'Roll one die: a 5 or 6 turns that unit to your side (Zoroastrianism). If other enemy units share its space, a battle follows at once. If the roll falls short you may spend Culture tokens to make up the difference. Only one success per turn.'
+    : 'Roll one die: a 5 or 6 wins over a building in that city. If the roll falls short you may spend Culture tokens to make up the difference. Only one success per turn.', { size: 13, color: TXT.muted, center: true, gap: 8 });
+  if (origin.settlers) f.text('Starting from your Settlers (Proselytism).', { size: 13, color: TXT.muted, center: true, gap: 6 });
+  else if (origin.owner !== 0) f.text(`Starting from the ${ownerName(ctl.g, origin.owner).toLowerCase()} city that holds your building (Hellenization).`, { size: 13, color: TXT.muted, center: true, gap: 6 });
   haveLine(f, s);
   let building = types[0];
   const rows = [];
-  if (types.length > 1) {
+  if (unitTarget) f.text(`Target: the ${noun(entry).toLowerCase()}.`, { bold: true, gap: 6 });
+  else if (types.length > 1) {
     f.text('Which building do you want to win over?', { bold: true, gap: 4 });
     for (const b of types) {
       const row = new Choice(ctl.scene, f.pad, f.y, f.inner, {
         id: b,
-        label: BUILDING_NAME[b],
-        icon: BUILD_ICON[b],
-        iconTint: PLAYER_COLORS[0],
+        label: typeName(b),
+        desc: b === 'druid' ? 'Druidic Influence: your Culture token lies under the city and is worth 1 VP.' : '',
+        icon: typeIcon(b),
+        iconTint: b === 'druid' ? undefined : PLAYER_COLORS[0],
         toggle: true,
         selected: b === building,
         onClick: (it) => {
@@ -421,7 +514,7 @@ async function influenceDialog(ctl, city) {
       f.add(row);
       f.y += row.h + 6;
     }
-  } else f.text(`Target: ${BUILDING_NAME[building]} in the ${ownerName(ctl.g, target.owner).toLowerCase()} city.`, { bold: true, gap: 6 });
+  } else f.text(building === 'druid' ? `Target: place your Culture token under the ${ownerName(ctl.g, target.owner).toLowerCase()} city (Druidic Influence, 1 VP).` : `Target: ${typeName(building)} in the ${ownerName(ctl.g, target.owner).toLowerCase()} city.`, { bold: true, gap: 6 });
   let update = () => {};
   let softBox = null;
   if (card && entry.soft !== null && entry.soft !== entry.plain) {
@@ -433,11 +526,19 @@ async function influenceDialog(ctl, city) {
     f.add(softBox);
     f.y += 28;
   }
+  const cultureOk = (boost) => canPay(s, 0, { culture: 1 + boost });
+  const moodOk = (boost) => hellenization && canPay(s, 0, { mood: 2, culture: boost });
   let arts = null;
-  if (hasAdv(s, 0, 'arts') && !s.turn.used.arts && canPay(s, 0, { culture: 1 + entry.boost })) {
+  let artsMood = null;
+  if (hasAdv(s, 0, 'arts') && !s.turn.used.arts && (cultureOk(entry.boost) || moodOk(entry.boost))) {
     arts = new Checkbox(ctl.scene, f.pad, f.y, 'Arts: make it a free action, for 1 Culture token', false, () => update(), { w: f.inner, size: 13, tip: 'Arts lets you try Influence Culture without using an action, once per turn.' });
     f.add(arts);
     f.y += 28;
+    if (hellenization) {
+      artsMood = new Checkbox(ctl.scene, f.pad + 28, f.y, 'Hellenization: pay 2 Mood tokens for Arts instead', false, () => update(), { w: f.inner - 28, size: 13, tip: 'Hellenization lets you pay the Arts cost with 2 Mood tokens instead of the Culture token.' });
+      f.add(artsMood);
+      f.y += 28;
+    }
   }
   const costNote = f.text(' ', { size: 13, color: TXT.gold, center: true, gap: 4 });
   const err = f.text(' ', { size: 13, color: TXT.bad, center: true, gap: 4 });
@@ -445,28 +546,50 @@ async function influenceDialog(ctl, city) {
   update = () => {
     const boost = boostNow();
     if (arts) {
-      const room = canPay(s, 0, { culture: 1 + boost });
-      arts.lock(!room);
-      if (!room) arts.set(false);
+      const culture = cultureOk(boost);
+      const mood = moodOk(boost);
+      arts.lock(!culture && !mood);
+      if (!culture && !mood) arts.set(false);
+      if (artsMood) {
+        artsMood.lock(!arts.checked || !mood || !culture);
+        if (!arts.checked || !mood) artsMood.set(false);
+        else if (!culture) artsMood.set(true);
+      }
     }
-    const upfront = boost + (arts && arts.checked ? 1 : 0);
-    costNote.setText(`Cost: ${arts && arts.checked ? 'no action' : '1 action'}${upfront ? `, ${upfront} Culture token${upfront === 1 ? '' : 's'}` : ''}${useCard ? `, ${card.name}` : ''}.`);
+    const free = !!(arts && arts.checked);
+    const withMood = free && !!(artsMood && artsMood.checked);
+    const culture = boost + (free && !withMood ? 1 : 0);
+    const parts = [free ? 'no action' : '1 action'];
+    if (culture) parts.push(`${culture} Culture token${culture === 1 ? '' : 's'}`);
+    if (withMood) parts.push('2 Mood tokens');
+    if (useCard) parts.push(card.name);
+    costNote.setText(`Cost: ${parts.join(', ')}.`);
   };
   f.buttons([
     {
       label: 'Roll the die', style: 'primary', w: 170,
       fn: () => {
-        const action = { type: 'influence', city: city.id, target: target.id, building };
+        const action = { type: 'influence' };
+        if (origin.settlers) action.unit = s.units.find((u) => u.owner === 0 && u.type === 'settler' && u.hex === origin.hex).id;
+        else action.city = origin.id;
+        if (unitTarget) action.targetUnit = target.id;
+        else {
+          action.target = target.id;
+          action.building = building;
+        }
         const boost = boostNow();
         if (boost) action.rangeBoost = boost;
         if (useCard) action.card = card.id;
-        if (arts && arts.checked) action.free = true;
+        if (arts && arts.checked) {
+          action.free = true;
+          if (artsMood && artsMood.checked) action.artsMood = true;
+        }
         submit(ctl, modal, action, err);
       },
     },
     { label: 'Cancel', w: 130, fn: () => modal.close() },
   ]);
-  modal = f.finish({ title: 'Influence Culture', subtitle: `Target: ${ownerName(ctl.g, target.owner).toLowerCase()} ${cityLine(s, target)}`, closable: true });
+  modal = f.finish({ title: 'Influence Culture', subtitle: unitTarget ? `Target: ${noun(entry).toLowerCase()} · ${TERRAIN[terrainOf(s, target.hex)]}` : `Target: ${ownerName(ctl.g, target.owner).toLowerCase()} ${cityLine(s, target)}`, closable: true });
   update();
 }
 
@@ -476,6 +599,6 @@ export function createCityDialogs(ctl) {
     recruit: (city) => recruitDialog(ctl, city),
     wonder: (city) => wonderDialog(ctl, city),
     happiness: (city) => happinessDialog(ctl, city),
-    influence: (city) => influenceDialog(ctl, city),
+    influence: (origin) => influenceDialog(ctl, origin),
   };
 }

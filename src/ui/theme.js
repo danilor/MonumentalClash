@@ -84,6 +84,8 @@ export const RES = {
   gold: { name: 'Gold', color: '#ffd23f' },
   mood: { name: 'Mood', color: '#ffe066' },
   culture: { name: 'Culture', color: '#c79bef' },
+  // Not a Resource: a Barbarian Army can be collected as a Captive (Civilizations module).
+  captive: { name: 'Captive', color: '#ff9f98' },
 };
 export const RES_ORDER = ['food', 'wood', 'ore', 'ideas', 'gold'];
 
@@ -104,13 +106,15 @@ export const TERRAIN_HELP = {
 };
 
 export const MOOD_NAME = { angry: 'Angry', neutral: 'Neutral', happy: 'Happy' };
-export const BUILDING_NAME = { academy: 'Academy', fortress: 'Fortress', market: 'Market', port: 'Port', temple: 'Temple' };
+export const BUILDING_NAME = { academy: 'Academy', fortress: 'Fortress', market: 'Market', port: 'Port', temple: 'Temple', obelisk: 'Obelisk', observatory: 'Observatory' };
 export const BUILDING_HELP = {
   academy: 'Academy: +2 Ideas when built.',
   fortress: 'Fortress: the defender rolls an extra die and cancels a hit in the first round.',
   market: 'Market: lets the city recruit Cavalry and Elephants, and earns you 1 Gold when an opponent uses Trade Routes with the city. Needs the Bartering Advance.',
   port: 'Port: lets the city recruit Ships and collect Gold or a Mood token from the sea.',
   temple: 'Temple: +1 Mood or +1 Culture token when built.',
+  obelisk: 'Obelisk (Civilizations, needs Arts): cannot be influenced and stays yours even if the city is captured.',
+  observatory: 'Observatory (Civilizations, needs Math): you draw 1 Action card when it is built.',
 };
 
 export const CARD_NAMES = { action: 'Action', objective: 'Objective', wonder: 'Wonder' };

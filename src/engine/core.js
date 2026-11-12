@@ -39,11 +39,15 @@ export function clampResources(g, p) {
  * Work out how to pay `cost` ({food,wood,ore,ideas,gold,mood,culture}).
  * Gold is a wildcard for resources; Ideas may stand in for Food when `ideasAsFood`.
  * Great Arena makes Mood and Culture interchangeable unless `noArena`.
+ * Civilization powers: `ideasFor` lets Ideas pay for any resource (Ziggurats); `moodFor` lets Mood pay for any resource
+ * (Slave Economy: 'resources') and for Culture too (Architecture: true).
  * Returns the amounts to spend per type, or null when unaffordable.
  */
 export function planPayment(s, p, cost, opts = {}) {
   const pl = s.players[p];
   const have = { ...pl.res };
+  let moodHave = pl.mood;
+  let cultureHave = pl.culture;
   const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0 };
   // Ideas first: an explicit Idea cost (Dark Age) must not lose its Ideas to Food that Ideas could stand in for.
   for (const r of ['ideas', 'food', 'wood', 'ore']) {
@@ -66,6 +70,18 @@ export function planPayment(s, p, cost, opts = {}) {
       spend.gold += gold;
       need -= gold;
     }
+    if (need > 0 && opts.ideasFor && r !== 'ideas') {
+      const use = Math.min(have.ideas, need);
+      have.ideas -= use;
+      spend.ideas += use;
+      need -= use;
+    }
+    if (need > 0 && opts.moodFor) {
+      const use = Math.min(moodHave, need);
+      moodHave -= use;
+      spend.mood += use;
+      need -= use;
+    }
     if (need > 0) return null;
   }
   if (cost.gold) {
@@ -76,8 +92,6 @@ export function planPayment(s, p, cost, opts = {}) {
   let mood = cost.mood || 0;
   let culture = cost.culture || 0;
   const flex = !opts.noArena && playerOwnsWonder(s, p, 'great_arena');
-  let moodHave = pl.mood;
-  let cultureHave = pl.culture;
   const m = Math.min(moodHave, mood);
   moodHave -= m;
   mood -= m;
@@ -86,6 +100,12 @@ export function planPayment(s, p, cost, opts = {}) {
   cultureHave -= c;
   culture -= c;
   spend.culture += c;
+  if (culture > 0 && opts.moodFor === true) {
+    const x = Math.min(moodHave, culture);
+    moodHave -= x;
+    culture -= x;
+    spend.mood += x;
+  }
   if (flex) {
     if (mood > 0) {
       const x = Math.min(cultureHave, mood);
@@ -165,7 +185,7 @@ export function unitFlags(g, id) {
 }
 
 // ----------------------------------------------------------------- decks
-function ensureDeck(g, deck) {
+export function ensureDeck(g, deck) {
   const d = g.s.decks;
   if (d[deck].length === 0) {
     const disc = deck + 'Discard';

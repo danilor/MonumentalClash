@@ -230,10 +230,13 @@ export class MapView {
         c.add(icon(this.scene, `mood_${city.mood}`, -27 * K, -31 * K, 17 * K));
         if (owner === BARB) c.add(txt(this.scene, 0, -41 * K, 'Barbarians', { size: 9.5, bold: true, origin: 0.5, color: '#d9cfe6', stroke: '#000000', strokeThickness: 2 }));
         const blds = Object.entries(city.buildings);
+        const tight = blds.length > 5; // the Obelisk and the Observatory make room for seven
         blds.forEach(([type, who], i) => {
-          const bx = (i - (blds.length - 1) / 2) * 18 * K;
-          c.add(icon(this.scene, `b_${type}`, bx, 20.5 * K, 18 * K).setTint(PLAYER_COLORS[who]));
+          const bx = (i - (blds.length - 1) / 2) * (tight ? 15 : 18) * K;
+          c.add(icon(this.scene, `b_${type}`, bx, 20.5 * K, (tight ? 16 : 18) * K).setTint(PLAYER_COLORS[who]));
         });
+        // Druidic Influence: a Culture token in the colour of its owner lies under the city.
+        if (city.druid !== undefined) c.add(this.scene.add.circle(-31 * K, 3 * K, 6 * K, PLAYER_COLORS[city.druid]).setStrokeStyle(2 * K, 0xffffff));
         city.wonders.forEach((w, i) => c.add(icon(this.scene, 'ic_wonder', (26 + i * 2) * K, (-31 + i * 12) * K, 17 * K)));
         const crowded = groups.length > 2; // Infantry, Cavalry, Elephants and Settlers in one city
         const packed = groups.length > 3;

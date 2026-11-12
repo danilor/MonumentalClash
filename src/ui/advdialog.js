@@ -1,9 +1,12 @@
 // The Advances window: the 12 categories of the Advance board. Click an Advance to read it, then research it.
 // In "pick" mode (free Advances, Great Library) it only lets the player choose one of the offered Advances.
 import { ADVANCES, ADVANCE_GROUPS } from '../engine/data/advances.js';
+import { BUILDING_ADVANCE, CIV_BUILDINGS } from '../engine/data/constants.js';
+import { CIVS } from '../engine/data/civs.js';
 import { advanceBlocked, advanceCost } from '../engine/advance.js';
+import { civAdvancesFor } from '../engine/civs.js';
 import { planPayment } from '../engine/core.js';
-import { hasAdv } from '../engine/queries.js';
+import { hasAdv, hasCivAdv } from '../engine/queries.js';
 import { BUILDING_NAME, C, PLAYER_COLORS, TXT, cap, joinNames, seatLabel, seatName } from './theme.js';
 import { Button, Checkbox, Modal, drawPanel, hitBox, icon, resRow, tip, txt } from './widgets.js';
 
@@ -24,7 +27,12 @@ const FREE_VIA = {
   math: 'Free thanks to Math.',
   astronomy: 'Free thanks to Astronomy.',
   priesthood: 'Free this turn thanks to Priesthood (once per turn).',
+  shipcraft: 'No Food needed thanks to Shipcraft.',
+  aqueducts: 'No Food needed thanks to Aqueducts.',
 };
+
+/** The Building an Advance allows. Arts (Obelisk) and Math (Observatory) only do so in a game with Civilizations. */
+const buildingOf = (s, adv) => adv.building || (s.civs ? CIV_BUILDINGS.find((b) => BUILDING_ADVANCE[b] === adv.id) : undefined);
 
 /** Ways to pay `n` Food using Food, Ideas and Gold that the player can afford. */
 function paymentOptions(have, n) {
@@ -111,10 +119,17 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
         marks.push(i);
         ix -= 22;
       }
-      if (adv.building) {
-        const i = icon(scene, `b_${adv.building}`, ix, CHIP_H / 2, 20);
+      const bld = buildingOf(s, adv);
+      if (bld) {
+        const i = icon(scene, `b_${bld}`, ix, CHIP_H / 2, 20);
         c.add(i);
         marks.push(i);
+        ix -= 24;
+      }
+      if (civAdvancesFor(s, 0, adv.id).length) {
+        const star = scene.add.star(ix, CHIP_H / 2, 5, 4, 8.5, 0xf0c040);
+        c.add(star);
+        marks.push(star);
       }
       const hit = hitBox(scene, 0, 0, w, CHIP_H);
       c.add(hit);
@@ -151,6 +166,8 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
         const lines = [adv.name, adv.text];
         if (st === 'locked') lines.push('', `Locked: ${whyLocked(adv.id)}`);
         if (st === 'borrowed') lines.push('', 'Borrowed from the Great Library for this turn.');
+        const gives = civAdvancesFor(s, 0, adv.id);
+        if (gives.length) lines.push('', `Also gives you ${joinNames(gives.map((a) => a.name))} (${CIVS[pl.civ].name}).`);
         const had = heldBy(adv.id);
         if (had.length) lines.push('', `${cap(joinNames(had.map((f) => seatName(s, f.idx))))} ${had.length === 1 ? 'has' : 'have'} this Advance.`);
         return lines.join('\n');
@@ -222,7 +239,10 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       nameT.setText(adv.name);
       const extras = [];
       if (adv.bonus) extras.push(`gives 1 ${adv.bonus === 'mood' ? 'Mood' : 'Culture'} token when learned`);
-      if (adv.building) extras.push(`unlocks the ${BUILDING_NAME[adv.building]}`);
+      const bld = buildingOf(s, adv);
+      if (bld) extras.push(`unlocks the ${BUILDING_NAME[bld]}`);
+      const gives = civAdvancesFor(s, 0, id);
+      if (gives.length) extras.push(`also gives you ${joinNames(gives.map((a) => a.name))} (${CIVS[pl.civ].name})`);
       metaT.setText([`${group.name}${group.gov ? ' (Government)' : ''}`, ...extras].join(' · '));
       textT.setText(adv.text);
       const own = pl.advances.includes(id);
@@ -246,6 +266,9 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       const n = cost.food || 0;
       // The Dark Age event adds 1 Idea to every paid Advance; Gold can stand in for it.
       const extra = cost.ideas || 0;
+      // Rome's Aqueducts: Sanitation may also be bought without an action, at the full price.
+      const aqueducts = id === 'sanitation' && via === 'aqueducts';
+      let skipAction = false;
       let choice = null;
       let freeEdu = null;
       const research = new Button(scene, rightW - 206, STRIP_H - 44, 200, 34, 'Research', () => go(), { style: 'primary', size: 16 });
@@ -254,39 +277,60 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       const can = ctl.humanCanAct();
       const left = s.turn ? s.turn.actionsLeft : 0;
       const options = n ? paymentOptions(pl.res, n).filter((o) => pl.res.ideas - o.ideas + (pl.res.gold - o.gold) >= extra) : [];
-      let why = '';
-      if (!can) why = 'You can only research during your own turn.';
-      else if (left <= 0) why = 'You have no actions left this turn.';
-      else if (n && !options.length) why = extra ? `You need ${n} Food and ${extra} Idea (Dark Age). Ideas or Gold can replace Food; Gold can replace the Idea.` : `You need ${n} Food. Ideas or Gold can replace Food.`;
-      research.setDisabled(!!why, why);
+      // India's Peace and Poetry: once per turn, 1 Mood token pays for the Food.
+      const peaceOk = n > 0 && hasCivAdv(s, 0, 'peace_and_poetry') && !(s.turn && s.turn.player === 0 && s.turn.used.peacePoetry) && pl.mood >= 1 && pl.res.ideas + pl.res.gold >= extra;
+      const tiles = peaceOk ? [...options, { food: 0, ideas: 0, gold: 0, mood: 1, peace: true }] : options;
+      const syncWhy = () => {
+        let why = '';
+        if (!can) why = 'You can only research during your own turn.';
+        else if (skipAction) {
+          if (!planPayment(s, 0, advanceCost(s, 0, id, { full: true }).cost, { ideasAsFood: true, ideasFirst: true })) why = 'Skipping the action costs 2 Food. Ideas or Gold can replace Food.';
+        } else if (left <= 0) why = 'You have no actions left this turn.';
+        else if (n && !tiles.length) why = extra ? `You need ${n} Food and ${extra} Idea (Dark Age). Ideas or Gold can replace Food; Gold can replace the Idea.` : `You need ${n} Food. Ideas or Gold can replace Food.`;
+        research.setDisabled(!!why, why);
+      };
+      syncWhy();
 
       const info = txt(scene, 0, 8, '', { size: 13, color: TXT.muted, wrap: rightW });
       pay.add(info);
       if (!n) {
-        info.setText(`Cost: 1 action. ${via ? FREE_VIA[via] : 'No resources needed.'}`);
+        const free = `Cost: 1 action. ${via ? FREE_VIA[via] : 'No resources needed.'}`;
+        info.setText(free);
+        if (aqueducts) {
+          const skip = new Checkbox(scene, 0, 44, 'Aqueducts: skip the action and pay 2 Food instead', false, (v) => {
+            skipAction = v;
+            info.setText(v ? 'Cost: 2 Food (Ideas or Gold can replace Food), but no action.' : free);
+            syncWhy();
+          }, { w: 400, size: 13, tip: 'Aqueducts: Sanitation costs either no Food or no action.' });
+          pay.add(skip);
+        }
       } else {
         info.setText(extra
           ? `Cost: 1 action, ${n} Food and ${extra} Idea (Dark Age; Gold can replace the Idea). Ideas or Gold can replace Food. Choose how to pay the Food:`
-          : `Cost: 1 action and ${n} Food. Ideas or Gold can replace Food. Choose how to pay:`);
+          : `Cost: 1 action and ${n} Food${via === 'ballcourts' ? ' (Ballcourts: one Spirituality Advance per turn costs 1 Food less)' : ''}. Ideas or Gold can replace Food. Choose how to pay:`);
         const base = planPayment(s, 0, { food: n }, { ideasAsFood: true, ideasFirst: true });
         const def = base ? options.find((o) => o.food === base.food && o.ideas === base.ideas && o.gold === base.gold) : null;
-        choice = def || options[0] || null;
+        choice = def || tiles[0] || null;
         const btns = [];
         const refresh = () => {
           btns.forEach((b) => b.draw());
           syncEdu();
         };
-        options.forEach((o, i) => {
-          const c = scene.add.container((i % 3) * 172, 44 + Math.floor(i / 3) * 32);
+        // Seven ways to pay (with Peace and Poetry) take two rows of four.
+        const cols = tiles.length > 6 ? 4 : 3;
+        const tw = cols === 4 ? 130 : 164;
+        tiles.forEach((o, i) => {
+          const c = scene.add.container((i % cols) * (tw + 8), 44 + Math.floor(i / cols) * 32);
           const bg = scene.add.graphics();
           const r = resRow(scene, 12, 15, o, { size: 17, font: 14, gap: 10 });
-          const hit = hitBox(scene, 0, 0, 164, 30);
+          const hit = hitBox(scene, 0, 0, tw, 30);
           c.add([bg, r, hit]);
+          if (o.peace) tip(hit, 'Peace and Poetry: pay 1 Mood token instead of the Food (once per turn).');
           const b = {
             draw: () => {
               bg.clear();
               const on = choice === o;
-              drawPanel(bg, 0, 0, 164, 30, { fill: on ? 0x34527a : 0x1a2432, border: on ? C.gold : C.border, radius: 7, line: on ? 2.5 : 1.5 });
+              drawPanel(bg, 0, 0, tw, 30, { fill: on ? 0x34527a : 0x1a2432, border: on ? C.gold : C.border, radius: 7, line: on ? 2.5 : 1.5 });
             },
           };
           hit.on('pointerdown', () => {
@@ -297,7 +341,7 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
           btns.push(b);
           pay.add(c);
         });
-        if (!options.length) pay.add(txt(scene, 0, 48, 'Not enough Food, Ideas or Gold.', { size: 14, color: TXT.bad }));
+        if (!tiles.length) pay.add(txt(scene, 0, 48, 'Not enough Food, Ideas or Gold.', { size: 14, color: TXT.bad }));
       }
       if (hasAdv(s, 0, 'free_education') && id !== 'free_education') {
         freeEdu = new Checkbox(scene, 0, STRIP_H - 42, 'Free Education: also pay 1 Idea, gain 1 Mood token', false, null, {
@@ -317,7 +361,9 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
 
       function go() {
         const action = { type: 'advance', advance: id };
-        if (n && choice) action.pay = { food: choice.food, ideas: choice.ideas, gold: choice.gold };
+        if (skipAction) action.noAction = true;
+        else if (choice && choice.peace) action.peace = true;
+        else if (n && choice) action.pay = { food: choice.food, ideas: choice.ideas, gold: choice.gold };
         if (freeEdu && freeEdu.checked) action.freeEducation = true;
         const r = ctl.check(action);
         if (!r.ok) {

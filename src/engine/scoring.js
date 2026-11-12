@@ -1,8 +1,12 @@
 // Final scoring and tiebreaks.
 import { BARBARIAN } from './data/constants.js';
+import { ADVANCES, GROUPS } from './data/advances.js';
 import { WONDERS } from './data/wonders.js';
+import { hasCivAdv } from './queries.js';
 
 export const SCORE_ORDER = ['core', 'advances', 'objectives', 'wonders', 'events'];
+/** The parts of a score in tiebreak order: the Civilizations module adds a part of its own (Captives, tokens, Runestones). */
+export const scoreOrder = (s) => (s.civs ? [...SCORE_ORDER, 'civ'] : SCORE_ORDER);
 
 /** Who still owns the Great Pyramid's points (its builder, wherever the city ended up). */
 export function pyramidBuilder(s) {
@@ -32,18 +36,29 @@ function wonderPoints(s, p) {
   return pts;
 }
 
+/** Civilization points: Aztec Captives (1/2 VP), Celtic Culture tokens under Barbarian cities (1 VP), Runestones (1 VP). */
+function civPoints(s, p) {
+  const pl = s.players[p];
+  return (pl.captives || []).length / 2 + s.cities.filter((c) => c.druid === p).length + (pl.runes || 0);
+}
+
 export function scoreOf(s, p) {
   const pl = s.players[p];
   const settlements = s.cities.filter((c) => c.owner === p).length;
   const buildings = s.cities.reduce((n, c) => n + Object.values(c.buildings).filter((col) => col === p).length, 0);
+  // Phoenicia: every Port in their colour scores 1 1/2 VP, and their Government Advances score nothing.
+  const independent = hasCivAdv(s, p, 'city_independence');
+  const ports = independent ? s.cities.filter((c) => c.buildings.port === p).length : 0;
+  const governments = independent ? pl.advances.filter((id) => GROUPS[ADVANCES[id].group].gov).length : 0;
   const parts = {
-    core: settlements + buildings,
-    advances: pl.advances.length / 2,
+    core: settlements + buildings + ports / 2,
+    advances: (pl.advances.length - governments + (pl.civAdv || []).length) / 2,
     objectives: pl.completed.length * 2,
     wonders: wonderPoints(s, p),
     events: pl.vpBonus,
   };
-  const total = SCORE_ORDER.reduce((n, k) => n + parts[k], 0);
+  if (s.civs) parts.civ = civPoints(s, p);
+  const total = scoreOrder(s).reduce((n, k) => n + parts[k], 0);
   return { total, parts, settlements, buildings };
 }
 
@@ -56,7 +71,7 @@ export function finalResult(s) {
     const builder = pyramidBuilder(s);
     if (builder !== null && tied.includes(builder)) tied = [builder];
   }
-  for (const key of SCORE_ORDER) {
+  for (const key of scoreOrder(s)) {
     if (tied.length <= 1) break;
     const top = Math.max(...tied.map((i) => scores[i].parts[key]));
     tied = tied.filter((i) => scores[i].parts[key] === top);

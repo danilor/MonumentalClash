@@ -4,7 +4,7 @@
 // the "Pirates Spawn and Raid" icon (pirateSpawn) places two and raids the coast.
 import { PIRATE } from './data/constants.js';
 import { addUnitTo, gainRes, removeUnits } from './core.js';
-import { allHexKeys, citiesOf, isNpc, isSea, nbrs, unitsAt, unitsLeft, unitsOf } from './queries.js';
+import { allHexKeys, citiesOf, freePirates, isNpc, isSea, nbrs, unitsAt, unitsLeft } from './queries.js';
 import { choose } from './prompts.js';
 import { eventMoodLoss, pickCity } from './eventTools.js';
 import { plural } from './text.js';
@@ -14,14 +14,15 @@ const SPAWN_SHIPS = 2;
 const KEEP = { food: 2, wood: 2, ore: 2, ideas: 2, gold: 1, mood: 2, culture: 2 };
 const NAME = { food: 'Food', wood: 'Wood', ore: 'Ore', ideas: 'Idea', gold: 'Gold', mood: 'Mood token', culture: 'Culture token' };
 
-const pirateShips = (s) => unitsOf(s, PIRATE, 'ship');
+// Pirate Ships that share a space with Carthage's units (Pirate Allies) belong to Carthage and escape every Pirate rule.
+const pirateShips = freePirates;
 const seatsFrom = (s, p) => s.players.map((_, i) => (p + i) % s.players.length);
 const nextTo = (s, c, k) => nbrs(s, c.hex).includes(k);
 const ownNear = (s, p, k) => citiesOf(s, p).filter((c) => nextTo(s, c, k)).length;
 const rivalCities = (s, p, k) => s.cities.filter((c) => c.owner !== p && !isNpc(c.owner) && nextTo(s, c, k));
 
-/** A Sea space with no player's Ship on it (Pirate Ships may share one). */
-const openSea = (s) => allHexKeys(s).filter((k) => isSea(s, k) && !unitsAt(s, k).some((u) => u.type === 'ship' && u.owner !== PIRATE));
+/** A Sea space with none of a player's units on it (Pirate Ships may share one). */
+const openSea = (s) => allHexKeys(s).filter((k) => isSea(s, k) && !unitsAt(s, k).some((u) => u.owner !== PIRATE));
 
 /** The cities of `q` next to at least one Pirate Ship. */
 export function raidedCities(s, q) {
@@ -88,6 +89,9 @@ function* placePirate(g, p, { nth, count, near, touched }) {
 export function* placePirates(g, p, count, { near = false } = {}) {
   const s = g.s;
   if (!openSea(s).length) return;
+  // Ships Carthage controls are out of reach: when it holds all four, the Event does nothing at all.
+  count = Math.min(count, unitsLeft(s, PIRATE, 'ship') + pirateShips(s).length);
+  if (count <= 0) return;
   yield* recallPirates(g, p, count - unitsLeft(s, PIRATE, 'ship'));
   let touched = false;
   for (let nth = 1; nth <= count; nth++) {

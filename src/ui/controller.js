@@ -5,12 +5,13 @@ import { cloneState } from '../engine/state.js';
 import { RuleError, canPay, heldModifier } from '../engine/core.js';
 import { ACTION_CARDS, OBJECTIVES } from '../engine/data/cards.js';
 import { ADVANCES, GROUPS } from '../engine/data/advances.js';
+import { CIVS, CIV_ADVANCES } from '../engine/data/civs.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { answerPrompt, attachAI, chooseAction, resourceWeights } from '../ai/index.js';
 import { collectPlans } from '../engine/enumerate.js';
 import { moveOptions, planMove } from '../engine/move.js';
-import { cityCapacity, collectCandidates, farCollectLimit } from '../engine/city.js';
-import { cityById, hasAdv, isArmy, nbrs, terrainOf, unitById } from '../engine/queries.js';
+import { cityCapacity, collectCandidates, effMood, farCollectLimit } from '../engine/city.js';
+import { cityAt, cityById, citySize, hasAdv, hasCivAdv, isArmy, nbrs, terrainOf, unitById } from '../engine/queries.js';
 import { MapView } from './mapview.js';
 import { Hud } from './panels.js';
 import { Context } from './context.js';
@@ -101,13 +102,14 @@ export class Controller {
     return this.hud.toast(text, kind, ms);
   }
 
-  /** Would this action be accepted right now? Returns { ok, error }. */
+  /** Would this action be accepted right now? Returns { ok, error, events } (the events show what it would do). */
   check(action) {
     try {
-      const r = this.g.clone().apply(action);
-      return { ok: !!r.ok, error: r.error || '' };
+      const copy = this.g.clone();
+      const r = copy.apply(action);
+      return { ok: !!r.ok, error: r.error || '', events: copy.events };
     } catch (e) {
-      return { ok: false, error: 'That cannot be done now.' };
+      return { ok: false, error: 'That cannot be done now.', events: [] };
     }
   }
 
@@ -149,13 +151,16 @@ export class Controller {
     for (const [k, list] of this.optByHex) {
       const o = list[0];
       let kind = 'move';
-      if (list.some((x) => x.battle)) kind = 'attack';
+      // Pirate Allies: a space with Pirate Ships may be shared or attacked, so it is only an attack when every way in is one.
+      if (list.every((x) => x.battle)) kind = 'attack';
       else if (o.explore !== null) kind = 'explore';
-      else if (o.kind === 'embark' || o.kind === 'ship') kind = 'sea';
+      else if (o.kind === 'embark' || o.kind === 'ship' || (o.kind === 'convert' && terrainOf(this.g.s, k) === 'sea')) kind = 'sea';
       let label = '';
       if (kind === 'explore') label = 'Explore';
       else if (list.every((x) => x.roads)) label = 'Roads';
       else if (list.every((x) => x.nav)) label = 'Navigation';
+      else if (list.every((x) => x.convert)) label = 'Shipcraft';
+      else if (this.nomadCity()) label = 'Move city';
       out.set(k, { kind, label });
     }
     return out;
@@ -171,7 +176,7 @@ export class Controller {
       if (c) lines.push('', `Click to collect: ${c.opts.map((r) => RES[r].name).join(' or ')}`);
     } else if (this.optByHex.has(k)) {
       const list = this.optByHex.get(k);
-      lines.push('', list.some((o) => o.battle) ? 'Click to attack here.' : list[0].explore !== null ? 'Click to explore here.' : 'Click to move here.');
+      lines.push('', list.every((o) => o.battle) ? 'Click to attack here.' : list.every((o) => o.convert) ? 'Click to change units and move here (Shipcraft).' : list[0].explore !== null ? 'Click to explore here.' : 'Click to move here.');
     } else if (this.sel && this.sel.hex !== k && this.humanCanAct()) {
       const why = this.whyNot(k);
       if (why) lines.push('', `Cannot move here: ${why}`);
@@ -195,7 +200,7 @@ export class Controller {
 
   // ---------------------------------------------------------- selection
   select(k) {
-    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0 }, groups: null } : null;
+    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0 }, groups: null, city: false } : null;
     if (k) this.initCounts();
     this.refreshView();
   }
@@ -204,10 +209,30 @@ export class Controller {
     this.select(null);
   }
 
+  /** Nomads: the player's city on `k` when it is small and calm enough to move. */
+  nomadCandidate(k) {
+    const s = this.g.s;
+    const city = cityAt(s, k);
+    if (!city || city.owner !== 0 || !hasCivAdv(s, 0, 'nomads') || citySize(city) !== 1 || effMood(s, city) === 'angry') return null;
+    return city;
+  }
+
+  /** The city that goes along with the selected units (the box is ticked in the context panel), if any. */
+  nomadCity() {
+    return this.sel && this.sel.city ? this.nomadCandidate(this.sel.hex) : null;
+  }
+
+  setMoveCity(on) {
+    if (!this.sel) return;
+    this.sel.city = on;
+    this.refreshView();
+  }
+
   ownGroups(k) {
     const s = this.g.s;
     const t = s.turn;
     const tactics = hasAdv(s, 0, 'tactics');
+    const longships = hasCivAdv(s, 0, 'longships');
     const out = {
       ship: { free: [], locked: [], why: '' },
       infantry: { free: [], locked: [], why: '' },
@@ -219,8 +244,8 @@ export class Controller {
       if (u.hex !== k || u.owner !== 0) continue;
       const f = t && t.unitFlags[u.id];
       let why = '';
-      if (f && f.fought) why = 'already fought this turn';
-      else if (f && f.stopped) why = 'stopped on a Mountain';
+      if (f && f.fought && !(u.type === 'ship' && longships)) why = 'already fought this turn';
+      else if (f && f.stopped) why = f.stopped === 'hegemony' ? 'landed by Hegemony' : 'stopped on a Mountain';
       else if (isArmy(u) && !tactics) why = 'Army units need the Tactics Advance to move';
       const grp = out[u.type];
       if (why) {
@@ -270,9 +295,10 @@ export class Controller {
     this.stuckWhy = '';
     if (!this.humanCanAct() || this.task || this.pickTask) return;
     const { ids } = this.selectedIds();
-    if (!ids.length) return;
+    const nomad = this.nomadCity();
+    if (!ids.length && !nomad) return;
     const t = this.g.s.turn;
-    let opts = moveOptions(this.g, 0, ids);
+    let opts = moveOptions(this.g, 0, ids, nomad ? nomad.id : null);
     const hadFresh = opts.some((o) => o.fresh);
     if (t.actionsLeft <= 0) opts = opts.filter((o) => !o.fresh);
     const s = this.g.s;
@@ -290,20 +316,21 @@ export class Controller {
   explainStuck(ids, noActions) {
     if (noActions) return 'You have no actions left to start a new move.';
     const s = this.g.s;
+    const nomad = this.nomadCity();
     const u = unitById(s, ids[0]);
-    if (!u) return '';
-    if (u.type === 'ship') return 'These Ships cannot reach any new Sea space.';
+    if (!u && !nomad) return '';
+    if (u && u.type === 'ship') return 'These Ships cannot reach any new Sea space.';
     const seen = new Map();
-    for (const n of nbrs(s, u.hex)) {
+    for (const n of nbrs(s, u ? u.hex : nomad.hex)) {
       try {
-        planMove(this.g, 0, { units: ids, to: n });
+        planMove(this.g, 0, { units: ids, to: n, city: nomad ? nomad.id : undefined });
       } catch (e) {
         if (!(e instanceof RuleError)) throw e;
         seen.set(e.message, (seen.get(e.message) || 0) + 1);
       }
     }
     const list = [...seen.keys()];
-    const key = list.find((m) => /Tactics|fought|stopped/.test(m));
+    const key = list.find((m) => /Tactics|fought|stopped|Hegemony/.test(m));
     return key || list[0] || '';
   }
 
@@ -339,11 +366,18 @@ export class Controller {
       }
     }
     const { ids, carry } = this.selectedIds();
-    if (!ids.length) return;
-    const ship = unitById(s, ids[0]).type === 'ship';
+    const nomad = this.nomadCity();
+    if (!ids.length && !nomad) return;
+    const ship = ids.length > 0 && unitById(s, ids[0]).type === 'ship';
     const action = { type: 'move', units: ids, to: o.to };
     if (o.roads) action.roads = true;
     if (o.nav) action.nav = o.nav;
+    if (o.convert) {
+      action.convert = true;
+      if (o.convert.into) action.into = o.convert.into;
+    }
+    if (o.attack) action.attack = true;
+    if (nomad) action.city = nomad.id;
     if (ship) action.carry = carry;
     const from = this.sel.hex;
     const res = await this.act(action);
@@ -466,24 +500,45 @@ export class Controller {
       metallurgy: false,
       free: t.actionsLeft <= 0 && econ,
       econ,
+      // Civilizations: Ballcourts add a space for 1 Mood; Aztec Gold turns an Ore from a Mountain into Gold or Culture.
+      ball: hasCivAdv(s, 0, 'ballcourts') && effMood(s, city) !== 'angry',
+      ballcourts: false,
+      aztec: hasCivAdv(s, 0, 'aztec_gold') && !t.used.aztecGold,
+      aztecGold: null,
     };
     this.refreshView();
   }
 
-  /** Spaces the chosen city may collect from, counting a ticked Resource Surge card. */
+  /** Spaces the chosen city may collect from, counting a ticked Resource Surge card and Ballcourts. */
   collectCap() {
     const tk = this.task;
-    return tk.cap + (tk.surge ? 2 : 0);
+    return tk.cap + (tk.surge ? 2 : 0) + (tk.ballcourts ? 1 : 0);
+  }
+
+  /** Drop the spaces that no longer fit after a box that raised the limit was unticked. */
+  trimPicks() {
+    const tk = this.task;
+    const cap = this.collectCap();
+    if (tk.picks.size > cap) tk.picks = new Map([...tk.picks].slice(0, cap));
   }
 
   setSurge(on) {
-    const tk = this.task;
-    tk.surge = on;
-    if (!on) {
-      const keep = [...tk.picks].slice(0, tk.cap);
-      tk.picks = new Map(keep);
-    }
+    this.task.surge = on;
+    this.trimPicks();
     this.refreshView();
+  }
+
+  setBallcourts(on) {
+    this.task.ballcourts = on;
+    this.trimPicks();
+    this.refreshView();
+  }
+
+  /** Aztec Gold needs a Mountain's Ore among the chosen spaces. */
+  aztecGoldOk() {
+    const tk = this.task;
+    const s = this.g.s;
+    return tk.aztec && [...tk.picks].some(([hex, res]) => res === 'ore' && terrainOf(s, hex) === 'mountain');
   }
 
   cancelTask() {
@@ -530,7 +585,7 @@ export class Controller {
     const s = this.g.s;
     const city = cityById(s, tk.city);
     const w = resourceWeights(s, 0);
-    const plans = collectPlans(s, 0, city, w, tk.surge ? 2 : 0);
+    const plans = collectPlans(s, 0, city, w, (tk.surge ? 2 : 0) + (tk.ballcourts ? 1 : 0));
     if (!plans.length) return;
     const value = (plan) => plan.reduce((n, p) => n + (w[p.res] || 1), 0);
     plans.sort((a, b) => value(b) - value(a));
@@ -551,6 +606,8 @@ export class Controller {
     if (tk.metallurgy && ore >= 2) a.metallurgy = true;
     if (tk.free) a.free = true;
     if (tk.surge && tk.surgeCard) a.card = tk.surgeCard.id;
+    if (tk.ballcourts) a.ballcourts = true;
+    if (tk.aztecGold && this.aztecGoldOk()) a.aztecGold = tk.aztecGold;
     return a;
   }
 
@@ -938,6 +995,25 @@ export class Controller {
       case 'mood':
         this.syncBefore('cities');
         this.draw();
+        break;
+      case 'civAdvance':
+        this.hud.update();
+        this.hud.toast(`${this.who(ev.player)} gained ${CIV_ADVANCES[ev.advance].name} (${CIVS[s.players[ev.player].civ].name}).`, ev.player === 0 ? 'good' : 'info', 2400);
+        break;
+      case 'captive':
+        this.hud.update();
+        this.hud.toast(`${this.who(ev.player)} took a Captive.`, ev.player === 0 ? 'good' : 'info', 1600);
+        break;
+      case 'sacrifice':
+        this.hud.update();
+        this.hud.toast(`${this.who(ev.player)} sacrificed a Captive.`, 'info', 1800);
+        break;
+      case 'runestone':
+        this.hud.update();
+        this.hud.toast(`${this.who(ev.player)} raised a Runestone.`, ev.player === 0 ? 'good' : 'info', 1800);
+        break;
+      case 'subterfuge':
+        this.hud.toast(`${this.who(ev.player)} discarded ${ACTION_CARDS[ev.discarded].name} to cancel ${ACTION_CARDS[ev.card].name} (Subterfuge).`, 'info', 2600);
         break;
       default:
         this.syncBefore('all');

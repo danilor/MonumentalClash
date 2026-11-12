@@ -30,7 +30,28 @@ const ADV_BONUS = {
 };
 export const advanceValue = (id) => ADV_BASE + (ADV_BONUS[id] || 0);
 
-const BUILDING_VALUE = { academy: 2.6, fortress: 2.1, market: 2.3, port: 2.4, temple: 2.6 };
+// A Civilization Advance comes free with another Advance: half a Victory Point, plus what its power is worth.
+const CIV_ADV_BASE = 1.1;
+const CIV_ADV_BONUS = {
+  captives: 0.6, human_sacrifice: 0.5, aztec_gold: 0.6, tribute_empire: 1.2,
+  canals: 0.8, code_of_laws: 0.5, star_catalogs: 1.0, ziggurats: 0.5,
+  warbeasts: 0.6, hegemony: 0.3, pirate_allies: 0.2, mercenaries: 0.5,
+  tribal_warfare: 0.4, tribal_allies: 0.2, druidic_influence: 0.5, tribal_trade: 0.5,
+  rice_paddies: 1.0, sprawling: 0.2, fireworks: 0.6, fighting_bands: 0.2,
+  flood_plains: 1.2, architecture: 0.8, embalming: 0.6, man_god: 0.6,
+  formal_training: 0.6, spartans: 0.5, hellenization: 0.5, city_states: 0.5,
+  nomads: 0.3, mounted_archers: 0.6, raiders: 0.6, hunnic_tribes: 0.4,
+  indian_elephants: 0.5, proselytism: 0.5, prosperity: 0.8, peace_and_poetry: 0.8,
+  pottery: 0.8, horsemanship: 0.6, subterfuge: 0.4, shogunate: 0.4,
+  terracing: 1.0, stelas: 0.8, ballcourts: 0.8, calendar: 0.2,
+  persian_elephants: 0.5, immortals: 0.6, zoroastrianism: 0.5, banking: 0.7,
+  city_independence: 0.5, biremes: 0.5, alphabet: 0.8, cedars_and_dyes: 0.6,
+  aqueducts: 0.8, imperial_roads: 0.6, slave_economy: 0.8, provinces: 0.6,
+  shipcraft: 0.6, longships: 0.5, runestones: 0.6, marauders: 0.5,
+};
+export const civAdvanceValue = (id) => CIV_ADV_BASE + (CIV_ADV_BONUS[id] ?? 0.5);
+
+const BUILDING_VALUE = { academy: 2.6, fortress: 2.1, market: 2.3, port: 2.4, temple: 2.6, obelisk: 2.3, observatory: 2.5 };
 const CITY_BASE = 5;
 const WONDER_BUILT = 14;
 const WONDER_HELD = 4.4;
@@ -297,9 +318,13 @@ export function sideValue(s, q, cfg = DEFAULTS, ix = null) {
   for (const c of s.cities) {
     for (const [type, colour] of Object.entries(c.buildings)) if (colour === q) v += BUILDING_VALUE[type];
     if (c.owner !== q) for (const w of c.wonders) if (w.builder === q) v += WONDER_HELD;
+    if (c.druid === q) v += 2.2; // Druidic Influence: a Culture token worth 1 VP while the city stays Barbarian
   }
 
   for (const id of pl.advances) v += advanceValue(id);
+  for (const id of pl.civAdv || []) v += civAdvanceValue(id);
+  // Captives and runestones count half a Victory Point and a whole one; a Captive may also be spent (Human Sacrifice).
+  v += (pl.captives || []).length * 1.2 + (pl.runes || 0) * 2.2;
   v += pl.completed.length * 4.4;
   v += objectiveValue(s, q);
   v += resourceValue(s, q);

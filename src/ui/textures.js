@@ -285,6 +285,14 @@ const ICONS = {
     p.fill(0xb57edc).stroke(1.6, 0x5f2f8f).circle(12, 12, 9.5, 'fs');
     p.fill(0xffffff).poly(starPts(12, 12.4, 6.2, 2.6));
   },
+  ic_captive(p) {
+    // a prisoner: head and shoulders with a rope round the arms
+    p.fill(0xe8b98a).stroke(1.4, 0x5a3a1a).circle(12, 7.6, 4.2, 'fs');
+    p.fill(0xb5543a).stroke(1.4, 0x5a3a1a).poly([[3.6, 22], [4.6, 15], [8.2, 12.4], [15.8, 12.4], [19.4, 15], [20.4, 22]], 'fs');
+    p.stroke(2.4, 0x5a3a1a).line(4.4, 17.2, 19.6, 17.2);
+    p.stroke(1.2, 0xe6cf8f).line(4.4, 17.2, 19.6, 17.2);
+    p.fill(0xe6cf8f).stroke(1, 0x5a3a1a).circle(12, 17.2, 1.7, 'fs');
+  },
   mood_happy(p) {
     p.fill(0x6fdc8c).stroke(1.6, 0x1f6b36).circle(12, 12, 10, 'fs');
     p.fill(0x12361d).circle(8.7, 9.8, 1.5).circle(15.3, 9.8, 1.5);
@@ -502,6 +510,28 @@ const ICONS = {
     p.fill(LIGHT).stroke(1.6, OUT).rect(2.4, 25, 27.2, 2.8, 'fs');
     p.fill(WHITE).stroke(1.6, OUT).rect(0.8, 27.8, 30.4, 2.8, 'fs');
   },
+  b_obelisk(p) {
+    // a tapering shaft with a pointed tip on two steps
+    p.fill(SHADE).stroke(1.6, OUT).rect(7, 26.6, 18, 3.4, 'fs');
+    p.fill(LIGHT).stroke(1.6, OUT).rect(9.4, 23.4, 13.2, 3.4, 'fs');
+    const shaft = [[11.8, 23.4], [20.2, 23.4], [18.4, 8.6], [13.6, 8.6]];
+    p.fill(WHITE).poly(shaft);
+    p.fill(SHADE).poly([[16, 23.4], [20.2, 23.4], [18.4, 8.6], [16, 8.6]]);
+    p.stroke(1.6, OUT).poly(shaft, 's');
+    p.fill(LIGHT).stroke(1.6, OUT).poly([[13.6, 8.6], [18.4, 8.6], [16, 1.6]], 'fs');
+    p.stroke(1, INK).line(14.4, 13, 17.6, 13).line(14.6, 16.6, 17.4, 16.6).line(14.8, 20.2, 17.2, 20.2);
+  },
+  b_observatory(p) {
+    // a domed tower with a slit and a telescope
+    p.stroke(2.6, OUT).line(17, 10.4, 26.4, 3.4);
+    p.stroke(1.4, WHITE).line(17, 10.4, 26.4, 3.4);
+    block(p, 6, 16.6, 20, 12.6);
+    p.fill(WHITE).poly(arcPts(16, 16.6, 10, 9.6, Math.PI, Math.PI * 2));
+    p.fill(SHADE).poly(arcPts(16, 16.6, 10, 9.6, Math.PI * 1.5, Math.PI * 2).concat([[16, 16.6]]));
+    p.stroke(1.8, OUT).poly(arcPts(16, 16.6, 10, 9.6, Math.PI, Math.PI * 2), 's');
+    p.fill(INK).poly([[14.4, 16.6], [14.8, 8.8], [17.2, 8.8], [17.6, 16.6]]);
+    p.fill(INK).poly([[12.6, 29.2], [12.6, 24.4], ...arcPts(16, 24.4, 3.4, 3.6, Math.PI, Math.PI * 2, 6), [19.4, 29.2]]);
+  },
   ic_wonder(p) {
     // golden pyramid with a bright capstone
     const half = (y) => (14.4 * (y - 6.4)) / 22 - 0.9;
@@ -563,10 +593,10 @@ const ICONS = {
 };
 
 const SIZES = {
-  ic_food: [24, 24], ic_wood: [24, 24], ic_ore: [24, 24], ic_ideas: [24, 24], ic_gold: [24, 24], ic_mood: [24, 24], ic_culture: [24, 24],
+  ic_food: [24, 24], ic_wood: [24, 24], ic_ore: [24, 24], ic_ideas: [24, 24], ic_gold: [24, 24], ic_mood: [24, 24], ic_culture: [24, 24], ic_captive: [24, 24],
   mood_happy: [24, 24], mood_neutral: [24, 24], mood_angry: [24, 24],
   u_infantry: [32, 32], u_cavalry: [32, 32], u_elephant: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_pirate: [32, 32], u_barb: [32, 32], b_city: [48, 46],
-  b_academy: [32, 32], b_fortress: [32, 32], b_market: [32, 32], b_port: [32, 32], b_temple: [32, 32],
+  b_academy: [32, 32], b_fortress: [32, 32], b_market: [32, 32], b_port: [32, 32], b_temple: [32, 32], b_obelisk: [32, 32], b_observatory: [32, 32],
   ic_wonder: [32, 32], ic_swords: [24, 24], ic_explore: [24, 24], ic_boat: [24, 24], ic_exhaust: [24, 24],
   ic_action: [20, 20], ic_action_off: [20, 20], ic_card: [20, 24], ic_die: [36, 36], ic_spark: [12, 12],
 };
