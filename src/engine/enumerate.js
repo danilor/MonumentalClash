@@ -66,7 +66,8 @@ export function moveGroups(s, p, hex) {
   const t = s.turn;
   const free = (u) => {
     const f = t.unitFlags[u.id];
-    return !(f && (f.fought || f.stopped));
+    // Longships: Ships may sail on after a battle.
+    return !(f && ((f.fought && !(u.type === 'ship' && hasCivAdv(s, p, 'longships'))) || f.stopped));
   };
   const here = s.units.filter((u) => u.owner === p && u.hex === hex && free(u));
   const ships = here.filter((u) => u.type === 'ship');

@@ -5,7 +5,7 @@ import { WONDERS } from './data/wonders.js';
 import { roll } from './rng.js';
 import {
   allHexKeys, armyAt, bfs, buildingsLeft, cityAt, cityById, citiesOf, cityHasWonder, citySize, citySizeCap, hasAdv, hasBuilding,
-  hasCivAdv, isArmy, isLand, isNpc, isPortCity, isSea, nbrs, owns, pirateBlocked, revealedDistances, seaNbrs, settlementsLeft,
+  hasCivAdv, isArmy, isLand, isNpc, isPortCity, isSea, nbrs, owns, pirateBlocked, pirateMaster, revealedDistances, seaNbrs, settlementsLeft,
   shipsAt, terrainOf, unitById, unitsAt, unitsLeft, unitsOf, hexDistance,
 } from './queries.js';
 import { addCity } from './state.js';
@@ -189,7 +189,8 @@ export function collectCandidates(s, p, city) {
     const there = k !== city.hex ? cityAt(s, k) : null;
     if (there && !tribute) return;
     if (pirateBlocked(s, k)) return;
-    const blockers = unitsAt(s, k).filter((u) => u.owner !== p);
+    // A Pirate Ship that shares its space with one of p's units counts as p's own (Pirate Allies).
+    const blockers = unitsAt(s, k).filter((u) => u.owner !== p && !(u.owner === PIRATE && pirateMaster(s, k) === p));
     let opts = [];
     if (!blockers.length) opts = resourcesFrom(s, p, city, h.terrain);
     else if (tribute && there.owner === BARBARIAN && blockers.every((u) => u.owner === BARBARIAN && isArmy(u)) && canTakeCaptive(s, p)) opts = ['captive'];

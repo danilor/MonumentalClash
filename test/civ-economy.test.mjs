@@ -321,7 +321,6 @@ test('Aztec Gold can be used once per turn and needs Ore from a Mountain', () =>
   const g = table('aztecs', 'aztec_gold');
   stock(g, 0, {});
   const { city, spaces: [a, b] } = mountainous(g);
-  const [plain] = ring(g, city.hex, 1).filter((k) => k !== a && k !== b);
   act(g, gather(city, [pick(a, 'ore')], { aztecGold: 'gold' }));
   assert.deepEqual(holds(g), { gold: 1 });
   assert.match(refused(g, gather(city, [pick(b, 'ore')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/, 'the second time in a turn');
@@ -330,12 +329,10 @@ test('Aztec Gold can be used once per turn and needs Ore from a Mountain', () =>
 
   const other = table('aztecs', 'aztec_gold');
   stock(other, 0, {});
-  const home = capitalOf(other);
-  const [field] = ring(other, home.hex, 1);
-  assert.match(refused(other, gather(home, [pick(field, 'food')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/, 'no Ore collected');
-  const { spaces: [hill] } = mountainous(other, 1);
+  const { city: home, spaces: [hill] } = mountainous(other, 1);
+  const [field] = ring(other, home.hex, 1).filter((k) => k !== hill);
+  assert.match(refused(other, gather(home, [pick(field, 'food')], { aztecGold: 'gold' })), /Aztec Gold needs 1 Ore/, 'no Ore from a Mountain');
   assert.match(refused(other, gather(home, [pick(hill, 'ore')], { aztecGold: 'wood' })), /Aztec Gold needs 1 Ore/, 'only Gold or Culture');
-  assert.ok(plain, 'the scenario has a Plains space');
 });
 
 test('Aztec Gold belongs to the Aztecs', () => {
@@ -420,4 +417,689 @@ test('Tribute Empire takes no more Captives than the 4 an Aztec can keep', () =>
   assert.deepEqual(checkInvariants(g), []);
 });
 
-// @@END@@
+// ------------------------------------------------------------------ Ballcourts (Maya)
+test('Maya: Ballcourts let a city Collect 1 more Resource for 1 Mood token', () => {
+  const g = table('maya', 'ballcourts');
+  stock(g, 0, { mood: 1 });
+  const city = capitalOf(g);
+  const [forest, hill] = ring(g, city.hex, 1);
+  setTerrain(g, forest, 'forest');
+  setTerrain(g, hill, 'mountain');
+  const three = [pick(city.hex, 'food'), pick(forest, 'wood'), pick(hill, 'ore')];
+  assert.match(refused(g, gather(city, three)), /at most 2 Resources/, 'a Happy city of size 1 collects 2');
+  act(g, gather(city, three, { ballcourts: true }));
+  assert.deepEqual(holds(g), { food: 1, wood: 1, ore: 1 }, 'the Mood token is spent');
+});
+
+test('Ballcourts need a Mood token, a city that is not Angry and the Maya', () => {
+  const g = table('maya', 'ballcourts');
+  const city = capitalOf(g);
+  const [forest, hill] = ring(g, city.hex, 1);
+  setTerrain(g, forest, 'forest');
+  setTerrain(g, hill, 'mountain');
+  const three = [pick(city.hex, 'food'), pick(forest, 'wood'), pick(hill, 'ore')];
+  stock(g, 0, {});
+  assert.match(refused(g, gather(city, three, { ballcourts: true })), /need 1 Mood token/);
+  stock(g, 0, { mood: 1 });
+  capitalOf(g).mood = 'angry';
+  assert.match(refused(g, gather(city, three, { ballcourts: true })), /cannot help an Angry city/);
+
+  const rome = table('rome');
+  stock(rome, 0, { mood: 1 });
+  const home = capitalOf(rome);
+  assert.match(refused(rome, gather(home, [pick(home.hex, 'food')], { ballcourts: true })), /need Ballcourts/);
+});
+
+test('Maya: Ballcourts let a city Recruit 1 more unit for 1 Mood token', () => {
+  const g = table('maya', 'ballcourts');
+  give(g, 0, { advances: ['tactics', 'storage'] });
+  stock(g, 0, { food: 3, ore: 3, mood: 1 });
+  const recruit = (extra = {}) => ({ type: 'recruit', city: capitalOf(g).id, units: { infantry: 3 }, ...extra });
+  assert.match(refused(g, recruit()), /at most 2 units/, 'a Happy city of size 1 recruits 2');
+  act(g, recruit({ ballcourts: true }));
+  assert.deepEqual(holds(g), {}, 'the Mood token and the price of 3 Infantry are spent');
+  assert.equal(g.s.units.filter((u) => u.owner === 0 && u.type === 'infantry').length, 3);
+  assert.deepEqual(checkInvariants(g), []);
+});
+
+test('Recruiting with Ballcourts needs a Mood token, a city that is not Angry and the Maya', () => {
+  const g = table('maya', 'ballcourts');
+  give(g, 0, { advances: ['tactics', 'storage'] });
+  const city = capitalOf(g);
+  const recruit = { type: 'recruit', city: city.id, units: { infantry: 3 }, ballcourts: true };
+  stock(g, 0, { food: 3, ore: 3 });
+  assert.match(refused(g, recruit), /cannot afford/);
+  stock(g, 0, { food: 3, ore: 3, mood: 1 });
+  capitalOf(g).mood = 'angry';
+  assert.match(refused(g, recruit), /Ballcourts cannot make this city larger/);
+
+  const rome = table('rome');
+  give(rome, 0, { advances: ['tactics', 'storage'] });
+  stock(rome, 0, { food: 3, ore: 3, mood: 1 });
+  assert.match(refused(rome, { ...recruit, city: capitalOf(rome).id }), /Ballcourts cannot make this city larger/);
+});
+
+test('Maya: Ballcourts make one Spirituality Advance a turn cost 1 Food less', () => {
+  const g = table('maya', 'ballcourts');
+  stock(g, 0, { food: 3 });
+  act(g, { type: 'advance', advance: 'myths' });
+  assert.equal(me(g).res.food, 2, 'the first Spirituality Advance costs 1 Food');
+  act(g, { type: 'advance', advance: 'rituals' });
+  assert.equal(me(g).res.food, 0, 'the second costs 2 Food');
+  assert.equal(g.s.turn.actionsLeft, 1);
+});
+
+test('The Ballcourts discount is for Spirituality Advances, and for the Maya', () => {
+  const g = table('maya', 'ballcourts');
+  stock(g, 0, { food: 2 });
+  act(g, { type: 'advance', advance: 'storage' });
+  assert.equal(me(g).res.food, 0, 'a Farming Advance costs 2 Food');
+  assert.match(refused(g, { type: 'advance', advance: 'myths' }), /costs 2 Food/);
+
+  const rome = table('rome');
+  stock(rome, 0, { food: 2 });
+  act(rome, { type: 'advance', advance: 'myths' });
+  assert.equal(me(rome).res.food, 0, 'Rome pays 2 Food');
+});
+
+test('The Ballcourts discount comes back each turn', () => {
+  const g = table('maya', 'ballcourts');
+  stock(g, 0, { food: 2 });
+  act(g, { type: 'advance', advance: 'myths' });
+  assert.equal(me(g).res.food, 1);
+  act(g, { type: 'end_turn' });
+  act(g, { type: 'end_turn' });
+  assert.equal(g.cur, 0, 'it is Maya\'s turn again');
+  stock(g, 0, { food: 1 });
+  act(g, { type: 'advance', advance: 'rituals' });
+  assert.equal(me(g).res.food, 0, 'the first Spirituality Advance of the new turn costs 1 Food');
+});
+
+// ------------------------------------------------------------------ Architecture (Egypt), Slave Economy (Rome)
+/** A second city for player p, away from the capital: a city grows no larger than the number of cities. */
+const second = (g, p = 0) => town(g, p, ring(g, capitalOf(g, p).hex, 2)[0]);
+const build = (g, building, city = capitalOf(g)) => ({ type: 'construct', city: city.id, building });
+const wonder = (g, id = 'great_wall') => ({ type: 'construct_wonder', city: capitalOf(g).id, wonder: id });
+/** The Great Wall costs 3 Food, 2 Wood, 7 Ore and 5 Culture. */
+const wallReady = (g) => give(g, 0, { advances: ['engineering', 'siegecraft'], wonders: ['great_wall'] });
+
+test('Egypt: Architecture lets Mood tokens pay for the resources of a building', () => {
+  const g = table('egypt', 'architecture');
+  second(g);
+  give(g, 0, { advances: ['bartering'] });
+  stock(g, 0, { food: 1, mood: 2 });
+  act(g, build(g, 'market'));
+  assert.equal(capitalOf(g).buildings.market, 0);
+  assert.deepEqual(holds(g), {}, '1 Food and 2 Mood tokens paid for the Food, Wood and Ore');
+  assert.deepEqual(checkInvariants(g), []);
+
+  const short = table('egypt', 'architecture');
+  second(short);
+  give(short, 0, { advances: ['bartering'] });
+  stock(short, 0, { food: 1, mood: 1 });
+  assert.match(refused(short, build(short, 'market')), /A building costs 1 Food, 1 Wood and 1 Ore/);
+});
+
+test('Egypt: Architecture lets Mood tokens pay for the resources and the Culture of a Wonder', () => {
+  const g = table('egypt', 'architecture');
+  second(g);
+  wallReady(g);
+  stock(g, 0, { food: 3, wood: 2, ore: 4, culture: 2, mood: 7 });
+  act(g, wonder(g));
+  assert.deepEqual(capitalOf(g).wonders, [{ id: 'great_wall', builder: 0 }]);
+  assert.deepEqual(holds(g), { mood: 1 }, '3 Mood tokens for the missing Ore and 3 for the missing Culture');
+
+  const short = table('egypt', 'architecture');
+  second(short);
+  wallReady(short);
+  stock(short, 0, { food: 3, wood: 2, ore: 4, culture: 2, mood: 5 });
+  assert.match(refused(short, wonder(short)), /cannot afford that Wonder/);
+});
+
+test('Without Architecture, Mood tokens pay for no resource of a building or a Wonder', () => {
+  const g = table('rome');
+  second(g);
+  give(g, 0, { advances: ['bartering'] });
+  stock(g, 0, { food: 1, mood: 6 });
+  assert.match(refused(g, build(g, 'market')), /A building costs/);
+
+  const wall = table('rome');
+  second(wall);
+  wallReady(wall);
+  stock(wall, 0, { food: 3, wood: 2, ore: 4, culture: 5, mood: 6 });
+  assert.match(refused(wall, wonder(wall)), /cannot afford that Wonder/);
+});
+
+test('Rome: Slave Economy lets Mood tokens pay for any resource when a city grows', () => {
+  const g = table('rome', 'slave_economy');
+  second(g);
+  stock(g, 0, { food: 1, mood: 2 });
+  act(g, build(g, 'market'));
+  assert.equal(capitalOf(g).buildings.market, 0);
+  assert.deepEqual(holds(g), {});
+
+  const wall = table('rome', 'slave_economy');
+  second(wall);
+  wallReady(wall);
+  stock(wall, 0, { food: 3, wood: 2, ore: 4, culture: 5, mood: 3 });
+  act(wall, wonder(wall));
+  assert.deepEqual(holds(wall), {}, '3 Mood tokens paid for the missing Ore');
+
+  const short = table('rome', 'slave_economy');
+  second(short);
+  give(short, 0, { advances: ['engineering'] });
+  stock(short, 0, { food: 1, mood: 1 });
+  assert.match(refused(short, build(short, 'market')), /A building costs/);
+});
+
+test('Slave Economy pays resources with Mood, not Culture', () => {
+  const g = table('rome', 'slave_economy');
+  second(g);
+  wallReady(g);
+  stock(g, 0, { food: 3, wood: 2, ore: 7, culture: 4, mood: 7 });
+  assert.match(refused(g, wonder(g)), /cannot afford that Wonder/, 'Culture is not a resource');
+  stock(g, 0, { food: 3, wood: 2, ore: 7, culture: 5, mood: 7 });
+  act(g, wonder(g));
+  assert.deepEqual(holds(g), { mood: 7 });
+});
+
+// ------------------------------------------------------------------ Ziggurats (Babylonia)
+test('Babylonia: Ziggurats come with Dogma and cancel its limit of 2 Ideas', () => {
+  const dogma = (people) => {
+    const g = world([people, 'china']);
+    give(g, 0, { advances: ['myths', 'state_religion'] });
+    stock(g, 0, { food: 2, ideas: 5 });
+    act(g, { type: 'advance', advance: 'dogma', pay: { food: 2 } });
+    return g;
+  };
+  const babylon = dogma('babylonia');
+  assert.ok(me(babylon).civAdv.includes('ziggurats'));
+  assert.equal(me(babylon).res.ideas, 5, 'no limit on Ideas');
+  assert.deepEqual(checkInvariants(babylon), []);
+
+  const rome = dogma('rome');
+  assert.equal(me(rome).res.ideas, 2, 'Dogma limits the Ideas of the others to 2');
+});
+
+test('Ziggurats let Ideas pay for the resources of a Temple, and for nothing else', () => {
+  const g = table('babylonia', 'ziggurats');
+  me(g).government = 'theocracy';
+  give(g, 0, { advances: ['myths', 'writing', 'engineering', 'siegecraft'], wonders: ['great_wall'] });
+  const other = second(g);
+  asking(g, { dogma: false });
+  stock(g, 0, { ideas: 7 });
+  assert.match(refused(g, build(g, 'academy', other)), /A building costs/, 'not for an Academy');
+  assert.match(refused(g, wonder(g)), /cannot afford that Wonder/, 'not for a Wonder');
+  act(g, build(g, 'temple'));
+  assert.equal(capitalOf(g).buildings.temple, 0);
+  assert.deepEqual(holds(g), { ideas: 4, mood: 1 }, '3 Ideas paid for the Food, Wood and Ore; the Temple gave 1 Mood');
+});
+
+test('Ideas pay for a Temple only with Ziggurats', () => {
+  const g = table('rome');
+  give(g, 0, { advances: ['myths'] });
+  second(g);
+  stock(g, 0, { ideas: 3 });
+  assert.match(refused(g, build(g, 'temple')), /A building costs/);
+});
+
+// ------------------------------------------------------------------ Formal Training (Greece)
+const academy = (g, p = 0) => {
+  capitalOf(g, p).buildings.academy = p;
+};
+const settle = (g) => ({ type: 'recruit', city: capitalOf(g).id, units: { settler: 1 } });
+
+test('Greece: Formal Training gives 1 Idea when a Recruit is made in a city with an Academy', () => {
+  const g = table('greece', 'formal_training');
+  academy(g);
+  stock(g, 0, { food: 2 });
+  act(g, settle(g));
+  assert.deepEqual(holds(g), { ideas: 1 });
+});
+
+test('Formal Training gives 1 Idea for a Recruit however many units it makes, Ships included', () => {
+  const g = table('greece', 'formal_training');
+  academy(g);
+  give(g, 0, { advances: ['tactics'] });
+  stock(g, 0, { food: 2, ore: 2 });
+  act(g, { type: 'recruit', city: capitalOf(g).id, units: { infantry: 2 } });
+  assert.deepEqual(holds(g), { ideas: 1 });
+
+  const port = table('greece', 'formal_training');
+  academy(port);
+  harbour(port, capitalOf(port));
+  stock(port, 0, { wood: 2 });
+  act(port, { type: 'recruit', city: capitalOf(port).id, units: { ship: 1 } });
+  assert.equal(port.s.units.filter((u) => u.owner === 0 && u.type === 'ship').length, 1);
+  assert.deepEqual(holds(port), { ideas: 1 });
+});
+
+test('Formal Training needs an Academy in the city that Recruits, and belongs to Greece', () => {
+  const bare = table('greece', 'formal_training');
+  stock(bare, 0, { food: 2 });
+  act(bare, settle(bare));
+  assert.deepEqual(holds(bare), {}, 'no Academy');
+
+  const rome = table('rome');
+  academy(rome);
+  stock(rome, 0, { food: 2 });
+  act(rome, settle(rome));
+  assert.deepEqual(holds(rome), {}, 'not Greek');
+});
+
+test('Formal Training is only for Recruiting: Collecting and building the Academy give what they always give', () => {
+  const g = table('greece', 'formal_training');
+  academy(g);
+  stock(g, 0, {});
+  act(g, gather(capitalOf(g), [pick(capitalOf(g).hex, 'food')]));
+  assert.deepEqual(holds(g), { food: 1, ideas: 1 }, 'Public Education gives the Idea of a Collect');
+
+  const school = table('greece', 'formal_training');
+  second(school);
+  give(school, 0, { advances: ['writing'] });
+  stock(school, 0, { food: 1, wood: 1, ore: 1 });
+  act(school, build(school, 'academy'));
+  assert.deepEqual(holds(school), { ideas: 2 }, 'the Academy gives 2 Ideas');
+});
+
+// ------------------------------------------------------------------ Stelas (Maya)
+test('Maya: Stelas give 1 Culture or 1 Idea when a Settler founds a city', () => {
+  for (const [answers, want] of [[{}, { culture: 1 }], [{ stelas: 'culture' }, { culture: 1 }], [{ stelas: 'ideas' }, { ideas: 1 }]]) {
+    const g = table('maya', 'stelas');
+    stock(g, 0, {});
+    const [hex] = ring(g, capitalOf(g).hex, 1);
+    const settler = troops(g, 0, 'settler', hex)[0];
+    const asked = asking(g, answers);
+    act(g, { type: 'found_city', unit: settler.id });
+    assert.deepEqual(holds(g), want, JSON.stringify(answers));
+    assert.deepEqual(asked.filter((q) => q.kind === 'stelas').map(optionIds), [['culture', 'ideas']]);
+  }
+  const rome = table('rome');
+  stock(rome, 0, {});
+  const [hex] = ring(rome, capitalOf(rome).hex, 1);
+  const settler = troops(rome, 0, 'settler', hex)[0];
+  const asked = asking(rome);
+  act(rome, { type: 'found_city', unit: settler.id });
+  assert.deepEqual(holds(rome), {});
+  assert.equal(asked.filter((q) => q.kind === 'stelas').length, 0);
+});
+
+test('Maya: Stelas give 1 Culture or 1 Idea when a city grows with an Obelisk, and not with another building', () => {
+  for (const [answers, want] of [[{}, { culture: 1 }], [{ stelas: 'ideas' }, { ideas: 1 }]]) {
+    const g = table('maya', 'stelas');
+    second(g);
+    stock(g, 0, { food: 1, wood: 1, ore: 1 });
+    asking(g, answers);
+    act(g, build(g, 'obelisk'));
+    assert.equal(capitalOf(g).buildings.obelisk, 0);
+    assert.deepEqual(holds(g), want, JSON.stringify(answers));
+  }
+  const market = table('maya', 'stelas');
+  second(market);
+  give(market, 0, { advances: ['bartering'] });
+  stock(market, 0, { food: 1, wood: 1, ore: 1 });
+  const asked = asking(market);
+  act(market, build(market, 'market'));
+  assert.deepEqual(holds(market), {});
+  assert.equal(asked.filter((q) => q.kind === 'stelas').length, 0);
+
+  const rome = table('rome');
+  second(rome);
+  give(rome, 0, { advances: ['arts'] });
+  stock(rome, 0, { food: 1, wood: 1, ore: 1 });
+  act(rome, build(rome, 'obelisk'));
+  assert.deepEqual(holds(rome), {});
+});
+
+test('Maya: Stelas give 1 Culture or 1 Idea when they capture a city, a Barbarian one too', () => {
+  const capture = (people, powers, owner, answers = {}) => {
+    const g = table(people, ...powers);
+    stock(g, 0, {});
+    const city = owner === BARBARIAN ? addCityAt(g, BARBARIAN, ring(g, capitalOf(g).hex, 2)[0]) : town(g, owner, ring(g, capitalOf(g).hex, 2)[0]);
+    asking(g, answers);
+    run(g, captureCity(g, city, 0));
+    assert.equal(g.s.cities.find((c) => c.id === city.id).owner, 0, 'the city is theirs');
+    return g;
+  };
+  assert.deepEqual(holds(capture('maya', ['stelas'], 1)), { gold: 1, culture: 1 });
+  assert.deepEqual(holds(capture('maya', ['stelas'], 1, { stelas: 'ideas' })), { gold: 1, ideas: 1 });
+  assert.deepEqual(holds(capture('maya', ['stelas'], BARBARIAN, { stelas: 'ideas' })), { gold: 1, ideas: 1 });
+  assert.deepEqual(holds(capture('rome', [], 1)), { gold: 1 }, 'the loot is all that Rome gets');
+});
+
+// ------------------------------------------------------------------ Star Catalogs (Babylonia)
+/** Player 0 buys the Advance that fills the Event tracker while a Good Year is on top of the Event cards. */
+const fullTracker = (people, powers, answers = {}, cubes = 1) => {
+  const g = table(people, ...powers);
+  stack(g, 'good_year');
+  me(g).cubes = cubes;
+  stock(g, 0, { food: 2 });
+  const asked = asking(g, answers);
+  act(g, { type: 'advance', advance: 'storage' });
+  return { g, asked: asked.map((q) => q.kind).filter((kind) => kind === 'star_catalogs' || kind === 'event') };
+};
+
+test('Babylonia: Star Catalogs give 1 Idea or 1 Culture before an Event is drawn', () => {
+  const rome = fullTracker('rome', []);
+  assert.deepEqual(rome.asked, ['event']);
+  assert.equal(me(rome.g).res.gold, 2, 'the Good Year');
+
+  const ideas = fullTracker('babylonia', ['star_catalogs']);
+  assert.deepEqual(ideas.asked, ['star_catalogs', 'event'], 'asked first, then the Event');
+  assert.equal(me(ideas.g).res.ideas, me(rome.g).res.ideas + 1);
+  assert.equal(me(ideas.g).culture, me(rome.g).culture);
+  assert.equal(me(ideas.g).res.gold, 2);
+
+  const culture = fullTracker('babylonia', ['star_catalogs'], { star_catalogs: 'culture' });
+  assert.equal(me(culture.g).culture, me(rome.g).culture + 1);
+  assert.equal(me(culture.g).res.ideas, me(rome.g).res.ideas);
+});
+
+test('Star Catalogs only count when the Advance triggers an Event', () => {
+  const g = fullTracker('babylonia', ['star_catalogs'], {}, 2);
+  assert.deepEqual(g.asked, []);
+  assert.equal(me(g.g).res.ideas, 0);
+  assert.equal(me(g.g).res.gold, 0, 'no Event');
+});
+
+// ------------------------------------------------------------------ Aqueducts (Rome)
+/** The Famine card is drawn for player 0. */
+const famine = (g) => {
+  stack(g, 'famine');
+  const asked = asking(g);
+  run(g, resolveEvent(g, 0));
+  return asked;
+};
+/** The action that buys Sanitation. */
+const sanitation = (extra = {}) => ({ type: 'advance', advance: 'sanitation', ...extra });
+
+test('Rome: Aqueducts ignore the Famine event, so no Food is lost and no city loses Mood', () => {
+  const g = table('rome', 'aqueducts');
+  stock(g, 0, { food: 1 });
+  famine(g);
+  assert.deepEqual(holds(g), { food: 1 });
+  assert.equal(capitalOf(g).mood, 'happy');
+  assert.ok(logged(g, /Aqueducts protect against the Famine/));
+  assert.deepEqual(checkInvariants(g), []);
+
+  const bare = table('rome');
+  give(bare, 0, { advances: ['engineering'] });
+  stock(bare, 0, { food: 1 });
+  famine(bare);
+  assert.deepEqual(holds(bare), {}, 'without the power Engineering does not help: the Food is gone');
+  assert.equal(capitalOf(bare).mood, 'neutral', 'and the Food it lacked costs a city 1 Mood');
+});
+
+test('Aqueducts ignore the Severe Famine too, which the other players still suffer', () => {
+  const g = table('rome', 'aqueducts');
+  const realms = [0, 1].map((p) => [capitalOf(g, p), second(g, p)]);
+  stock(g, 0, {});
+  stock(g, 1, {});
+  const asked = asking(g);
+  run(g, WORLD_EFFECTS.severe_famine(g, 0));
+  assert.deepEqual(realms[0].map((c) => c.mood), ['happy', 'neutral'], 'Rome feeds nobody and loses nothing');
+  assert.deepEqual(realms[1].map((c) => c.mood), ['angry', 'angry'], 'China has no Food for its cities');
+  assert.equal(asked.filter((q) => q.player === 0).length, 0);
+  assert.ok(logged(g, /The Aqueducts protect .* against the Severe Famine/));
+  assert.deepEqual(checkInvariants(g), []);
+
+  const bare = table('rome');
+  const cities = [capitalOf(bare), second(bare)];
+  stock(bare, 0, {});
+  asking(bare);
+  run(bare, WORLD_EFFECTS.severe_famine(bare, 0));
+  assert.deepEqual(cities.map((c) => c.mood), ['angry', 'angry'], 'without the power Rome is hit like the others');
+});
+
+test('Rome: Aqueducts buy Sanitation for no Food, which still takes an action', () => {
+  const g = table('rome', 'aqueducts');
+  stock(g, 0, { food: 2 });
+  act(g, sanitation());
+  assert.ok(me(g).advances.includes('sanitation'));
+  assert.equal(me(g).res.food, 2, 'nothing is paid');
+  assert.equal(g.s.turn.actionsLeft, 2);
+
+  const bare = table('rome');
+  stock(bare, 0, { food: 2 });
+  act(bare, sanitation());
+  assert.equal(me(bare).res.food, 0, 'without Aqueducts it costs 2 Food');
+  assert.equal(bare.s.turn.actionsLeft, 2);
+});
+
+test('Rome: Aqueducts buy Sanitation without an action, for the full 2 Food', () => {
+  const g = table('rome', 'aqueducts');
+  stock(g, 0, { food: 2 });
+  act(g, sanitation({ noAction: true }));
+  assert.ok(me(g).advances.includes('sanitation'));
+  assert.equal(me(g).res.food, 0, 'it is not the cheap way: Aqueducts give either no Food or no action');
+  assert.equal(g.s.turn.actionsLeft, 3, 'no action is spent');
+
+  const spent = table('rome', 'aqueducts');
+  stock(spent, 0, { food: 2 });
+  spent.s.turn.actionsLeft = 0;
+  assert.match(refused(spent, sanitation()), /no actions left/, 'the version that costs an action needs one');
+  act(spent, sanitation({ noAction: true }));
+  assert.ok(me(spent).advances.includes('sanitation'));
+  assert.equal(spent.s.turn.actionsLeft, 0);
+});
+
+test('Sanitation without an action is only for Aqueducts, only for Sanitation, and still has to be paid', () => {
+  const g = table('rome', 'aqueducts');
+  stock(g, 0, { food: 2 });
+  assert.match(refused(g, { type: 'advance', advance: 'storage', noAction: true }), /Only Aqueducts lets you buy Sanitation without an action/);
+  stock(g, 0, {});
+  assert.match(refused(g, sanitation({ noAction: true })), /costs 2 Food/, 'the Food is not waived');
+
+  for (const people of ['rome', 'china']) {
+    const bare = table(people);
+    stock(bare, 0, { food: 2 });
+    assert.match(refused(bare, sanitation({ noAction: true })), /Only Aqueducts lets you buy Sanitation without an action/, people);
+  }
+});
+
+// ------------------------------------------------------------------ Peace and Poetry (India)
+const peace = (advance) => ({ type: 'advance', advance, peace: true });
+
+test('India: Peace and Poetry pay 1 Mood token instead of the 2 Food of an Advance', () => {
+  const g = table('india', 'peace_and_poetry');
+  stock(g, 0, { food: 2, mood: 2 });
+  act(g, peace('roads'));
+  assert.ok(me(g).advances.includes('roads'));
+  assert.deepEqual(holds(g), { food: 2, mood: 1, culture: 1 }, 'the Food is kept; Roads give their Culture token');
+  assert.equal(g.s.turn.actionsLeft, 2, 'it is still an action');
+
+  const none = table('india', 'peace_and_poetry');
+  stock(none, 0, { mood: 1 });
+  act(none, peace('roads'));
+  assert.ok(me(none).advances.includes('roads'), 'no Food is needed at all');
+  assert.deepEqual(holds(none), { culture: 1 });
+});
+
+test('Peace and Poetry can be used once per turn, and again the next turn', () => {
+  const g = table('india', 'peace_and_poetry');
+  stock(g, 0, { food: 2, mood: 2 });
+  act(g, peace('roads'));
+  assert.match(refused(g, peace('tactics')), /once per turn/, 'a Mood token is left, but the power is used');
+  act(g, { type: 'advance', advance: 'tactics' });
+  assert.deepEqual(holds(g), { mood: 1, culture: 2 }, 'a plain Advance still costs its 2 Food');
+
+  act(g, { type: 'end_turn' });
+  act(g, { type: 'end_turn' });
+  assert.equal(g.cur, 0, 'it is the turn of India again');
+  act(g, peace('fishing'));
+  assert.ok(me(g).advances.includes('fishing'));
+  assert.equal(me(g).mood, 1, 'a Mood token was paid, and Fishing gave one');
+});
+
+test('Peace and Poetry need the Advance, an Advance that costs Food and a Mood token', () => {
+  const rome = table('rome');
+  stock(rome, 0, { food: 2, mood: 1 });
+  assert.match(refused(rome, peace('roads')), /You need Peace and Poetry/);
+
+  const early = world(['india', 'rome']);
+  stock(early, 0, { food: 2, mood: 1 });
+  assert.match(refused(early, peace('roads')), /You need Peace and Poetry/, 'India has not earned it yet');
+
+  const g = table('india', 'peace_and_poetry');
+  give(g, 0, { advances: ['math'] });
+  stock(g, 0, { food: 2, mood: 1 });
+  assert.match(refused(g, peace('roads')), /costs no Food to replace/, 'Math makes Roads free');
+  stock(g, 0, { food: 2 });
+  assert.match(refused(g, peace('tactics')), /costs 2 Food/, 'the Mood token has to be there');
+  assert.equal(me(g).res.food, 2);
+});
+
+// ------------------------------------------------------------------ Banking (Persia)
+/** Player 1 starts a turn holding `gold`; every player answers with `answers`. */
+const bankTurn = (people, powers, gold, answers = {}) => {
+  const g = world(['rome', people]);
+  power(g, 1, ...powers);
+  stock(g, 1, { gold });
+  const asked = asking(g, answers);
+  act(g, { type: 'end_turn' });
+  assert.equal(g.cur, 1);
+  return { g, asked: asked.filter((q) => q.kind === 'banking') };
+};
+
+test('Persia: Banking gives 1 Gold or 1 Culture at the start of the turn to a player who already has Gold', () => {
+  for (const [answers, want] of [[{}, { gold: 1, culture: 1 }], [{ banking: 'culture' }, { gold: 1, culture: 1 }], [{ banking: 'gold' }, { gold: 2 }]]) {
+    const { g, asked } = bankTurn('persia', ['banking'], 1, answers);
+    assert.deepEqual(holds(g, 1), want, JSON.stringify(answers));
+    assert.deepEqual(asked.map(optionIds), [['culture', 'gold']]);
+  }
+});
+
+test('Banking needs Gold in hand, and belongs to Persia', () => {
+  const poor = bankTurn('persia', ['banking'], 0);
+  assert.deepEqual(poor.asked, []);
+  assert.deepEqual(holds(poor.g, 1), {}, 'no Gold, no Banking');
+
+  const other = bankTurn('china', [], 1);
+  assert.deepEqual(other.asked, []);
+  assert.deepEqual(holds(other.g, 1), { gold: 1 }, 'China has no Banking');
+});
+
+test('Banking comes before the trade routes: the Gold they pay counts from the next turn', () => {
+  const g = world(['rome', 'persia']);
+  power(g, 1, 'banking');
+  give(g, 1, { advances: ['trade_routes'] });
+  troops(g, 1, 'settler', ring(g, capitalOf(g, 0).hex, 2)[0]);
+  stock(g, 1, {});
+  const asked = asking(g, { trade_income: 'gold', banking: 'gold' });
+  const trade = () => asked.map((q) => q.kind).filter((kind) => kind === 'banking' || kind === 'trade_income');
+  act(g, { type: 'end_turn' });
+  assert.deepEqual(trade(), ['trade_income'], 'no Gold in hand yet when the turn starts, so no Banking');
+  assert.deepEqual(holds(g, 1), { gold: 1 }, 'the route paid 1 Gold');
+
+  act(g, { type: 'end_turn' });
+  act(g, { type: 'end_turn' });
+  assert.equal(g.cur, 1);
+  assert.deepEqual(trade(), ['trade_income', 'banking', 'trade_income'], 'now Banking is offered first, then the route pays');
+  assert.deepEqual(holds(g, 1), { gold: 3 }, '1 Gold held, 1 from Banking and 1 from the route');
+});
+
+// ------------------------------------------------------------------ enumerateActions: the candidates of the AI and of random play
+/** The candidate actions of player p in a category, whose action satisfies `match`. */
+const candidates = (g, cat, match = () => true, p = 0) => enumerateActions(g, p).filter((c) => c.cat === cat && match(c.action));
+const headcount = (action) => Object.values(action.units).reduce((n, k) => n + k, 0);
+
+test('enumerateActions offers the Aztec Gold variants of a Collect that takes Ore from a Mountain, until they are used', () => {
+  const g = table('aztecs', 'aztec_gold');
+  stock(g, 0, {});
+  const { city, spaces: [hill] } = mountainous(g, 1);
+  const variants = () => candidates(g, 'collect', (a) => a.aztecGold);
+  const offered = variants();
+  assert.deepEqual([...new Set(offered.map((c) => c.action.aztecGold))].sort(), ['culture', 'gold']);
+  assert.ok(offered.every((c) => c.action.city === city.id && c.action.picks.some((x) => x.hex === hill && x.res === 'ore')));
+  assert.ok(candidates(g, 'collect', (a) => !a.aztecGold).length > 0, 'the plain Collects are offered as well');
+  act(g, offered.find((c) => c.action.aztecGold === 'gold').action);
+  assert.equal(me(g).res.gold, 1, 'the candidate can be played');
+  assert.equal(variants().length, 0, 'Aztec Gold is used up for the turn');
+
+  const rome = table('rome');
+  mountainous(rome, 1);
+  assert.ok(candidates(rome, 'collect').length > 0);
+  assert.equal(candidates(rome, 'collect', (a) => a.aztecGold).length, 0, 'Rome has no Aztec Gold');
+});
+
+test('enumerateActions offers the Ballcourts variants of a Collect and of a Recruit while 1 Mood token can be paid', () => {
+  const collects = (g) => candidates(g, 'collect', (a) => a.ballcourts);
+  const recruits = (g) => candidates(g, 'recruit', (a) => a.ballcourts);
+  const city = (people, powers, mood) => {
+    const g = table(people, ...powers);
+    give(g, 0, { advances: ['tactics', 'storage'] });
+    stock(g, 0, { food: 3, ore: 3, mood });
+    return g;
+  };
+
+  const g = city('maya', ['ballcourts'], 1);
+  assert.ok(collects(g).length > 0);
+  assert.ok(collects(g).every((c) => c.action.picks.length === 3), 'one more than the 2 a Happy city of size 1 gathers');
+  assert.ok(candidates(g, 'collect', (a) => !a.ballcourts).every((c) => c.action.picks.length <= 2));
+  assert.ok(recruits(g).length > 0);
+  assert.ok(recruits(g).every((c) => headcount(c.action) === 3), 'one more than the 2 such a city recruits');
+  assert.ok(candidates(g, 'recruit', (a) => !a.ballcourts).every((c) => headcount(c.action) <= 2));
+  act(g, recruits(g)[0].action);
+  assert.equal(me(g).mood, 0, 'the candidate can be played, and costs the Mood token');
+
+  const noMood = city('maya', ['ballcourts'], 0);
+  const angry = city('maya', ['ballcourts'], 1);
+  capitalOf(angry).mood = 'angry';
+  const rome = city('rome', [], 1);
+  for (const [label, t] of [['no Mood token', noMood], ['Angry city', angry], ['not the Maya', rome]]) {
+    assert.ok(candidates(t, 'collect').length > 0, label);
+    assert.equal(collects(t).length, 0, `${label}: no Collect`);
+    assert.equal(recruits(t).length, 0, `${label}: no Recruit`);
+  }
+});
+
+test('enumerateActions offers Advances paid with Mood (Peace and Poetry) and Sanitation without an action (Aqueducts)', () => {
+  const moody = (g) => candidates(g, 'advance', (a) => a.peace).map((c) => c.id);
+  const plain = (g, advance) => candidates(g, 'advance', (a) => !a.peace && !a.noAction && a.advance === advance).length;
+  const india = table('india', 'peace_and_poetry');
+  stock(india, 0, { mood: 2 });
+  assert.equal(candidates(india, 'advance', (a) => !a.peace).length, 0, 'without Food nothing is offered the ordinary way');
+  assert.ok(moody(india).includes('roads'), 'but Mood pays for an Advance');
+  stock(india, 0, { food: 2, mood: 1 });
+  assert.ok(moody(india).includes('roads') && plain(india, 'roads') === 1, 'with both Food and Mood the two ways are offered');
+  act(india, peace('roads'));
+  stock(india, 0, { food: 2, mood: 2 });
+  assert.deepEqual(moody(india), [], 'Peace and Poetry is used up for the turn');
+  assert.equal(plain(india, 'tactics'), 1, 'the ordinary way is still there');
+  const poor = table('india', 'peace_and_poetry');
+  stock(poor, 0, { food: 2 });
+  assert.deepEqual(moody(poor), [], 'a Mood token is needed');
+  const rome = table('rome');
+  stock(rome, 0, { mood: 2 });
+  assert.equal(candidates(rome, 'advance').length, 0, 'Rome cannot pay an Advance with Mood');
+
+  const aqueducts = table('rome', 'aqueducts');
+  const withoutAction = (g) => candidates(g, 'advance', (a) => a.noAction).map((c) => c.action);
+  stock(aqueducts, 0, { food: 2 });
+  assert.deepEqual(withoutAction(aqueducts), [sanitation({ noAction: true })]);
+  assert.equal(plain(aqueducts, 'sanitation'), 1, 'the way that costs no Food is offered too');
+  aqueducts.s.turn.actionsLeft = 0;
+  assert.equal(withoutAction(aqueducts).length, 1, 'with no action left it is the only way');
+  assert.equal(candidates(aqueducts, 'advance', (a) => !a.noAction).length, 0);
+  stock(aqueducts, 0, {});
+  assert.deepEqual(withoutAction(aqueducts), [], 'it has to be paid in full');
+  const bare = table('rome');
+  stock(bare, 0, { food: 2 });
+  assert.deepEqual(withoutAction(bare), []);
+});
+
+test('enumerateActions offers founding a city on Barren land to the Egyptians only', () => {
+  for (const [people, powers, offered] of [['egypt', ['flood_plains'], 1], ['rome', [], 0]]) {
+    const g = table(people, ...powers);
+    const [dust] = ring(g, capitalOf(g).hex, 1);
+    setTerrain(g, dust, 'barren');
+    const settler = troops(g, 0, 'settler', dust)[0];
+    const there = candidates(g, 'found', (a) => a.unit === settler.id);
+    assert.equal(there.length, offered, people);
+    if (!offered) continue;
+    assert.equal(there[0].hex, dust);
+    act(g, there[0].action);
+    assert.equal(g.s.cities.find((c) => c.hex === dust).owner, 0, 'the candidate can be played');
+  }
+});
+
