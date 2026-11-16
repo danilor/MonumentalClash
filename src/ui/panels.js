@@ -1,13 +1,14 @@
 // The heads-up display: top bar, player cards, bottom bar, message log, toasts and banners.
 import { GROUPS } from '../engine/data/advances.js';
 import { CIVS } from '../engine/data/civs.js';
+import { LEADER_RECRUIT_COST } from '../engine/data/leaders.js';
 import { armyOf, citiesOf, resLimit, totalAges, unitsOf } from '../engine/queries.js';
 import { scoreOf } from '../engine/scoring.js';
 import { roman } from '../engine/game.js';
 import { C, H, PLAYER_COLORS, PLAYER_HEX, RES_ORDER, TXT, W, LAYOUT, logColor, seatLabel, turnLabel } from './theme.js';
 import { freeMoveText, placeWords, worldEffects } from './info.js';
 import { Button, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
-import { civExtras, civSummary } from './civdialog.js';
+import { CIV_SCORE, civExtras, civSummary, leaderBlurb, leaderLine } from './civdialog.js';
 
 const CARD_W = LAYOUT.left - 16;
 const CARD_H = 306;
@@ -22,7 +23,7 @@ export const LOG_Y = 478;
 function scoreTip(s, p) {
   const pt = scoreOf(s, p).parts;
   const lines = ['Victory points so far', `Settlements and buildings: ${pt.core}`, `Advances (1 per 2): ${pt.advances}`, `Objectives (2 each): ${pt.objectives}`, `Wonders: ${pt.wonders}`, `Events and bonuses: ${pt.events}`];
-  if (pt.civ !== undefined) lines.push(`Captives, tokens and Runestones: ${pt.civ}`);
+  if (pt.civ !== undefined) lines.push(`${CIV_SCORE}: ${pt.civ}`);
   return lines.join('\n');
 }
 
@@ -187,7 +188,7 @@ export class Hud {
     const cards = pl.hand;
     const body = hitBox(sc, x, y, CARD_W, h);
     body.on('pointerdown', open);
-    tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}\n${s.civs ? `${civSummary(g.s, p)}\n` : ''}Cards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)\nNext Event in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}.\nClick for the Advances, Wonders, Objectives and score.`);
+    tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}\n${s.civs ? `${civSummary(g.s, p)}\n${leaderLine(g.s, p)}\n` : ''}Cards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)\nNext Event in ${pl.cubes} Advance${pl.cubes === 1 ? '' : 's'}.\nClick for the Advances, Wonders, Objectives and score.`);
     c.add(body);
 
     const sw = sc.add.graphics();
@@ -328,9 +329,17 @@ export class Hud {
 
     const civ = s.civs ? CIVS[pl.civ] : null;
     const half = (CARD_W - 26) / 2;
+    if (civ) {
+      const leader = pl.leader;
+      c.add(txt(sc, x + CARD_W / 2, y + 247, leaderLine(s, p), { size: 12, origin: 0.5, color: leader ? TXT.gold : TXT.dim }));
+      const hit = hitBox(sc, x + 10, y + 237, CARD_W - 20, 20);
+      hit.on('pointerdown', () => this.ctl.dialogs.civilization(p, 'leaders'));
+      tip(hit, leader ? `${leaderBlurb(leader)}\nClick for all the Leaders of this civilization.` : `No Leader in play.\n${p === 0 ? `Recruit one in a city: it costs ${LEADER_RECRUIT_COST.culture} Culture and ${LEADER_RECRUIT_COST.mood} Mood on top of the units.\n` : ''}Click for the Leaders of this civilization.`);
+      c.add(hit);
+    }
     c.add(new Button(sc, x + 10, y + 258, civ ? half : CARD_W - 20, 32, 'Overview', () => this.ctl.dialogs.overview(p), { size: 14, style: 'ghost', tip: 'Advances, wonders, objectives and score breakdown' }));
     if (civ) {
-      const civTip = () => [civSummary(this.ctl.g.s, p), ...civExtras(this.ctl.g.s, p), 'Click for the four Advances of this civilization.'].join('\n');
+      const civTip = [civSummary(s, p), leaderLine(s, p), ...civExtras(s, p), 'Click for the four Advances and the Leaders of this civilization.'].join('\n');
       c.add(new Button(sc, x + 16 + half, y + 258, half, 32, civ.name, () => this.ctl.dialogs.civilization(p), { size: 14, style: 'ghost', tip: civTip }));
     }
   }
@@ -376,6 +385,7 @@ export class Hud {
     this.btnAdvance.setDisabled(!open, 'Not available right now');
     this.btnCards.setDisabled(!open);
     this.btnAbilities.setDisabled(!open);
+    this.btnAbilities.setTipText(s.civs ? 'Special abilities from your Advances, Wonders and Leader' : 'Special abilities from your Advances and Wonders');
     this.btnEnd.setDisabled(!can, ctl.busy ? 'Please wait' : 'Wait for your turn');
     this.btnCards.setBadge(s.players[0].hand.action.length);
     let hint = '';

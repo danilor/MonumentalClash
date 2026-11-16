@@ -1,21 +1,23 @@
 // Candidate actions for the AI and for random-play tests. Candidates are plausible rather than guaranteed
 // legal: callers simulate them (or apply them and accept the rejection).
-import { ARMY_TYPES, BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
+import { ARMY_TYPES, BUILDINGS, RESOURCES } from './data/constants.js';
 import { ACTION_CARDS, TOP_EFFECTS } from './data/cards.js';
 import {
   armyAt, cargoAt, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, isArmy, isPortCity, isSea, navyAt, owns, playerOwnsWonder,
-  resLimit, shipCap, terrainOf, unitsLeft,
+  resLimit, shipCap, stackLimit, terrainOf, unitsLeft,
 } from './queries.js';
 import { canPay, planPayment } from './core.js';
 import { advanceCost, availableAdvances } from './advance.js';
 import {
   canBoostInfluence, cityCapacity, collectCandidates, constructBlocked, effMood, farCollectLimit, foundBlocked, happinessRoom,
-  influenceBlocked, influenceOrigins, influenceTypes, recruitBlocked, wonderBlocked, zoroastrianTargets,
+  influenceBlocked, influenceOrigins, influenceTypes, leaderBuildPrice, recruitBlocked, wonderBlocked, wonderChoices, zoroastrianTargets,
 } from './city.js';
 import { moveOptions } from './move.js';
 import { CAPTIVE_LIMIT, canDraftShip, canMountHere, sizePay } from './civs.js';
 import { hegemonyShips, hegemonySites } from './civActions.js';
 import { canSpawnBarbarians } from './barbarians.js';
+import { leadersAvailable } from './leaders.js';
+import { leaderActionList, taxGains } from './leaderActions.js';
 import { ADVANCES, GROUPS } from './data/advances.js';
 
 const uniform = () => Object.fromEntries(RESOURCES.map((r) => [r, 1]));
@@ -106,14 +108,14 @@ function recruitVariants(g, p, city) {
   // Ballcourts: pay 1 Mood to recruit as if the city were 1 size larger.
   const ball = hasCivAdv(s, p, 'ballcourts') && effMood(s, city) !== 'angry' && canPay(s, p, { mood: 1 });
   const cap = base + (ball ? 1 : 0);
-  const room = STACK_LIMIT - armyAt(s, city.hex, p).length;
+  const room = stackLimit(s, p, city.hex) - armyAt(s, city.hex, p).length;
   const port = isPortCity(city);
   const market = hasBuilding(city, 'market');
   const draft = hasAdv(s, p, 'draft');
   const pays = [null, ...(hasCivAdv(s, p, 'mercenaries') ? ['gold'] : []), ...(hasCivAdv(s, p, 'spartans') ? ['culture'] : [])];
   const seen = new Set();
   const push = (units, extra = {}) => {
-    const total = Object.values(units).reduce((n, x) => n + x, 0) + (extra.draftCard ? 1 : 0);
+    const total = Object.values(units).reduce((n, x) => n + x, 0) + (extra.draftCard ? 1 : 0) + (extra.leader ? 1 : 0);
     const a = { type: 'recruit', city: city.id, units, ...extra, ...(total > base ? { ballcourts: true } : {}) };
     const k = JSON.stringify(a);
     if (seen.has(k)) return;
@@ -148,6 +150,12 @@ function recruitVariants(g, p, city) {
         }
       }
     }
+  }
+  // A Leader (Civilizations): any of the people's Leaders that is not in play, alone or with an Infantry or a Cavalry.
+  for (const leader of leadersAvailable(s, p)) {
+    push({}, { leader });
+    push({ infantry: 1 }, { leader });
+    if (cavalryOk) push({ cavalry: 1 }, { leader });
   }
   return out;
 }
@@ -220,7 +228,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
       for (const b of BUILDINGS) {
         if (constructBlocked(s, p, c, b)) continue;
         const freeFood = b === 'temple' && hasAdv(s, p, 'state_religion') && !t.used.stateReligion;
-        if (!planPayment(s, p, { food: freeFood ? 0 : 1, wood: 1, ore: 1 }, sizePay(s, p, b))) continue;
+        if (!planPayment(s, p, leaderBuildPrice(s, p, c, b, { food: freeFood ? 0 : 1, wood: 1, ore: 1 }), sizePay(s, p, b, c))) continue;
         if (b === 'temple') {
           add('construct', { type: 'construct', city: c.id, building: b, templeBonus: 'mood' }, { city: c.id, building: b });
           add('construct', { type: 'construct', city: c.id, building: b, templeBonus: 'culture' }, { city: c.id, building: b });
@@ -228,7 +236,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
           add('construct', { type: 'construct', city: c.id, building: b }, { city: c.id, building: b });
         }
       }
-      for (const w of pl.hand.wonder) {
+      for (const w of wonderChoices(s, p, c)) {
         if (!wonderBlocked(s, p, c, w)) add('wonder', { type: 'construct_wonder', city: c.id, wonder: w }, { city: c.id, wonder: w });
       }
       for (const a of recruitVariants(g, p, c)) add('recruit', a, { city: c.id });
@@ -342,22 +350,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
 
   // Free abilities
   if (hasAdv(s, p, 'taxation') && !t.used.taxation && left > 0 && canPay(s, p, { mood: 1 })) {
-    const n = mine.length;
-    const kinds = hasAdv(s, p, 'currency') ? ['food', 'wood', 'ore', 'gold'] : ['food', 'wood', 'ore'];
-    const seen = new Set();
-    for (const a of kinds) {
-      for (const b of kinds) {
-        for (let k = 0; k <= n; k++) {
-          const gain = {};
-          gain[a] = (gain[a] || 0) + k;
-          gain[b] = (gain[b] || 0) + (n - k);
-          const key = JSON.stringify(Object.entries(gain).filter(([, v]) => v).sort());
-          if (seen.has(key)) continue;
-          seen.add(key);
-          add('tax', { type: 'taxation', gain }, {});
-        }
-      }
-    }
+    for (const gain of taxGains(s, p)) add('tax', { type: 'taxation', gain }, {});
   }
   if (left > 0 && hasAdv(s, p, 'civil_liberties')) add('civil', { type: 'civil_liberties' });
   if (hasAdv(s, p, 'bartering') && !t.used.bartering) {
@@ -390,7 +383,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
       const army = cargoAt(s, ship.hex).filter((u) => u.owner === p && isArmy(u));
       const others = navyAt(s, ship.hex, p).filter((x) => x.id !== ship.id).length * shipCap(s, p);
       for (const to of hegemonySites(s, p, ship)) {
-        const over = Math.max(0, armyAt(s, to, p).length + army.length - STACK_LIMIT);
+        const over = Math.max(0, armyAt(s, to, p).length + army.length - stackLimit(s, p, to, army));
         const stay = army.slice(army.length - over).map((u) => u.id);
         if (stay.length > others) continue;
         add('hegemony', { type: 'hegemony', unit: ship.id, to, ...(stay.length ? { stay } : {}) }, { unit: ship.id, to });
@@ -403,7 +396,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
       const settlers = s.units.filter((u) => u.owner === p && u.hex === hex && u.type === 'settler');
       const infantry = s.units.filter((u) => u.owner === p && u.hex === hex && u.type === 'infantry');
       if (settlers.length && unitsLeft(s, p, 'infantry') >= settlers.length
-        && (isSea(s, hex) || armyAt(s, hex, p).length + settlers.length <= STACK_LIMIT)) {
+        && (isSea(s, hex) || armyAt(s, hex, p).length + settlers.length <= stackLimit(s, p, hex))) {
         add('bands', { type: 'fighting_bands', units: settlers.map((u) => u.id) }, { hex, to: 'infantry' });
       }
       if (infantry.length && unitsLeft(s, p, 'settler') >= infantry.length) {
@@ -419,6 +412,7 @@ export function enumerateActions(g, p, { weights = uniform() } = {}) {
     }
   }
   if (hasCivAdv(s, p, 'calendar')) add('calendar', { type: 'calendar' });
+  out.push(...leaderActionList(g, p));
 
   add('end', { type: 'end_turn' });
   return out;

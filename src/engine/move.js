@@ -1,8 +1,8 @@
 // Move Units: land steps, boarding and landing, ship voyages (with Navigation and exploration) and Roads.
-import { PIRATE, STACK_LIMIT } from './data/constants.js';
+import { PIRATE } from './data/constants.js';
 import {
   armyAt, bfs, cargoAt, cityAt, cityById, cityHasWonder, citySize, citiesOf, hasAdv, hasCivAdv, hexDistance, isArmy, isHidden, isLand,
-  isSea, navyAt, nbrs, pirateMaster, seaGroup, shipCap, shipsAt, terrainOf, unitById, unitsAt, unitsLeft,
+  isSea, leaderAt, leaderOf, navyAt, nbrs, pirateMaster, seaGroup, shipCap, shipsAt, stackLimit, terrainOf, unitById, unitsAt, unitsLeft,
 } from './queries.js';
 import { RuleError, applyPayment, fail, gainRes, planPayment, unitFlags } from './core.js';
 import { perimeterRing } from './ring.js';
@@ -10,6 +10,7 @@ import { exploreRegion, orientationCandidates } from './explore.js';
 import { battle } from './combat.js';
 import { choose } from './prompts.js';
 import { effMood, finishActivation, markStart, resourcesFrom } from './city.js';
+import { afterCapture } from './leaderCapture.js';
 
 const hostile = (s, p, k) => {
   if (unitsAt(s, k).some((u) => u.owner !== p)) return true;
@@ -157,6 +158,12 @@ function planShips(g, p, a, units, from, to) {
   };
 }
 
+/** Pakal with Settlers only (no other Army unit): the group may step 2 spaces in one Move. */
+const pakalGroup = (s, p, army, settlers) => {
+  const pakal = leaderOf(s, p, 'pakal');
+  return !!pakal && settlers.length > 0 && army.length === 1 && army[0].id === pakal.id;
+};
+
 function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}) {
   const s = g.s;
   const t = s.turn;
@@ -172,6 +179,9 @@ function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}
   };
   // Scouting Report: a free step of up to 2 spaces that ignores the Mountain and Forest penalties.
   const scouting = scout && army.length > 0 && !fromSea && !a.roads && !nomad;
+  // Pakal's step of 2 spaces keeps the terrain penalties (Roads, which ignore them, may be paid on top).
+  const pakal = !a.roads && !fromSea && !nomad && pakalGroup(s, p, army, settlers);
+  const wide = scouting || pakal;
   const plan = { kind: 'land', roads: false, scout: scouting, cost: null, battle: null, explore: null, carry: [], city: nomad ? nomad.id : null };
 
   if (nomad) {
@@ -206,14 +216,14 @@ function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}
   }
   // Imperial Roads: between two of your cities a group may travel up to 4 spaces.
   const imperial = plan.roads && mine(from) && mine(to) && hasCivAdv(s, p, 'imperial_roads');
-  if (d < 1 || d > (imperial ? 4 : plan.roads || scouting ? 2 : 1)) fail('That space is too far away.');
+  if (d < 1 || d > (imperial ? 4 : plan.roads || wide ? 2 : 1)) fail('That space is too far away.');
   if (d >= 2) {
-    if (scouting && toTerr === null) fail('Scouting cannot explore a new Region.');
+    if (wide && toTerr === null) fail(scouting ? 'Scouting cannot explore a new Region.' : 'Pakal cannot explore a new Region with a double step.');
     // The spaces passed through must be clear, and their stacking limit still applies.
-    const clear = (m) => isLand(s, m) && !hostile(s, p, m) && (!army.length || armyAt(s, m, p).length + army.length <= STACK_LIMIT);
+    const clear = (m) => isLand(s, m) && !hostile(s, p, m) && (!army.length || armyAt(s, m, p).length + army.length <= stackLimit(s, p, m, army));
     const vias = d === 2 ? nbrs(s, from).filter((m) => hexDistance(m, to) === 1 && clear(m)) : [];
     if (vias.length) plan.via = vias.includes(a.via) ? a.via : vias[0];
-    else if (!(imperial && bfs(s, from, 4, clear).has(to))) fail(scouting ? 'There is no clear path to that space.' : 'There is no clear road to that space.');
+    else if (!(imperial && bfs(s, from, 4, clear).has(to))) fail(wide ? 'There is no clear path to that space.' : 'There is no clear road to that space.');
   }
 
   if (toTerr === null) {
@@ -231,7 +241,7 @@ function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}
     if (!army.length) fail('Settlers cannot enter enemy spaces without Army units.');
     const sworn = (s.flags.protect || []).find((e) => e.foe === p && (foeUnits.some((u) => u.owner === e.by) || (foeCity && foeCity.owner === e.by)));
     if (sworn) fail(`${g.name(sworn.by)} has played Non-Aggression: you cannot enter their spaces this round.`);
-    if (d === 2 && scouting) fail('Scouting cannot attack: the enemy is two spaces away.');
+    if (d === 2 && wide) fail(scouting ? 'Scouting cannot attack: the enemy is two spaces away.' : "Pakal's double step cannot attack: the enemy is two spaces away.");
     if (d > 2) fail('Imperial Roads cannot be used to attack.');
     if (d === 2 && !mine(from)) fail('Roads can only be used to attack when leaving one of your cities.');
     for (const u of units) {
@@ -242,8 +252,13 @@ function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}
       }
     }
     plan.battle = { defender: foeUnits.length ? foeUnits[0].owner : foeCity.owner };
-  } else if (army.length && armyAt(s, to, p).length + army.length > STACK_LIMIT) {
-    fail('A space holds at most 4 Army units.');
+    // Cleopatra: the attacker first pays an equal number of Culture tokens to remove the ones in the city.
+    if (foeCity && foeCity.beloved > 0) {
+      plan.toll = planPayment(s, p, { culture: foeCity.beloved }, { noArena: true });
+      if (!plan.toll) fail(`The city at ${to} holds ${foeCity.beloved} Culture token${foeCity.beloved > 1 ? 's' : ''} (Cleopatra): pay as many to attack it.`);
+    }
+  } else if (army.length && armyAt(s, to, p).length + army.length > stackLimit(s, p, to, army)) {
+    fail(`A space holds at most ${stackLimit(s, p, to, army)} Army units.`);
   }
   plan.kind = fromSea ? 'disembark' : 'land';
   return plan;
@@ -294,8 +309,9 @@ function planConvert(g, p, a, units, from, to) {
       if (carry.some((u) => !u) || new Set(a.carry).size !== a.carry.length) fail('Those units are not on board.');
       if (carry.length < must) fail('The Ships left behind cannot hold the remaining units.');
     }
-    const army = (into === 'infantry' ? units.length : 0) + carry.filter(isArmy).length;
-    if (armyAt(s, to, p).length + army > STACK_LIMIT) fail('A space holds at most 4 Army units.');
+    const landing = carry.filter(isArmy);
+    const army = (into === 'infantry' ? units.length : 0) + landing.length;
+    if (armyAt(s, to, p).length + army > stackLimit(s, p, to, landing)) fail(`A space holds at most ${stackLimit(s, p, to, landing)} Army units.`);
     for (const u of units) plan.convert[u.id] = into;
     plan.carry = carry.map((u) => u.id);
     plan.landing = [...units, ...carry].map((u) => u.id);
@@ -331,7 +347,11 @@ export function planMove(g, p, a) {
     const f = t.unitFlags[u.id] || {};
     // Longships: Ships may sail on after a battle.
     if (f.fought && !(u.type === 'ship' && hasCivAdv(s, p, 'longships'))) fail('Units that fought cannot move again this turn.');
-    if (f.stopped) fail(f.stopped === 'hegemony' ? 'Units landed by Hegemony cannot move again this turn.' : 'That unit stopped on a Mountain and cannot move again this turn.');
+    if (f.stopped) {
+      fail(f.stopped === 'hegemony' ? 'Units landed by Hegemony cannot move again this turn.'
+        : f.stopped === 'hanno' ? "Hanno's Ships cannot be moved again this turn."
+          : 'That unit stopped on a Mountain and cannot move again this turn.');
+    }
   }
   const ships = units.filter((u) => u.type === 'ship');
   if (ships.length && ships.length !== units.length) fail('Ships move separately from land units.');
@@ -389,18 +409,19 @@ export function moveOptions(g, p, ids, cityId = null) {
   }
   const roads = hasAdv(s, p, 'roads') && !nomad;
   const scouting = !!(s.turn && s.turn.move && s.turn.move.credits > 0 && s.turn.move.scout);
+  const wide = scouting || (!nomad && pakalGroup(s, p, units.filter(isArmy), units.filter((u) => u.type === 'settler')));
   for (const n of nbrs(s, from)) {
     attempt({ to: n });
     if (roads) attempt({ to: n, roads: true });
     if (shipcraft && !nomad && isSea(s, n)) attempt({ to: n, convert: true });
   }
-  if (roads || scouting) {
+  if (roads || wide) {
     const seen = new Set(nbrs(s, from));
     for (const n of nbrs(s, from)) {
       for (const m of nbrs(s, n)) {
         if (m === from || seen.has(m)) continue;
         seen.add(m);
-        if (scouting) attempt({ to: m });
+        if (wide) attempt({ to: m });
         if (roads) attempt({ to: m, roads: true });
       }
     }
@@ -415,13 +436,20 @@ export function moveOptions(g, p, ids, cityId = null) {
 }
 
 // -------------------------------------------------------------- execution
+/** Hannibal with at least one Elephant: his whole group ignores the Mountain penalty. */
+const hannibalStrides = (s, units) => {
+  const h = units.length ? leaderOf(s, units[0].owner, 'hannibal') : null;
+  return !!h && units.some((u) => u.id === h.id) && units.some((u) => u.type === 'elephant');
+};
+
 function terrainFlags(g, plan, units, landTerrain) {
+  const strides = landTerrain === 'mountain' && hannibalStrides(g.s, units);
   for (const u of units) {
     const f = unitFlags(g, u.id);
     if (landTerrain === 'plains') f.plains = true;
     if (plan.roads || plan.scout) continue;
     // Terracing: Settlers walk over Mountains without stopping.
-    if (landTerrain === 'mountain' && !(u.type === 'settler' && hasCivAdv(g.s, u.owner, 'terracing'))) f.stopped = true;
+    if (landTerrain === 'mountain' && !strides && !(u.type === 'settler' && hasCivAdv(g.s, u.owner, 'terracing'))) f.stopped = true;
     if (landTerrain === 'forest') f.noBattle = true;
   }
 }
@@ -529,8 +557,14 @@ export function* moveAction(g, a) {
   }
   t.move.credits -= 1;
   for (const id of plan.ids) t.move.moved[id] = true;
+  for (const id of [...plan.ids, ...plan.carry]) unitFlags(g, id).moved = true;
   if (plan.city) t.move.moved[`city:${plan.city}`] = true;
   if (plan.cost) applyPayment(g, p, plan.cost);
+  if (plan.toll) {
+    applyPayment(g, p, plan.toll);
+    delete cityAt(s, plan.to).beloved;
+    g.log(`${g.name(p)} pays Culture tokens to remove the ones in the city at ${plan.to} (Cleopatra).`);
+  }
 
   if (plan.kind === 'ship') {
     yield* moveShips(g, p, plan);
@@ -570,11 +604,19 @@ export function* moveAction(g, a) {
         if (u) u.hex = plan.via;
       }
     }
+    if (res.captured && res.winner === p) yield* afterCapture(g, p, to);
     return;
   }
   for (const u of units) u.hex = to;
   terrainFlags(g, plan, units, terrainOf(s, to));
   if (plan.city) yield* moveCity(g, p, cityById(s, plan.city), to);
+  // Akbar the Great: 1 Gold whenever he is moved into one of the player's cities.
+  const home = cityAt(s, to);
+  const akbar = leaderOf(s, p, 'akbar');
+  if (home && home.owner === p && akbar && units.some((u) => u.id === akbar.id)) {
+    gainRes(g, p, { gold: 1 });
+    g.log(`${g.name(p)} gains 1 gold (Akbar the Great).`);
+  }
 }
 
 /**

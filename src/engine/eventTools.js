@@ -1,16 +1,20 @@
 // Helpers shared by the Event cards (events.js and worldEvents.js).
-import { allHexKeys, cityAt, citiesOf, citySize, hasAdv, isLand, nbrs, unitsAt, unitsLeft } from './queries.js';
+import { allHexKeys, cityAt, citiesOf, citySize, hasAdv, isLand, leaderCity, nbrs, unitById, unitsAt, unitsLeft } from './queries.js';
 import { addUnitTo, canPay, moodDown, pay } from './core.js';
-import { choose, confirm } from './prompts.js';
+import { choose, chooseMany, confirm } from './prompts.js';
 
 export const bySize = (a, b) => citySize(b) - citySize(a);
 export const cityOption = (c) => ({ id: c.id, label: `City at ${c.hex} (size ${citySize(c)})`, hex: c.hex });
 
-/** Mood loss from an event. Myths lets the owner pay 1 Mood to prevent it. Returns true if the city was affected. */
+/**
+ * Mood loss from an event. Myths lets the owner pay 1 Mood to prevent it, and Marqzen (Aztecs) reverses it for nothing when the
+ * city is his. Returns true if the city was affected.
+ */
 export function* eventMoodLoss(g, p, city, { to = null } = {}) {
   const s = g.s;
   if (city.mood === 'angry') return false;
-  if (hasAdv(s, p, 'myths') && canPay(s, p, { mood: 1 })) {
+  const marqzen = leaderCity(s, city.owner, 'marqzen') === city;
+  if (!marqzen && hasAdv(s, p, 'myths') && canPay(s, p, { mood: 1 })) {
     const protect = yield* confirm(g, p, {
       kind: 'myths',
       title: 'Myths',
@@ -25,10 +29,46 @@ export function* eventMoodLoss(g, p, city, { to = null } = {}) {
       return false;
     }
   }
+  const was = city.mood;
   if (to === 'angry') city.mood = 'angry';
   else moodDown(city, 1);
   g.emit({ type: 'mood', city: city.id });
+  if (marqzen) {
+    const undo = yield* confirm(g, city.owner, {
+      kind: 'marqzen',
+      title: 'Marqzen',
+      text: `The Event lowers the Mood of the city at ${city.hex}. Reverse it?`,
+      yes: 'Reverse the Mood drop',
+      no: 'Accept it',
+      default: true,
+    });
+    if (undo) {
+      city.mood = was;
+      g.emit({ type: 'mood', city: city.id });
+      g.log(`${g.name(city.owner)} reverses the Mood drop of the city at ${city.hex} (Marqzen).`);
+      return false;
+    }
+  }
   return true;
+}
+
+/** Units an Event takes (their ids). Marqzen (Aztecs) may take back any of those that stand in his city; returns the ones really lost. */
+export function* eventUnitLoss(g, p, ids) {
+  const s = g.s;
+  const city = leaderCity(s, p, 'marqzen');
+  const here = city ? ids.filter((id) => { const u = unitById(s, id); return !!u && u.owner === p && u.hex === city.hex; }) : [];
+  if (!here.length) return ids;
+  const keep = yield* chooseMany(g, p, {
+    kind: 'marqzen_units',
+    title: 'Marqzen',
+    text: `The Event takes units from the city at ${city.hex}. Take back any of them?`,
+    options: here.map((id) => ({ id, label: `Take back the ${unitById(s, id).type}` })),
+    min: 0,
+    max: here.length,
+    default: here,
+  });
+  if (keep.length) g.log(`${g.name(p)} takes back ${keep.length === 1 ? 'a unit' : `${keep.length} units`} (Marqzen).`);
+  return ids.filter((id) => !keep.includes(id));
 }
 
 export function* pickCity(g, p, cities, { title, text, prefer = 'smallest' }) {

@@ -1,6 +1,7 @@
 // The human's questions: turns every prompt the rules engine asks into a window or a choice on the map.
 import { BARBARIAN } from '../engine/data/constants.js';
 import { EVENT_CARDS } from '../engine/data/cards.js';
+import { unitById } from '../engine/queries.js';
 import { BUILDING_HELP, BUILDING_NAME, C, HEX_SCALE, HEX_TEX_W, PLAYER_COLORS, RES, TERRAIN, TXT, cap, plural, seatName, seatOwner } from './theme.js';
 import { Choice, Flow, optionModal } from './modals.js';
 import { drawPanel, icon } from './widgets.js';
@@ -8,11 +9,15 @@ import { advancesDialog } from './advdialog.js';
 import { UNIT_NAME, placeWords } from './info.js';
 import { unitTexture } from './textures.js';
 
-const MAP_KINDS = new Set(['pick_hex', 'pick_city', 'pick_cities', 'raze', 'city_states']);
+const MAP_KINDS = new Set(['pick_hex', 'pick_city', 'pick_cities', 'raze', 'city_states', 'leader_influence_target']);
 const RECOMMENDED = new Set(['government', 'siege', 'first_player']);
 // Civilizations: prompts whose answers are tokens or resources get the matching icon.
 const TOKEN_ICON = { food: 'ic_food', wood: 'ic_wood', ore: 'ic_ore', ideas: 'ic_ideas', gold: 'ic_gold', mood: 'ic_mood', culture: 'ic_culture', culture_a: 'ic_culture', ideas_a: 'ic_ideas' };
-const TOKEN_KINDS = new Set(['banking', 'stelas', 'star_catalogs', 'trade_route_income', 'marauders', 'hunnic_tribes']);
+const TOKEN_KINDS = new Set(['banking', 'stelas', 'star_catalogs', 'trade_route_income', 'marauders', 'hunnic_tribes', 'ramses', 'leader_token', 'pygmalion_trade']);
+// Leaders: options named by a building or a unit type, or by the id of a unit on the board.
+const BUILDING_KINDS = new Set(['choice', 'wak_remove', 'wak_build', 'leader_influence_building']);
+const UNIT_KINDS = new Set(['choice', 'caesar_unit']);
+const UNIT_ID_KINDS = new Set(['viriatus', 'marqzen_units']);
 const TERRAIN_ORDER = ['plains', 'forest', 'mountain', 'barren', 'sea'];
 
 // What the symbol on an Event card does in addition to its text. `w` is who drew the card: { me, name, own }.
@@ -196,14 +201,19 @@ export function createPrompts(ctl) {
     if (p.kind === 'pick_resource' && RES[o.id]) {
       out.label = RES[o.id].name;
       out.icon = `ic_${o.id}`;
-    } else if (p.kind === 'choice' && BUILDING_NAME[o.id]) {
+    } else if (BUILDING_KINDS.has(p.kind) && BUILDING_NAME[o.id]) {
       out.label = BUILDING_NAME[o.id];
       out.icon = `b_${o.id}`;
       out.iconTint = PLAYER_COLORS[0];
       out.desc = BUILDING_HELP[o.id];
-    } else if (p.kind === 'choice' && UNIT_NAME[o.id]) {
+    } else if (UNIT_KINDS.has(p.kind) && UNIT_NAME[o.id]) {
       out.icon = unitTexture(o.id, 0);
       out.iconTint = PLAYER_COLORS[0];
+    } else if (UNIT_ID_KINDS.has(p.kind) && unitById(ctl.g.s, o.id)) {
+      const u = unitById(ctl.g.s, o.id);
+      out.label = o.label.replace(/\ba (?=[aeiou])/, 'an ');
+      out.icon = unitTexture(u.type, u.owner);
+      out.iconTint = PLAYER_COLORS[u.owner];
     } else if ((p.kind === 'trade_income' || p.kind === 'pirate_loss' || p.kind === 'pirate_bounty') && RES[o.id]) {
       out.icon = `ic_${o.id}`;
     } else if (p.kind === 'nomad_resource' && RES[o.id]) {
@@ -222,7 +232,8 @@ export function createPrompts(ctl) {
     const answer = await optionModal(ctl, {
       title: p.title,
       text: wordy(ctl.g.s, p.text || ''),
-      options: p.options.map((o) => tidy(p, o)),
+      // Viriatus lists every enemy unit: identical ones are only shown once.
+      options: p.options.map((o) => tidy(p, o)).filter((o, i, all) => p.kind !== 'viriatus' || all.findIndex((x) => x.label === o.label) === i),
       multi: p.multi || null,
       chosen: p.multi ? p.default : undefined,
     });
@@ -246,6 +257,11 @@ export function createPrompts(ctl) {
         return cardView({ name: p.title, text: p.text, icon: p.icon }, p.player);
       case 'free_advance':
         return advancesDialog(ctl, { pick: { title: p.title, text: p.text, options: p.options.map((o) => o.id), default: p.default } });
+      case 'leader_advance': {
+        const none = p.options.find((o) => o.id === 'none');
+        const options = p.options.filter((o) => o !== none).map((o) => o.id);
+        return advancesDialog(ctl, { pick: { title: p.title, text: p.text, options, default: p.default, skip: none ? none.label : null } });
+      }
       case 'orientation':
         return orientation(p);
       case 'combat_card':

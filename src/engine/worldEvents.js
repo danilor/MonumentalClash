@@ -1,10 +1,10 @@
 // World events: Event cards that affect every player, not only the one who drew the card. `resolveEvent` (events.js)
 // applies the card's icon first and then runs the effect found here. Effects start with the drawer and go clockwise.
-import { BARBARIAN, BASE_RESOURCES, RESOURCES, STACK_LIMIT } from './data/constants.js';
+import { BARBARIAN, BASE_RESOURCES, RESOURCES } from './data/constants.js';
 import { ADVANCES } from './data/advances.js';
 import {
   armyAt, armyOf, bfs, cityAt, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, hexDistance, isLand, isPortCity, nbrs, resLimit,
-  shipCap, terrainOf, unitsAt, unitsLeft, unitsOf,
+  shipCap, stackLimit, terrainOf, unitsAt, unitsLeft, unitsOf,
 } from './queries.js';
 import { addUnitTo, canPay, gainRes, pay, removeUnits } from './core.js';
 import { randInt } from './rng.js';
@@ -138,7 +138,7 @@ function conflictHexes(s, q) {
     return (city && city.owner !== q) || unitsAt(s, k).some((u) => u.owner !== q && u.type !== 'ship');
   };
   const mine = new Set([...armyOf(s, q).map((u) => u.hex), ...citiesOf(s, q).map((c) => c.hex)]);
-  return [...mine].filter((k) => isLand(s, k) && armyAt(s, k, q).length < STACK_LIMIT && nbrs(s, k).some(hostile)).sort();
+  return [...mine].filter((k) => isLand(s, k) && armyAt(s, k, q).length < stackLimit(s, q, k) && nbrs(s, k).some(hostile)).sort();
 }
 
 /** Sea spaces within 2 steps of `from` that a player's Ship may sail to: no foreign units on the way or at the end. */
@@ -417,7 +417,7 @@ export const WORLD_EFFECTS = {
     const s = g.s;
     for (const q of laggards(seatsFrom(s, p), (x) => armyOf(s, x).length)) {
       if (unitsLeft(s, q, 'infantry') <= 0) continue;
-      const roomy = citiesOf(s, q).filter((c) => armyAt(s, c.hex, q).length < STACK_LIMIT).sort(bySize);
+      const roomy = citiesOf(s, q).filter((c) => armyAt(s, c.hex, q).length < stackLimit(s, q, c.hex)).sort(bySize);
       const city = roomy.find((c) => c.hex === s.players[q].homeHex) || roomy[0];
       if (!city) continue;
       addUnitTo(g, q, 'infantry', city.hex);
@@ -539,7 +539,7 @@ export const WORLD_EFFECTS = {
     const s = g.s;
     for (const q of seatsFrom(s, p)) {
       const spots = conflictHexes(s, q);
-      const room = Math.max(0, ...spots.map((k) => STACK_LIMIT - armyAt(s, k, q).length));
+      const room = Math.max(0, ...spots.map((k) => stackLimit(s, q, k) - armyAt(s, k, q).length));
       const most = Math.min(2, Math.floor(s.players[q].res.gold / 2), unitsLeft(s, q, 'infantry'), room);
       if (most <= 0) continue;
       const hired = Number(yield* choose(g, q, {
@@ -552,7 +552,7 @@ export const WORLD_EFFECTS = {
         default: '0',
       }));
       if (!hired) continue;
-      const fits = spots.filter((k) => STACK_LIMIT - armyAt(s, k, q).length >= hired);
+      const fits = spots.filter((k) => stackLimit(s, q, k) - armyAt(s, k, q).length >= hired);
       const hex = yield* choose(g, q, {
         kind: 'pick_hex', title: 'Mercenary Influx', text: 'Choose the space where the mercenaries arrive.',
         options: mapOptions(fits), default: fits[0],

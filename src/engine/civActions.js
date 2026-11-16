@@ -1,10 +1,10 @@
 // Free and ordinary actions that only a Civilization power gives: Hegemony, Sprawling, Fighting Bands, Tribal Allies,
 // Human Sacrifice and the Calendar. They are registered in game.js like every other action.
-import { PIRATE, STACK_LIMIT } from './data/constants.js';
+import { PIRATE } from './data/constants.js';
 import { EVENT_CARDS } from './data/cards.js';
 import { addCity } from './state.js';
 import {
-  armyAt, cargoAt, controlledPirates, hasCivAdv, isArmy, isSea, nbrs, navyAt, shipCap, unitById, unitsLeft,
+  armyAt, cargoAt, controlledPirates, hasCivAdv, isArmy, isSea, nbrs, navyAt, shipCap, stackLimit, unitById, unitsLeft,
 } from './queries.js';
 import { ensureDeck, fail, gainRes, pay, removeUnits } from './core.js';
 import { foundBlocked } from './city.js';
@@ -44,7 +44,7 @@ export function* hegemonyAction(g, a) {
   const rest = navyAt(s, sea, p).filter((x) => x.id !== ship.id).length * shipCap(s, p);
   if (stay.length > rest) fail('The other Ships cannot carry that many units.');
   const landing = cargo.filter((u) => !stay.includes(u.id));
-  if (armyAt(s, to, p).length + landing.filter(isArmy).length > STACK_LIMIT) fail('That many Army units do not fit on the new city. Leave some on the Ships.');
+  if (armyAt(s, to, p).length + landing.filter(isArmy).length > stackLimit(s, p, to, landing.filter(isArmy))) fail('That many Army units do not fit on the new city. Leave some on the Ships.');
 
   g.spendAction();
   removeUnits(g, [ship.id]);
@@ -92,7 +92,7 @@ export function* fightingBandsAction(g, a) {
     if (isSea(s, hex)) continue;
     const here = units.filter((u) => u.hex === hex);
     const more = here.filter((u) => u.type === 'settler').length - here.filter((u) => u.type === 'infantry').length;
-    if (more > 0 && armyAt(s, hex, p).length + more > STACK_LIMIT) fail('Too many Army units would end up in one space.');
+    if (more > 0 && armyAt(s, hex, p).length + more > stackLimit(s, p, hex)) fail('Too many Army units would end up in one space.');
   }
   t.used.fightingBands = true;
   for (const u of asInfantry) u.type = 'infantry';

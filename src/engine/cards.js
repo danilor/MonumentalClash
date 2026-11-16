@@ -1,12 +1,12 @@
 // Action cards: the non-combat (top) effects. Combat effects live in combat.js.
 import { ACTION_CARDS, COMBAT_EFFECTS, OBJECTIVE_CARDS, OBJECTIVES, TOP_EFFECTS } from './data/cards.js';
 import { ADVANCES } from './data/advances.js';
-import { BUILDINGS, RESOURCES, STACK_LIMIT } from './data/constants.js';
-import { armyAt, armyOf, citiesOf, cityById, foesOf, hasAdv, hasCivAdv, isArmy, nbrs, resLimit, unitsAt, unitsOf } from './queries.js';
-import { applyPayment, discardCard, drawActionCard, drawObjectiveCard, fail, gainRes, moodUp, planPayment } from './core.js';
+import { BUILDINGS, RESOURCES } from './data/constants.js';
+import { armyAt, armyOf, citiesOf, cityById, foesOf, hasAdv, hasCivAdv, isArmy, leaderCity, nbrs, resLimit, stackLimit, unitsAt, unitsOf } from './queries.js';
+import { applyPayment, canPay, discardCard, drawActionCard, drawObjectiveCard, fail, gainRes, moodUp, planPayment } from './core.js';
 import { choose, chooseMany } from './prompts.js';
 import { availableAdvances, quickAdvance } from './advance.js';
-import { constructBlocked, performConstruct, takeUnit } from './city.js';
+import { checkActivatable, constructBlocked, finishActivation, markStart, performConstruct, takeUnit } from './city.js';
 import { openFreeMove } from './move.js';
 import { subterfuge } from './civs.js';
 import { scoreOf } from './scoring.js';
@@ -120,7 +120,7 @@ const EFFECTS = {
 
   *mass_levy(g, p, a) {
     const s = g.s;
-    const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < STACK_LIMIT);
+    const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < stackLimit(s, p, c.hex));
     const picked = yield* pickCities(g, p, a, { title: 'Mass Levy', text: 'Recruit a free Infantry in up to 2 cities.', eligible, max: 2, none: 'There is no room for new Infantry.' });
     const reserved = new Set();
     for (const c of picked) {
@@ -215,7 +215,7 @@ const EFFECTS = {
   *reinforce(g, p, a) {
     const s = g.s;
     const besieged = (c) => nbrs(s, c.hex).some((k) => unitsAt(s, k).some((u) => u.owner !== p && isArmy(u)));
-    const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < STACK_LIMIT && besieged(c));
+    const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < stackLimit(s, p, c.hex) && besieged(c));
     const [c] = yield* pickCities(g, p, { ...a, cities: undefined }, {
       title: 'Reinforce', text: 'Place a free Infantry in a city with an enemy Army next to it.', eligible, max: 1,
       none: 'None of your cities has an enemy Army next to it.',
@@ -291,6 +291,16 @@ function* pickFoe(g, p, a, marks, { title, text, fallback }) {
   return Number(ans);
 }
 
+/** Alexander the Great: the city he is in, which an "As an Action" card is played through for 1 Culture token instead of an action. */
+function alexanderCity(g, p) {
+  const s = g.s;
+  const city = leaderCity(s, p, 'alexander');
+  if (!city) fail('Alexander the Great must be in one of your cities.');
+  checkActivatable(g, city);
+  if (!canPay(s, p, { culture: 1 })) fail('You need 1 Culture token.');
+  return city;
+}
+
 /** The Play Card action: use the top effect of an Action card from your hand. */
 export function* playCard(g, a) {
   const s = g.s;
@@ -305,17 +315,21 @@ export function* playCard(g, a) {
     fail(`${eff.name} is played together with ${action} action, not on its own.`);
   }
   const paid = eff.timing === 'action' && !hasCivAdv(s, p, 'shogunate');
-  if (paid && (!s.turn || s.turn.actionsLeft <= 0)) fail('You have no actions left.');
+  if (a.alexander && !paid) fail('Alexander the Great only plays the cards that need an action.');
+  const alexander = a.alexander ? alexanderCity(g, p) : null;
+  if (paid && !alexander && (!s.turn || s.turn.actionsLeft <= 0)) fail('You have no actions left.');
   pl.hand.action.splice(idx, 1);
   discardCard(g, p, 'action', def.id);
   g.emit({ type: 'card', player: p, card: def.id });
   g.log(`${g.name(p)} plays ${def.name}.`);
   // Subterfuge: the card was announced, but nothing is paid if a rival cancels it.
   if (yield* subterfuge(g, p, def)) return;
-  if (paid) g.spendAction();
-  if (GAINS[def.top]) {
-    gainRes(g, p, GAINS[def.top]);
-    return;
-  }
-  yield* EFFECTS[def.top](g, p, a);
+  if (alexander) {
+    markStart(g, alexander);
+    applyPayment(g, p, planPayment(s, p, { culture: 1 }));
+    g.log(`${g.name(p)} pays 1 Culture token and activates the city at ${alexander.hex} instead of an action (Alexander the Great).`);
+  } else if (paid) g.spendAction();
+  if (GAINS[def.top]) gainRes(g, p, GAINS[def.top]);
+  else yield* EFFECTS[def.top](g, p, a);
+  if (alexander) yield* finishActivation(g, alexander);
 }

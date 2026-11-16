@@ -1,21 +1,31 @@
 // City dialogs: Construct, Recruit, Wonder, Happiness and Influence Culture.
-import { BUILDINGS, PIRATE, STACK_LIMIT } from '../engine/data/constants.js';
+import { BUILDINGS, PIRATE } from '../engine/data/constants.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { ADVANCES } from '../engine/data/advances.js';
-import { cityCapacity, constructBlocked, effMood, happinessRoom, influenceBlocked, influenceRange, influenceTypes, rapidPrice, recruitBlocked, recruitCost, wonderBlocked, zoroastrianTargets } from '../engine/city.js';
+import { LEADERS, LEADER_RECRUIT_COST } from '../engine/data/leaders.js';
+import { cityCapacity, constructBlocked, effMood, happinessRoom, influenceBlocked, influenceRange, influenceTypes, leaderBuildPrice, rapidPrice, recruitBlocked, recruitCost, wonderBlocked, wonderChoices, wonderCost, wonderSource, zoroastrianTargets } from '../engine/city.js';
 import { canDraftShip, canMountHere, sizePay } from '../engine/civs.js';
 import { canPay, heldModifier, planPayment } from '../engine/core.js';
 import { TOP_EFFECTS } from '../engine/data/cards.js';
-import { armyAt, buildingsIn, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, isPortCity, seaNbrs, shipsAt, terrainOf } from '../engine/queries.js';
-import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TXT, costText } from './theme.js';
+import { leadersAvailable } from '../engine/leaders.js';
+import { armyAt, buildingsIn, citiesOf, citySize, hasAdv, hasBuilding, hasCivAdv, isPortCity, leaderAt, leaderIdOf, seaNbrs, shipsAt, stackLimit, terrainOf } from '../engine/queries.js';
+import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TXT, costText, seatOwner } from './theme.js';
 import { Choice, Flow, confirmModal, optionModal } from './modals.js';
-import { Button, Checkbox, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
+import { Button, Checkbox, Stepper, drawPanel, icon, resRow, tip, txt } from './widgets.js';
 import { UNIT_NAME, ownerName } from './info.js';
+import { leaderBlurb } from './civdialog.js';
 
 const BUILD_ICON = Object.fromEntries(BUILDINGS.map((b) => [b, `b_${b}`]));
 const STACK_DEPTH = 1100;
 
 const cityLine = (s, c) => `${TERRAIN[terrainOf(s, c.hex)]} city · size ${citySize(c)} · ${MOOD_NAME[c.mood]}`;
+
+/** What the Leader in a city lets the player pay for its growth with (Acamapichtli, Pakal). */
+const growthPay = (s, c) => {
+  if (leaderAt(s, 0, 'acamapichtli', c.hex)) return 'Acamapichtli: Captives can pay for missing resources, 1 for 1.';
+  if (leaderAt(s, 0, 'pakal', c.hex)) return 'Pakal: each Culture token can pay for any 2 missing resources.';
+  return '';
+};
 
 /**
  * Targets of Influence Culture within reach of `origin` (a city of the player, a city holding their Buildings, or Settlers
@@ -103,9 +113,11 @@ function constructDialog(ctl, city, opts = {}) {
   const f = new Flow(ctl.scene, cols === 2 ? 1000 : 580, { top: 80 });
   f.text('A building costs 1 Food, 1 Wood and 1 Ore and uses one action. It makes the city one size larger.', { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
+  const pay = growthPay(s, city);
+  if (pay) f.text(pay, { size: 12, color: TXT.muted, center: true, gap: 6 });
   let modal = null;
   let err = null;
-  const base = (b) => ({ food: b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
+  const base = (b) => leaderBuildPrice(s, 0, city, b, { food: b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
   const price = (b) => (rapid ? rapidPrice(s, 0, base(b), opts.waive).price : base(b));
   if (card) {
     const again = (extra) => {
@@ -166,8 +178,9 @@ function constructDialog(ctl, city, opts = {}) {
   const colW = (f.inner - (cols - 1) * 12) / cols;
   const ys = new Array(cols).fill(f.y);
   const rows = list.map((b, i) => {
-    const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b), sizePay(s, 0, b)) ? null : `You need ${costText(price(b))}.`);
-    const note = b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? ' State Religion: the Food is free this turn.' : '';
+    const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b), sizePay(s, 0, b, city)) ? null : `You need ${costText(price(b))}.`);
+    const note = (b === 'temple' && hasAdv(s, 0, 'state_religion') && !s.turn.used.stateReligion ? ' State Religion: the Food is free this turn.' : '') +
+      (base(b).wood === 0 ? ` ${LEADERS[leaderIdOf(s, 0)].name}: no Food or Wood here.` : '');
     const c = i % cols;
     const row = new Choice(ctl.scene, f.pad + c * (colW + 12), ys[c], colW, {
       id: b,
@@ -199,12 +212,13 @@ function recruitDialog(ctl, city) {
   const ball = hasCivAdv(s, 0, 'ballcourts') && effMood(s, city) !== 'angry';
   const cap = base + (ball ? 1 : 0);
   const port = isPortCity(city);
+  const vercingetorix = leaderAt(s, 0, 'vercingetorix', city.hex);
   const f = new Flow(ctl.scene, 580, { top: 80 });
-  f.text(`This city can recruit up to ${base} unit${base === 1 ? '' : 's'} in one action${ball ? `, or ${cap} with Ballcourts (that costs 1 more Mood token)` : ''}.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+  f.text(`This city can recruit up to ${base} unit${base === 1 ? '' : 's'} in one action${ball ? `, or ${cap} with Ballcourts (that costs 1 more Mood token)` : ''}.${vercingetorix ? ' Vercingetorix: new land units may be deployed on the spaces next to the city.' : ''}`, { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
   const count = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
   let update = () => {};
-  const army = Math.max(0, Math.min(cap, STACK_LIMIT - armyAt(s, city.hex, 0).length));
+  const army = Math.max(0, Math.min(cap, vercingetorix ? cap : stackLimit(s, 0, city.hex) - armyAt(s, city.hex, 0).length));
   const mounted = (type) => hasBuilding(city, 'market') || canMountHere(s, 0, type);
   const kinds = [
     ['infantry', 'u_infantry', '1 Food + 1 Ore', army],
@@ -213,14 +227,54 @@ function recruitDialog(ctl, city) {
     ['settler', 'u_settler', '2 Food', cap],
     ['ship', 'u_ship', port ? '2 Wood, appears on the Port\'s sea space' : '2 Wood (this city needs a Port)', port ? cap : 0],
   ];
+  const steppers = [];
   for (const [type, img, caption, max] of kinds) {
-    stepRow(f, {
+    const st = stepRow(f, {
       img, tint: PLAYER_COLORS[0], label: UNIT_NAME[type], caption, value: 0, min: 0, max,
       onChange: (v) => {
         count[type] = v;
         update();
       },
     });
+    steppers.push({ type, st, max });
+  }
+  // A Leader is recruited like a unit: it takes one of the city's recruits and costs 1 Culture and 1 Mood more.
+  const leaders = s.civs ? leadersAvailable(s, 0) : [];
+  const inPlay = s.players[0].leader;
+  const leaderPrice = `+${LEADER_RECRUIT_COST.culture} Culture, +${LEADER_RECRUIT_COST.mood} Mood`;
+  const leaderRows = {};
+  const leaderWhy = {};
+  let picked = null;
+  let leaderNote = null;
+  if (leaders.length) {
+    const width = (id) => {
+      const t = txt(ctl.scene, 0, 0, LEADERS[id].name, { size: 14, bold: true });
+      const w = t.width + 58;
+      t.destroy();
+      return w;
+    };
+    const want = leaders.map(width);
+    const scale = Math.min(1, (f.inner - 8 * (leaders.length - 1)) / want.reduce((n, w) => n + w, 0));
+    let x = f.pad;
+    let h = 0;
+    leaders.forEach((id, i) => {
+      const w = Math.floor(want[i] * scale);
+      const row = new Choice(ctl.scene, x, f.y, w, {
+        id, label: LEADERS[id].name, toggle: true, size: 14, minH: 36,
+        onClick: (it) => {
+          picked = it.selected ? id : null;
+          for (const other of leaders) if (other !== id) leaderRows[other].set(false);
+          update();
+        },
+      });
+      tip(row.hit, () => `${leaderBlurb(id)}${leaderWhy[id] ? `\n\nNot possible: ${leaderWhy[id]}` : ''}`);
+      f.add(row);
+      leaderRows[id] = row;
+      x += w + 8;
+      h = Math.max(h, row.h);
+    });
+    f.y += h + 6;
+    leaderNote = f.text(' \n ', { size: 12, color: TXT.muted, gap: 8 });
   }
   const opt = {};
   const rowH = s.civs ? 26 : 28;
@@ -278,6 +332,10 @@ function recruitDialog(ctl, city) {
   let ok = null;
   let action = null;
   update = () => {
+    for (const { type, st, max } of steppers) {
+      st.setRange(0, Math.min(max, cap - (picked ? 1 : 0)));
+      count[type] = st.value;
+    }
     const units = { ...count };
     const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
     const fighters = units.infantry + units.cavalry + units.elephant + units.ship;
@@ -302,17 +360,26 @@ function recruitDialog(ctl, city) {
     if (on('sanitation')) action.sanitation = true;
     if (on('nationalism') && fighters > 0) action.nationalism = 'culture';
     if (on('attack') && units.ship > 0) action.attack = true;
-    const slots = total + (action.draftCard ? 1 : 0);
+    if (picked) action.leader = picked;
+    const slots = total + (action.draftCard ? 1 : 0) + (picked ? 1 : 0);
     if (slots > base) action.ballcourts = true;
     const chk = recruitBlocked(g, 0, city, action);
     const cost = chk.plan ? chk.plan : recruitCost(s, 0, units, {
       draft: action.draft ? 1 : 0, sanitation: action.sanitation ? 1 : 0, draftShip: action.draftShip ? 1 : 0, draftCard: action.draftCard ? 1 : 0,
-      draftWith: action.draftWith, ball: action.ballcourts ? 1 : 0,
+      draftWith: action.draftWith, ball: action.ballcourts ? 1 : 0, leader: !!picked,
     });
     if (costRow) costRow.destroy();
     costRow = resRow(ctl.scene, f.pad + 70, costY, slots ? cost : {}, { size: 18, font: 14, gap: 12 });
     f.add(costRow);
-    if (!slots) note.setText('Choose how many units to recruit.').setColor(TXT.muted);
+    for (const id of leaders) {
+      leaderWhy[id] = recruitBlocked(g, 0, city, { type: 'recruit', city: city.id, units: {}, leader: id }).why || '';
+      leaderRows[id].setDisabled(!!leaderWhy[id] && picked !== id);
+    }
+    if (leaderNote) {
+      const gone = inPlay ? ` ${picked ? 'Replaces' : 'A new one replaces'} ${LEADERS[inPlay].name} (gone for good).` : '';
+      leaderNote.setText(picked ? `${LEADERS[picked].name}: ${leaderPrice}, takes up one recruit.${gone}` : `Optional Leader: ${leaderPrice}, takes up one recruit.${gone || ' Hover a name to read the abilities.'}`);
+    }
+    if (!slots) note.setText(leaders.length ? 'Choose how many units to recruit, or a Leader.' : 'Choose how many units to recruit.').setColor(TXT.muted);
     else if (chk.why) note.setText(chk.why).setColor(TXT.bad);
     else note.setText(`${action.ballcourts ? 'Ballcourts add 1 to the capacity for 1 Mood. ' : ''}${hasAdv(s, 0, 'medicine') ? 'Medicine will refund 1 of the resources you spend.' : 'Ready to recruit.'}`).setColor(TXT.good);
     if (ok) ok.setDisabled(!slots || !!chk.why, chk.why || 'Choose at least one unit.');
@@ -328,25 +395,33 @@ function recruitDialog(ctl, city) {
 // ------------------------------------------------------------------- wonder
 function wonderDialog(ctl, city) {
   const s = ctl.g.s;
-  const hand = s.players[0].hand.wonder;
+  const ids = wonderChoices(s, 0, city);
+  const leaderName = leaderIdOf(s, 0) ? LEADERS[leaderIdOf(s, 0)].name : '';
   const f = new Flow(ctl.scene, 640, { top: 80 });
   f.text('A Wonder is worth Victory Points and gives a lasting power. It needs a Happy city and uses one action.', { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
+  const pay = growthPay(s, city);
+  if (pay) f.text(pay, { size: 12, color: TXT.muted, center: true, gap: 6 });
   let modal = null;
-  for (const id of hand) {
+  for (const id of ids) {
     const w = WONDERS[id];
+    const cost = wonderCost(s, 0, city, id);
     const why = wonderBlocked(s, 0, city, id);
+    const src = wonderSource(s, 0, city, id);
+    // The Leader's own Wonder (Great Gardens, Great Wall) may be built without holding the card.
+    const lent = src && src.kind !== 'hand' ? `${leaderName} lets you build it without the card (taken from ${src.kind === 'deck' ? 'the Wonder deck' : `${seatOwner(s, src.player)} hand`}).` : '';
+    const cheaper = costText(cost) !== costText(w.cost);
     const row = new Choice(ctl.scene, f.pad, f.y, f.inner, {
       id,
       label: `${w.name} · ${w.vp} VP`,
-      desc: `${w.text}\nCost: ${costText(w.cost)}. Needs ${ADVANCES[w.advance].name}.${why ? `\nNot possible: ${why}` : ''}`,
+      desc: `${w.text}\nCost: ${costText(cost)}${cheaper ? ` (${leaderName} saves some; normally ${costText(w.cost)})` : ''}. Needs ${ADVANCES[w.advance].name}.${lent ? `\n${lent}` : ''}${why ? `\nNot possible: ${why}` : ''}`,
       icon: 'ic_wonder',
       disabled: !!why,
       reason: why || '',
       onClick: async () => {
         const yes = await confirmModal(ctl, {
           title: `Build the ${w.name}?`,
-          text: `It costs ${costText(w.cost)} and uses one action.`,
+          text: `It costs ${costText(cost)} and uses one action.${lent ? ` ${lent}` : ''}`,
           yes: 'Build it',
           no: 'Not now',
           depth: STACK_DEPTH,
@@ -365,7 +440,7 @@ function wonderDialog(ctl, city) {
     f.add(row);
     f.y += row.h + 8;
   }
-  if (!hand.length) f.text('You hold no Wonder cards.', { center: true, color: TXT.dim });
+  if (!ids.length) f.text('You hold no Wonder cards.', { center: true, color: TXT.dim });
   f.gap(2);
   f.buttons([{ label: 'Close', w: 130, fn: () => modal.close() }]);
   modal = f.finish({ title: 'Build a Wonder', subtitle: cityLine(s, city), closable: true });

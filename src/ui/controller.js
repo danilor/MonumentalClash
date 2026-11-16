@@ -7,6 +7,7 @@ import { ACTION_CARDS, OBJECTIVES } from '../engine/data/cards.js';
 import { ADVANCES, GROUPS } from '../engine/data/advances.js';
 import { CIVS, CIV_ADVANCES } from '../engine/data/civs.js';
 import { WONDERS } from '../engine/data/wonders.js';
+import { LEADERS, ERIC_TOKEN_VP, LEADER_CAPTURE_VP } from '../engine/data/leaders.js';
 import { answerPrompt, attachAI, chooseAction, resourceWeights } from '../ai/index.js';
 import { collectPlans } from '../engine/enumerate.js';
 import { moveOptions, planMove } from '../engine/move.js';
@@ -19,11 +20,13 @@ import { createDialogs } from './dialogs.js';
 import { createPrompts } from './prompts.js';
 import { playBattleRound } from './battle.js';
 import { countText, hexLines, placeWords } from './info.js';
-import { PLAYER_HEX, RES, TXT, cap, joinNames, plural, seatName, turnLabel } from './theme.js';
+import { BUILDING_NAME, PLAYER_HEX, RES, TXT, cap, joinNames, plural, seatName, seatOwner, turnLabel } from './theme.js';
 import { SAVE_KEY, SPEED_KEY, store } from './store.js';
 
 const SPEED = { normal: 0.75, fast: 0.3, instant: 0 };
 const AI_ACTION_CAP = 40;
+const LAND_TYPES = ['leader', 'infantry', 'cavalry', 'elephant', 'settler']; // what a Ship carries (the Leader boards first)
+const UNIT_TYPES = ['ship', ...LAND_TYPES];
 const copy = (x) => JSON.parse(JSON.stringify(x));
 
 export class Controller {
@@ -176,7 +179,9 @@ export class Controller {
       if (c) lines.push('', `Click to collect: ${c.opts.map((r) => RES[r].name).join(' or ')}`);
     } else if (this.optByHex.has(k)) {
       const list = this.optByHex.get(k);
-      lines.push('', list.every((o) => o.battle) ? 'Click to attack here.' : list.every((o) => o.convert) ? 'Click to change units and move here (Shipcraft).' : list[0].explore !== null ? 'Click to explore here.' : 'Click to move here.');
+      const city = cityAt(this.g.s, k);
+      const toll = city && city.owner !== 0 ? city.beloved || 0 : 0; // Cleopatra: an attacker pays as many Culture tokens
+      lines.push('', list.every((o) => o.battle) ? `Click to attack here.${toll ? ` You first pay ${plural(toll, 'Culture token')} (Cleopatra).` : ''}` : list.every((o) => o.convert) ? 'Click to change units and move here (Shipcraft).' : list[0].explore !== null ? 'Click to explore here.' : 'Click to move here.');
     } else if (this.sel && this.sel.hex !== k && this.humanCanAct()) {
       const why = this.whyNot(k);
       if (why) lines.push('', `Cannot move here: ${why}`);
@@ -200,7 +205,7 @@ export class Controller {
 
   // ---------------------------------------------------------- selection
   select(k) {
-    this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0 }, groups: null, city: false } : null;
+    this.sel = k ? { hex: k, counts: Object.fromEntries(UNIT_TYPES.map((t) => [t, 0])), groups: null, city: false } : null;
     if (k) this.initCounts();
     this.refreshView();
   }
@@ -233,13 +238,7 @@ export class Controller {
     const t = s.turn;
     const tactics = hasAdv(s, 0, 'tactics');
     const longships = hasCivAdv(s, 0, 'longships');
-    const out = {
-      ship: { free: [], locked: [], why: '' },
-      infantry: { free: [], locked: [], why: '' },
-      cavalry: { free: [], locked: [], why: '' },
-      elephant: { free: [], locked: [], why: '' },
-      settler: { free: [], locked: [], why: '' },
-    };
+    const out = Object.fromEntries(UNIT_TYPES.map((t) => [t, { free: [], locked: [], why: '' }]));
     for (const u of s.units) {
       if (u.hex !== k || u.owner !== 0) continue;
       const f = t && t.unitFlags[u.id];
@@ -263,16 +262,14 @@ export class Controller {
     if (terrainOf(this.g.s, sel.hex) === 'sea') {
       c.ship = gr.ship.free.length;
       let room = c.ship * 2;
-      for (const type of ['infantry', 'cavalry', 'elephant', 'settler']) {
+      for (const type of LAND_TYPES) {
         c[type] = Math.min(gr[type].free.length, room);
         room -= c[type];
       }
     } else {
       c.ship = 0;
-      c.infantry = gr.infantry.free.length;
-      c.cavalry = gr.cavalry.free.length;
-      c.elephant = gr.elephant.free.length;
-      c.settler = c.infantry + c.cavalry + c.elephant ? 0 : gr.settler.free.length;
+      for (const type of ['leader', 'infantry', 'cavalry', 'elephant']) c[type] = gr[type].free.length;
+      c.settler = c.leader + c.infantry + c.cavalry + c.elephant ? 0 : gr.settler.free.length;
     }
   }
 
@@ -282,10 +279,10 @@ export class Controller {
     sel.groups = this.ownGroups(sel.hex);
     const gr = sel.groups;
     const c = sel.counts;
-    for (const type of ['ship', 'infantry', 'cavalry', 'elephant', 'settler']) c[type] = Math.min(c[type], gr[type].free.length);
+    for (const type of UNIT_TYPES) c[type] = Math.min(c[type], gr[type].free.length);
     if (c.ship > 0) {
       let room = c.ship * 2;
-      for (const type of ['infantry', 'cavalry', 'elephant', 'settler']) {
+      for (const type of LAND_TYPES) {
         c[type] = Math.min(c[type], room);
         room -= c[type];
       }
@@ -341,7 +338,7 @@ export class Controller {
     const gr = sel.groups || this.ownGroups(sel.hex);
     const c = sel.counts;
     const take = (list, n) => list.slice(0, n).map((u) => u.id);
-    const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.cavalry.free, c.cavalry), ...take(gr.elephant.free, c.elephant), ...take(gr.settler.free, c.settler)];
+    const cargo = LAND_TYPES.flatMap((type) => take(gr[type].free, c[type]));
     if (c.ship > 0) return { ids: take(gr.ship.free, c.ship), carry: cargo };
     return { ids: cargo, carry: [] };
   }
@@ -385,7 +382,7 @@ export class Controller {
     // keep working with whatever is left where the units went (or where they started)
     const dest = ship && o.explore !== null ? from : o.to;
     const here = this.ownGroups(dest);
-    const any = here.ship.free.length + here.infantry.free.length + here.cavalry.free.length + here.elephant.free.length + here.settler.free.length;
+    const any = UNIT_TYPES.reduce((n, type) => n + here[type].free.length, 0);
     if (any && this.humanCanAct()) this.select(dest);
     else if (this.sel) this.clearSelection();
   }
@@ -825,6 +822,17 @@ export class Controller {
     return cap(seatName(this.g.s, p));
   }
 
+  /** What to tell the player when a Leader leaves the game: killed, taken by an opponent (worth VP to them) or replaced. */
+  leaderLostNote(ev) {
+    const s = this.g.s;
+    const name = LEADERS[ev.leader]?.name || 'A Leader';
+    if (ev.by === null || ev.by === undefined) return { text: `${this.who(ev.player)} lost ${name}.`, kind: ev.player === 0 ? 'error' : 'info' };
+    return {
+      text: `${this.who(ev.by)} captured ${seatOwner(s, ev.player)} ${name} (+${LEADER_CAPTURE_VP} VP).`,
+      kind: ev.by === 0 ? 'good' : ev.player === 0 ? 'error' : 'info',
+    };
+  }
+
   async playEvent(ev, next) {
     const s = this.g.s;
     const map = this.map;
@@ -865,10 +873,57 @@ export class Controller {
         this.syncBefore('all');
         this.draw();
         const hex = this.cityHex(ev.city);
-        if (hex) void map.floatText(hex, `+${countText(ev.units)}`, '#bde0ff');
+        const what = [LEADERS[ev.leader]?.name, countText(ev.units)].filter(Boolean).join(', ');
+        if (hex && what) void map.floatText(hex, `+${what}`, '#bde0ff');
         await this.sleep(350);
         break;
       }
+      case 'leader':
+        this.syncBefore('all');
+        this.draw();
+        void map.pulse(ev.hex, 0xf2c14e, 60);
+        await this.sleep(300);
+        break;
+      case 'leader_lost': {
+        const note = this.leaderLostNote(ev);
+        if (this.battle) this.battle.news.push(note); // told after the battle report, which would otherwise be spoiled
+        else {
+          this.syncBefore('all');
+          this.draw();
+          this.hud.toast(note.text, note.kind, 2600);
+          await this.sleep(450);
+        }
+        break;
+      }
+      case 'revert': {
+        const hex = this.cityHex(ev.city);
+        this.syncBefore('cities');
+        this.draw();
+        if (hex) {
+          void map.pulse(hex, 0xffe9a8);
+          void map.floatText(hex, `${BUILDING_NAME[ev.building] || 'Building'} taken back`, '#ffe9a8');
+        }
+        await this.sleep(400);
+        break;
+      }
+      case 'beloved': {
+        const hex = this.cityHex(ev.city);
+        this.syncBefore('cities');
+        this.draw();
+        if (hex) {
+          void map.pulse(hex, 0xc79bef);
+          void map.floatText(hex, '+1 Culture token', '#c79bef');
+        }
+        await this.sleep(400);
+        break;
+      }
+      case 'eric_token':
+        this.hud.update();
+        void map.pulse(ev.hex, 0xc79bef);
+        void map.floatText(ev.hex, `Culture token +${ERIC_TOKEN_VP} VP`, '#c79bef', { size: 15 });
+        if (ev.player !== 0) this.hud.toast(`${this.who(ev.player)} placed a Culture token on a Region (Eric the Red, ${ERIC_TOKEN_VP} VP).`, 'info', 2200);
+        await this.sleep(450);
+        break;
       case 'construct': {
         this.syncBefore('all');
         this.draw();
@@ -980,18 +1035,21 @@ export class Controller {
         this.draw();
         break;
       case 'battle_start':
-        this.battle = { hex: ev.hex, attacker: ev.attacker, defender: ev.defender, domain: ev.domain, rounds: [] };
+        this.battle = { hex: ev.hex, attacker: ev.attacker, defender: ev.defender, domain: ev.domain, rounds: [], news: [] };
         void map.pulse(ev.hex, 0xff5a4f, 60);
         await this.sleep(250);
         break;
       case 'battle_round':
         await playBattleRound(this, ev);
         break;
-      case 'battle_end':
+      case 'battle_end': {
         this.syncBefore('all');
         this.draw();
+        const news = this.battle ? this.battle.news : [];
         this.battle = null;
+        if (news.length) this.hud.toast(news.map((n) => n.text).join('\n'), news.some((n) => n.kind === 'error') ? 'error' : news.some((n) => n.kind === 'good') ? 'good' : 'info', 2800);
         break;
+      }
       case 'mood':
         this.syncBefore('cities');
         this.draw();

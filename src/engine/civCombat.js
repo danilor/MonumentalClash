@@ -5,11 +5,11 @@ import { gainRes } from './core.js';
 import { addCaptive } from './civs.js';
 import { armyAt, buildingsLeft, hasCivAdv, hexDistance, isNpc, unitById } from './queries.js';
 
-/** Remember the types of the Army units a side is about to lose: Captives are made of them once the battle is won. */
+/** Remember the types of the Army units a side is about to lose: Captives are made of them once the battle is won (Leaders are never taken). */
 export function noteLoss(s, res, owner, ids) {
   for (const id of ids) {
     const u = unitById(s, id);
-    if (u && u.type !== 'ship' && u.type !== 'settler') (res.lost[owner] ||= []).push(u.type);
+    if (u && u.type !== 'ship' && u.type !== 'settler' && u.type !== 'leader') (res.lost[owner] ||= []).push(u.type);
   }
 }
 

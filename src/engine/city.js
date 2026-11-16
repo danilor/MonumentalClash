@@ -5,16 +5,19 @@ import { WONDERS } from './data/wonders.js';
 import { roll } from './rng.js';
 import {
   allHexKeys, armyAt, bfs, buildingsLeft, cityAt, cityById, citiesOf, cityHasWonder, citySize, citySizeCap, hasAdv, hasBuilding,
-  hasCivAdv, isArmy, isLand, isNpc, isPortCity, isSea, nbrs, owns, pirateBlocked, pirateMaster, revealedDistances, seaNbrs, settlementsLeft,
-  shipsAt, terrainOf, unitById, unitsAt, unitsLeft, unitsOf, hexDistance,
+  hasCivAdv, hasLeader, isArmy, isLand, isNpc, isPortCity, isSea, leaderAt, leaderCity, leaderOf, leaderUnit, nbrs, owns, pirateBlocked,
+  pirateMaster, revealedDistances, seaNbrs, settlementsLeft, shipsAt, stackLimit, terrainOf, unitById, unitsAt, unitsLeft, unitsOf,
+  hexDistance,
 } from './queries.js';
 import { addCity } from './state.js';
 import {
-  addUnitTo, applyPayment, canPay, drawActionCard, drawObjectiveCard, fail, gainRes, modifierCard, moodUp, planPayment,
-  removeUnits, useCard,
+  addUnitTo, applyPayment, canPay, drawActionCard, drawObjectiveCard, drawWonderCard, fail, gainRes, modifierCard, moodUp, planPayment,
+  removeUnits, spendCaptive, useCard,
 } from './core.js';
+import { LEADERS, LEADER_RECRUIT_COST } from './data/leaders.js';
+import { leadersAvailable, placeLeader } from './leaders.js';
 import { choose, confirm } from './prompts.js';
-import { advanceBlocked, gainAdvance } from './advance.js';
+import { advanceBlocked, gainAdvance, leaderAdvance, leaderAdvanceOptions } from './advance.js';
 import { battle, trimCargo } from './combat.js';
 import { completeEvent } from './objectives.js';
 import { cityOption } from './eventTools.js';
@@ -25,12 +28,21 @@ import {
 } from './civs.js';
 
 // ------------------------------------------------------------------ helpers
-/** Mood as it counts for activation this turn (Forced Labor makes Angry cities act as Neutral). */
-export const effMood = (s, c) => (s.turn && s.turn.forcedLabor && c.mood === 'angry' ? 'neutral' : c.mood);
+/**
+ * Mood as it counts for activation this turn (Forced Labor makes Angry cities act as Neutral; Bleda's city acts as Happy on its
+ * first activation).
+ */
+export const effMood = (s, c) => {
+  if (s.turn && s.turn.player === c.owner && !s.turn.activated[c.id] && leaderAt(s, c.owner, 'bleda', c.hex)) return 'happy';
+  return s.turn && s.turn.forcedLabor && c.mood === 'angry' ? 'neutral' : c.mood;
+};
 
 export function cityCapacity(s, c) {
   const m = effMood(s, c);
-  return m === 'angry' ? 1 : citySize(c) + (m === 'happy' ? 1 : 0);
+  if (m === 'angry') return 1;
+  // Attila makes a size 1 city he is in act as one size larger.
+  const attila = citySize(c) === 1 && leaderAt(s, c.owner, 'attila', c.hex) ? 1 : 0;
+  return citySize(c) + attila + (m === 'happy' ? 1 : 0);
 }
 
 function ownCity(g, id, p) {
@@ -98,8 +110,8 @@ function* cityStatesStandIn(g, city) {
   return stand;
 }
 
-/** Bookkeeping after a city action resolved: extra activations lower the Mood. */
-export function* finishActivation(g, city) {
+/** Bookkeeping after a city action resolved: extra activations lower the Mood. `purpose` is 'collect' for a Collect. */
+export function* finishActivation(g, city, purpose = null) {
   const t = g.s.turn;
   delete city.corrupt; // Corrupt Officials: the city is clean again once it has been activated
   const acted = (t.activated[city.id] || 0) === 1 && hasCivAdv(g.s, city.owner, 'city_states') ? yield* cityStatesStandIn(g, city) : city;
@@ -114,6 +126,10 @@ export function* finishActivation(g, city) {
   }
   t.activated[acted.id] = n + 1;
   yield* lighthouseShip(g, acted);
+  if (purpose !== 'collect' && leaderAt(g.s, city.owner, 'imhotep', city.hex)) {
+    const got = gainRes(g, city.owner, { ideas: 1 });
+    if (got.ideas) g.log(`${g.name(city.owner)} gains 1 idea (Imhotep).`);
+  }
 }
 
 // -------------------------------------------------------------- found city
@@ -138,8 +154,15 @@ export function* foundCity(g, a) {
   const hex = u.hex;
   const why = foundBlocked(s, p, hex);
   if (why) fail(why);
-  g.spendAction();
-  removeUnits(g, [u.id]);
+  // Queen Dido's Settlers found at no action cost; with Queen Boudica a Settler stays after founding for 1 Food.
+  const keep = !!a.keep;
+  if (keep && !leaderAt(s, p, 'boudica', hex)) fail('Only Queen Boudica lets a Settler stay after founding a city.');
+  if (keep && !canPay(s, p, { food: 1 })) fail('Keeping the Settler costs 1 Food.');
+  if (!leaderAt(s, p, 'dido', hex)) g.spendAction();
+  if (keep) {
+    applyPayment(g, p, planPayment(s, p, { food: 1 }));
+    g.log(`${g.name(p)} pays 1 food to keep the Settler (Queen Boudica).`);
+  } else removeUnits(g, [u.id]);
   const city = addCity(s, p, hex, 'neutral');
   g.emit({ type: 'found', city: city.id, hex, player: p });
   g.log(`${g.name(p)} founds a new city.`);
@@ -201,11 +224,14 @@ export function collectCandidates(s, p, city) {
   if (hasAdv(s, p, 'husbandry')) {
     for (const [k, d] of bfs(s, city.hex, 2, (n) => isLand(s, n))) if (d === 2) consider(k, true);
   }
-  if (hasCivAdv(s, p, 'tribute_empire')) {
+  // Acamapichtli lends Tribute Empire to the city he is in for 1 Captive (once per Collect), for people without the Advance.
+  const toll = !hasCivAdv(s, p, 'tribute_empire') && s.players[p].captives.length > 0 && leaderAt(s, p, 'acamapichtli', city.hex);
+  if (hasCivAdv(s, p, 'tribute_empire') || toll) {
     for (const [k] of revealedDistances(s, city.hex, 2)) {
       const target = cityAt(s, k);
       if (target && target.owner !== p) consider(k, false, true);
     }
+    if (toll) for (const c of out.values()) if (c.tribute) c.toll = true;
   }
   return [...out.values()];
 }
@@ -252,6 +278,7 @@ export function* collectAction(g, a) {
   let far = 0;
   const resolved = [];
   const captives = [];
+  let tolled = false;
   for (const pk of picks) {
     const c = byHex.get(pk.hex);
     if (!c) fail('You cannot collect from that space.');
@@ -261,6 +288,7 @@ export function* collectAction(g, a) {
     if (!c.opts.includes(res)) fail('That space does not give that Resource.');
     if (c.sea) seas += 1;
     if (c.far) far += 1;
+    if (c.toll) tolled = true;
     if (res === 'captive') {
       captives.push(pk.hex);
       resolved.push({ hex: pk.hex, res });
@@ -275,6 +303,10 @@ export function* collectAction(g, a) {
 
   if (surge) useCard(g, p, surge);
   if (moodPlan) applyPayment(g, p, moodPlan);
+  if (tolled) {
+    spendCaptive(g, p);
+    g.log(`${g.name(p)} pays 1 Captive for Tribute Empire (Acamapichtli).`);
+  }
   if (free) t.econLib = true;
   else g.spendAction();
   t.collects += 1;
@@ -302,15 +334,15 @@ export function* collectAction(g, a) {
   const word = ([r, n]) => (r === 'mood' ? plural(n, 'Mood token') : `${n} ${r === 'ideas' && n === 1 ? 'idea' : r}`);
   const gotText = [...Object.entries(got).map(word), ...(captives.length ? [plural(captives.length, 'Captive')] : [])].join(', ');
   g.log(`${g.name(p)} collects ${gotText || 'nothing'}.`);
-  yield* finishActivation(g, city);
+  yield* finishActivation(g, city, 'collect');
 }
 
 // --------------------------------------------------------------- construct
-export function constructBlocked(s, p, city, building) {
+export function constructBlocked(s, p, city, building, { angry = false } = {}) {
   if (!BUILDINGS.includes(building) || (CIV_BUILDINGS.includes(building) && !s.civs)) return 'Unknown building.';
   const need = BUILDING_ADVANCE[building];
   if (!hasAdv(s, p, need)) return `You need ${ADVANCES[need].name}.`;
-  if (effMood(s, city) === 'angry') return 'You cannot construct in an Angry city.';
+  if (!angry && effMood(s, city) === 'angry') return 'You cannot construct in an Angry city.';
   if (city.buildings[building] !== undefined) return 'The city already has that building.';
   if (citySize(city) + 1 > citySizeCap(s, p)) return 'A city cannot grow larger than size 5 or your number of cities.';
   if (buildingsLeft(s, p, building) <= 0) return 'You have no pieces of that building left.';
@@ -349,12 +381,75 @@ export function rapidPrice(s, p, price, waive) {
   return { price: { ...price, [waived]: price[waived] - 1 }, waived };
 }
 
-/** Shared by the Construct action and the City Boom card. `rapid` (Rapid Construction): { card, waive } for 1 less resource. */
-export function* performConstruct(g, p, city, building, { portHex = null, templeBonus = 'mood', cost = null, spendAction = true, rapid = null } = {}) {
+/** Add two prices (or any two lists of amounts). */
+export function addCosts(a, b) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) out[k] = (out[k] || 0) + v;
+  return out;
+}
+
+/** Hammurabi's Fortress and Imhotep's Observatory cost no Food or Wood in the city their Leader is in. */
+export function leaderBuildPrice(s, p, city, building, price) {
+  const free = (building === 'fortress' && leaderAt(s, p, 'hammurabi', city.hex)) || (building === 'observatory' && leaderAt(s, p, 'imhotep', city.hex));
+  return free ? { ...price, food: 0, wood: 0 } : price;
+}
+
+/** Ramses II: an Obelisk gives 1 Culture token or 2 Ideas. */
+function* ramsesObelisk(g, p) {
+  if (!hasLeader(g.s, p, 'ramses')) return;
+  const pick = yield* choose(g, p, {
+    kind: 'ramses',
+    title: 'Ramses II',
+    text: 'Your new Obelisk gives 1 Culture token or 2 Ideas.',
+    options: [
+      { id: 'culture', label: '1 Culture' },
+      { id: 'ideas', label: '2 Ideas' },
+    ],
+    default: 'culture',
+  });
+  gainRes(g, p, pick === 'ideas' ? { ideas: 2 } : { culture: 1 });
+  g.log(`${g.name(p)} gains ${pick === 'ideas' ? '2 ideas' : '1 culture'} (Ramses II).`);
+}
+
+/** What a city's size growing (a Building or a Wonder) sets off for the Leader in it: Go-Toba's free Advance, Siyaj Kak's free Influence. */
+function* afterSizeIncrease(g, p, city, building = null) {
+  const s = g.s;
+  if ((building === 'academy' || building === 'observatory') && leaderAt(s, p, 'go_toba', city.hex)) yield* goTobaAdvance(g, p);
+  if (leaderAt(s, p, 'siyaj_kak', city.hex)) yield* freeInfluence(g, p, city, 'Siyaj Kak');
+}
+
+/** Emperor Go-Toba: after an Academy or Apothecary, an Advance at its usual price and no action. */
+function* goTobaAdvance(g, p) {
+  const s = g.s;
+  const options = leaderAdvanceOptions(s, p, { full: true });
+  if (!options.length) return;
+  const id = yield* choose(g, p, {
+    kind: 'leader_advance',
+    title: 'Emperor Go-Toba',
+    text: 'You may research an Advance at no action cost (you pay its usual price).',
+    options: [...options.map((o) => ({ id: o, label: ADVANCES[o].name })), { id: 'none', label: 'No Advance' }],
+    default: 'none',
+  });
+  if (id === 'none' || !options.includes(id)) return;
+  yield* leaderAdvance(g, p, id, { full: true });
+}
+
+/** Sacrifice `n` Captives as part of a price (Ahuitzotl): they must be held before anything is paid. */
+function sacrificeCaptives(g, p, n) {
+  for (let i = 0; i < n; i++) spendCaptive(g, p);
+  if (n) g.log(`${g.name(p)} sacrifices ${plural(n, 'Captive')} (Ahuitzotl).`);
+}
+
+/**
+ * Shared by the Construct action and the City Boom card. `rapid` (Rapid Construction): { card, waive } for 1 less resource;
+ * `sacrifice` is the number of Captives that go with the price (Ahuitzotl).
+ */
+export function* performConstruct(g, p, city, building, { portHex = null, templeBonus = 'mood', cost = null, spendAction = true, rapid = null, extra = null, angry = false, sacrifice = 0 } = {}) {
   const s = g.s;
   const t = s.turn;
-  const why = constructBlocked(s, p, city, building);
+  const why = constructBlocked(s, p, city, building, { angry });
   if (why) fail(why);
+  if (s.players[p].captives.length < sacrifice) fail(`You need ${plural(sacrifice, 'Captive')} to sacrifice.`);
   let port = null;
   if (building === 'port') {
     const seas = seaNbrs(s, city.hex);
@@ -366,12 +461,15 @@ export function* performConstruct(g, p, city, building, { portHex = null, temple
     price = { ...price, food: 0 };
     stateReligion = true;
   }
+  price = leaderBuildPrice(s, p, city, building, price);
   if (rapid) price = rapidPrice(s, p, price, rapid.waive).price;
-  const plan = planPayment(s, p, price, sizePay(s, p, building));
+  if (extra) price = addCosts(price, extra);
+  const plan = planPayment(s, p, price, sizePay(s, p, building, city));
   if (!plan) fail(rapid ? 'You cannot afford that, even with Rapid Construction.' : 'A building costs 1 Food, 1 Wood and 1 Ore.');
   if (rapid) useCard(g, p, rapid.card);
   if (spendAction) g.spendAction();
   applyPayment(g, p, plan);
+  sacrificeCaptives(g, p, sacrifice);
   if (stateReligion) t.used.stateReligion = true;
   city.buildings[building] = p;
   if (building === 'port') city.port = port;
@@ -383,7 +481,11 @@ export function* performConstruct(g, p, city, building, { portHex = null, temple
     if (hasAdv(s, p, 'dogma')) yield* dogmaAdvance(g, p);
   }
   if (building === 'observatory') yield* drawActionCard(g, p);
-  if (building === 'obelisk') yield* stelaBonus(g, p);
+  if (building === 'obelisk') {
+    yield* stelaBonus(g, p);
+    yield* ramsesObelisk(g, p);
+  }
+  yield* afterSizeIncrease(g, p, city, building);
 }
 
 export function* constructAction(g, a) {
@@ -400,34 +502,103 @@ export function* constructAction(g, a) {
 
 export function wonderBlocked(s, p, city, id) {
   const w = WONDERS[id];
-  if (!w || !s.players[p].hand.wonder.includes(id)) return 'You do not hold that Wonder card.';
+  if (!w || !wonderSource(s, p, city, id)) return 'You do not hold that Wonder card.';
   if (!hasAdv(s, p, 'engineering')) return 'You need Engineering to construct Wonders.';
   if (!hasAdv(s, p, w.advance)) return `You need ${ADVANCES[w.advance].name}.`;
-  if (city.mood !== 'happy') return 'Wonders can only be built in a Happy city.';
+  if (effMood(s, city) !== 'happy') return 'Wonders can only be built in a Happy city.';
   if (citySize(city) + 1 > citySizeCap(s, p)) return 'A city cannot grow larger than size 5 or your number of cities.';
-  if (!planPayment(s, p, w.cost, { noArena: true, ...sizePay(s, p) })) return 'You cannot afford that Wonder.';
+  if (!planPayment(s, p, wonderCost(s, p, city, id), { noArena: true, ...sizePay(s, p, null, city) })) return 'You cannot afford that Wonder.';
   return null;
 }
 
-export function* wonderAction(g, a) {
+const LEADER_WONDER = { nebuchadnezzar: 'great_gardens', qin: 'great_wall' };
+
+/**
+ * Where the card of a Wonder comes from: the player's hand ({ kind: 'hand' }). Nebuchadnezzar II builds the Great Gardens and Qin
+ * Shi Huang the Great Wall in their city without holding it: the card then comes from another player's hand ({ kind: 'player' },
+ * who draws a replacement) or from the Wonder deck ({ kind: 'deck' }). Null when it cannot be had.
+ */
+export function wonderSource(s, p, city, id) {
+  if (!WONDERS[id]) return null;
+  if (s.players[p].hand.wonder.includes(id)) return { kind: 'hand' };
+  if (!Object.entries(LEADER_WONDER).some(([leader, w]) => w === id && leaderAt(s, p, leader, city.hex))) return null;
+  if (s.cities.some((c) => cityHasWonder(c, id))) return null;
+  const holder = s.players.find((x) => x.idx !== p && x.hand.wonder.includes(id));
+  if (holder) return { kind: 'player', player: holder.idx };
+  return s.decks.wonder.includes(id) ? { kind: 'deck' } : null;
+}
+
+/** The Wonders a city could be given a try at: the ones in the player's hand, plus the Leader's own. */
+export function wonderChoices(s, p, city) {
+  const ids = [...s.players[p].hand.wonder];
+  for (const w of Object.values(LEADER_WONDER)) if (!ids.includes(w) && wonderSource(s, p, city, w)) ids.push(w);
+  return ids;
+}
+
+/**
+ * What a Wonder costs in `city`. Nebuchadnezzar II and Qin Shi Huang take 1 Culture token and any 2 resources off their Wonder; Xerxes
+ * takes any 2 resources or Culture tokens off every Wonder in his city. The player is let off where they are shortest.
+ */
+export function wonderCost(s, p, city, id) {
+  const cost = { ...WONDERS[id].cost };
+  const pl = s.players[p];
+  const short = (k) => cost[k] - (k === 'culture' ? pl.culture : pl.res[k]);
+  const waive = (kinds, n) => {
+    for (let i = 0; i < n; i++) {
+      const k = kinds.filter((x) => cost[x] > 0).sort((x, y) => short(y) - short(x))[0];
+      if (!k) return;
+      cost[k] -= 1;
+    }
+  };
+  if (Object.entries(LEADER_WONDER).some(([leader, w]) => w === id && leaderAt(s, p, leader, city.hex))) {
+    waive(['culture'], 1);
+    waive(['food', 'wood', 'ore'], 2);
+  }
+  if (leaderAt(s, p, 'xerxes', city.hex)) waive(['food', 'wood', 'ore', 'culture'], 2);
+  return cost;
+}
+
+/** Take the card of a Wonder the player is about to build from wherever it is (see wonderSource). */
+function takeWonderCard(g, p, city, id) {
   const s = g.s;
-  const p = g.cur;
-  const city = ownCity(g, a.city, p);
-  checkActivatable(g, city);
-  markStart(g, city);
-  const why = wonderBlocked(s, p, city, a.wonder);
+  const src = wonderSource(s, p, city, id);
+  if (src.kind === 'hand') s.players[p].hand.wonder.splice(s.players[p].hand.wonder.indexOf(id), 1);
+  else if (src.kind === 'deck') s.decks.wonder.splice(s.decks.wonder.indexOf(id), 1);
+  else {
+    const theirs = s.players[src.player].hand.wonder;
+    theirs.splice(theirs.indexOf(id), 1);
+    drawWonderCard(g, src.player);
+    g.log(`${g.name(p)} takes the card from ${g.name(src.player)}, who draws a replacement.`);
+  }
+}
+
+/** Build a Wonder. `spendAction` is false for the free builds of Leaders; `extra` is a cost added to the Wonder's; `sacrifice` Captives go with it (Ahuitzotl). */
+export function* performWonder(g, p, city, id, { spendAction = true, extra = null, sacrifice = 0 } = {}) {
+  const s = g.s;
+  const why = wonderBlocked(s, p, city, id);
   if (why) fail(why);
-  const w = WONDERS[a.wonder];
-  const plan = planPayment(s, p, w.cost, { noArena: true, ...sizePay(s, p) });
-  g.spendAction();
+  if (s.players[p].captives.length < sacrifice) fail(`You need ${plural(sacrifice, 'Captive')} to sacrifice.`);
+  const w = WONDERS[id];
+  const plan = planPayment(s, p, extra ? addCosts(wonderCost(s, p, city, id), extra) : wonderCost(s, p, city, id), { noArena: true, ...sizePay(s, p, null, city) });
+  if (!plan) fail('You cannot afford that Wonder.');
+  if (spendAction) g.spendAction();
   applyPayment(g, p, plan);
-  const hand = s.players[p].hand.wonder;
-  hand.splice(hand.indexOf(w.id), 1);
+  sacrificeCaptives(g, p, sacrifice);
+  takeWonderCard(g, p, city, id);
   city.wonders.push({ id: w.id, builder: p });
   s.players[p].builtWonders.push(w.id);
   g.emit({ type: 'wonder', player: p, city: city.id, wonder: w.id });
   g.log(`${g.name(p)} completes the ${w.name}!`);
   if (w.id === 'great_statue') drawObjectiveCard(g, p);
+  yield* afterSizeIncrease(g, p, city);
+}
+
+export function* wonderAction(g, a) {
+  const p = g.cur;
+  const city = ownCity(g, a.city, p);
+  checkActivatable(g, city);
+  markStart(g, city);
+  yield* performWonder(g, p, city, a.wonder);
   yield* finishActivation(g, city);
 }
 
@@ -437,7 +608,7 @@ export function* wonderAction(g, a) {
  * are paid with the Draft price in `draftWith` (Mood; Gold with Mercenaries; Culture with Spartans) instead of their usual price;
  * `ball` is the Mood a Ballcourts city costs.
  */
-export function recruitCost(s, p, units, { draft = 0, sanitation = 0, draftShip = 0, draftCard = 0, draftWith = 'mood', ball = 0 } = {}) {
+export function recruitCost(s, p, units, { draft = 0, sanitation = 0, draftShip = 0, draftCard = 0, draftWith = 'mood', ball = 0, leader = false } = {}) {
   const cost = { food: 0, wood: 0, ore: 0, mood: 0 };
   for (const type of RECRUIT_TYPES) {
     let n = units[type] || 0;
@@ -451,6 +622,10 @@ export function recruitCost(s, p, units, { draft = 0, sanitation = 0, draftShip 
   else if (draftWith === 'culture') cost.culture = price;
   else cost.mood = price;
   cost.mood += sanitation + ball;
+  if (leader) {
+    cost.culture = (cost.culture || 0) + LEADER_RECRUIT_COST.culture;
+    cost.mood += LEADER_RECRUIT_COST.mood;
+  }
   return cost;
 }
 
@@ -474,12 +649,14 @@ export function recruitBlocked(g, p, city, a) {
   const s = g.s;
   const units = Object.fromEntries(RECRUIT_TYPES.map((type) => [type, Math.max(0, a.units?.[type] | 0)]));
   const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
+  const leader = a.leader || null;
+  if (leader && !leadersAvailable(s, p).includes(leader)) return { why: 'You cannot recruit that Leader.' };
   const draftCard = a.draftCard ? 1 : 0;
-  if (total + draftCard <= 0) return { why: 'Choose at least one unit to recruit.' };
+  if (total + (leader ? 1 : 0) + draftCard <= 0) return { why: 'Choose at least one unit to recruit.' };
   const ball = a.ballcourts ? 1 : 0;
   if (ball && (!hasCivAdv(s, p, 'ballcourts') || effMood(s, city) === 'angry')) return { why: 'Ballcourts cannot make this city larger.' };
   const cap = cityCapacity(s, city) + ball;
-  if (total + draftCard > cap) return { why: `This city can recruit at most ${plural(cap, 'unit')}.` };
+  if (total + (leader ? 1 : 0) + draftCard > cap) return { why: `This city can recruit at most ${plural(cap, 'unit')}.` };
   if (units.ship && !isPortCity(city)) return { why: 'Ships need a city with a Port.' };
   if (units.cavalry && !hasBuilding(city, 'market') && !canMountHere(s, p, 'cavalry')) return { why: 'Cavalry need a city with a Market.' };
   if (units.elephant && !hasBuilding(city, 'market') && !canMountHere(s, p, 'elephant')) return { why: 'Elephants need a city with a Market.' };
@@ -494,11 +671,19 @@ export function recruitBlocked(g, p, city, a) {
   const draftWith = a.draftWith === 'gold' || a.draftWith === 'culture' ? a.draftWith : 'mood';
   if (draftWith === 'gold' && !hasCivAdv(s, p, 'mercenaries')) return { why: 'You need Mercenaries to Draft with Gold.' };
   if (draftWith === 'culture' && !hasCivAdv(s, p, 'spartans')) return { why: 'You need the Spartans to Draft with Culture.' };
-  const cost = recruitCost(s, p, units, { draft, sanitation, draftShip, draftCard, draftWith, ball });
+  const caesar = !!a.caesar && s.turn && s.turn.caesarCity === city.id;
+  if (a.caesar && !caesar) return { why: 'Caesar can only build units in a city he has just captured.' };
+  const cost = recruitCost(s, p, units, { draft, sanitation, draftShip, draftCard, draftWith, ball, leader: !!leader });
+  if (caesar) cost.gold = (cost.gold || 0) + 1;
   const plan = planPayment(s, p, cost);
   if (!plan) return { why: 'You cannot afford that.' };
-  const placed = units.infantry + units.cavalry + units.elephant;
-  if (armyAt(s, city.hex, p).length + placed > STACK_LIMIT) return { why: 'A space holds at most 4 Army units.' };
+  const placed = units.infantry + units.cavalry + units.elephant + (leader ? 1 : 0);
+  // The Leader in play is discarded when another one is recruited; Xerxes' Army stacks up to 5. Vercingetorix may send his recruits
+  // to the spaces around the city, so the stack there is checked once they are deployed.
+  const old = leaderUnit(s, p);
+  const staying = armyAt(s, city.hex, p).length - (leader && old && old.hex === city.hex ? 1 : 0);
+  const limit = leader ? (leader === 'xerxes' ? STACK_LIMIT + 1 : STACK_LIMIT) : stackLimit(s, p, city.hex);
+  if (!leaderAt(s, p, 'vercingetorix', city.hex) && staying + placed > limit) return { why: `A space holds at most ${limit} Army units.` };
   for (const type of RECRUIT_TYPES) {
     const over = units[type] - Math.max(0, unitsLeft(s, p, type));
     if (over <= 0) continue;
@@ -506,7 +691,36 @@ export function recruitBlocked(g, p, city, a) {
     const pool = unitsOf(s, p, type).filter((u) => u.hex !== there);
     if (pool.length < over) return { why: `You have no ${type} left to recruit.` };
   }
-  return { units, draft, draftShip, draftCard, sanitation, cost, plan };
+  return { units, leader, caesar, draft, draftShip, draftCard, sanitation, cost, plan };
+}
+
+/** Where a Vercingetorix recruit may be deployed: revealed Land spaces next to the city with no enemy units, cities or Leaders. */
+export function deployHexes(s, p, city) {
+  return nbrs(s, city.hex).filter((k) => {
+    const c = cityAt(s, k);
+    return isLand(s, k) && !(c && c.owner !== p) && !s.units.some((u) => u.hex === k && u.owner !== p);
+  });
+}
+
+function* deployRecruits(g, p, city, made) {
+  const s = g.s;
+  const mine = made.filter((u) => u.type !== 'ship' && u.type !== 'leader');
+  for (const u of mine) {
+    const room = (k) => (isArmy(u) ? armyAt(s, k, p).length < stackLimit(s, p, k) : true);
+    const spots = deployHexes(s, p, city).filter(room);
+    if (!spots.length) break;
+    const to = yield* choose(g, p, {
+      kind: 'pick_hex',
+      title: 'Vercingetorix',
+      text: `Deploy this ${u.type} on a space next to the city, or leave it in the city.`,
+      options: [{ id: city.hex, label: 'Stay in the city', hex: city.hex }, ...spots.map((k) => ({ id: k, label: k, hex: k }))],
+      default: city.hex,
+    });
+    if (to !== city.hex && spots.includes(to)) {
+      u.hex = to;
+      g.log(`${g.name(p)} deploys a ${u.type} on ${to} (Vercingetorix).`);
+    }
+  }
 }
 
 export function* recruitAction(g, a) {
@@ -518,25 +732,38 @@ export function* recruitAction(g, a) {
   markStart(g, city);
   const chk = recruitBlocked(g, p, city, a);
   if (chk.why) fail(chk.why);
-  const { units, draft, draftShip, draftCard, sanitation, plan } = chk;
-  g.spendAction();
+  const { units, leader, caesar, draft, draftShip, draftCard, sanitation, plan } = chk;
+  if (!caesar) g.spendAction();
   applyPayment(g, p, plan);
   const reserved = new Set();
   const newShips = [];
+  const made = [];
+  if (leader) made.push(placeLeader(g, p, leader, city.hex));
   for (const type of ['settler', 'infantry', 'cavalry', 'elephant', 'ship']) {
     for (let i = 0; i < units[type]; i++) {
       const u = takeUnit(g, p, type, type === 'ship' ? city.port : city.hex, reserved);
       reserved.add(u.id);
+      made.push(u);
       if (type === 'ship') newShips.push(u.id);
     }
   }
-  g.emit({ type: 'recruit', player: p, city: city.id, units });
-  const made = countList(units, { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], elephant: ['Elephant', 'Elephants'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] });
-  g.log(`${g.name(p)} recruits ${draftCard && !made ? 'an Action card' : made}.`);
+  if (caesar && t.move) for (const u of made) t.move.moved[u.id] = true;
+  g.emit({ type: 'recruit', player: p, city: city.id, units, leader });
+  const names = { infantry: ['Infantry', 'Infantry'], cavalry: ['Cavalry', 'Cavalry'], elephant: ['Elephant', 'Elephants'], settler: ['Settler', 'Settlers'], ship: ['Ship', 'Ships'] };
+  const text = [leader ? LEADERS[leader].name : '', countList(units, names)].filter(Boolean).join(' and ');
+  g.log(`${g.name(p)} recruits ${draftCard && !text ? 'an Action card' : text}.`);
+  if (leaderAt(s, p, 'vercingetorix', city.hex)) {
+    yield* deployRecruits(g, p, city, made);
+    if (armyAt(s, city.hex, p).length > stackLimit(s, p, city.hex)) fail(`A space holds at most ${stackLimit(s, p, city.hex)} Army units.`);
+  }
 
   if (draft || draftShip || draftCard) {
     t.draftUses += 1;
     if (t.draftUses >= 2) completeEvent(g, p, 'draft_obj');
+    if (leaderAt(s, p, 'leonidas', city.hex)) {
+      gainRes(g, p, { culture: 1 });
+      g.log(`${g.name(p)} gains 1 Culture token (Leonidas).`);
+    }
   }
   if (draftCard) yield* drawActionCard(g, p);
   formalTraining(g, p, city);
@@ -568,7 +795,7 @@ export function* recruitAction(g, a) {
 }
 
 // -------------------------------------------------------------- happiness
-function happinessPlan(s, p, amount, explicit) {
+function happinessPlan(s, p, amount, explicit, culture = 0) {
   const pl = s.players[p];
   const arena = !!(s.cities.some((c) => c.owner === p && cityHasWonder(c, 'great_arena')));
   const rituals = hasAdv(s, p, 'rituals');
@@ -587,13 +814,17 @@ function happinessPlan(s, p, amount, explicit) {
       sum += n;
     }
     if (sum !== amount) fail(`The payment must total ${amount}.`);
+    if (culture) {
+      if (pl.culture - (plan.culture || 0) < culture) fail('You cannot afford that.');
+      plan.culture = (plan.culture || 0) + culture;
+    }
     return plan;
   }
-  const direct = planPayment(s, p, { mood: amount });
+  const direct = planPayment(s, p, { mood: amount, culture });
   if (direct) return direct;
   if (!rituals) return null;
-  const moodAvail = pl.mood + (arena ? pl.culture : 0);
-  const plan = planPayment(s, p, { mood: Math.min(amount, moodAvail) });
+  const moodAvail = pl.mood + (arena ? Math.max(0, pl.culture - culture) : 0);
+  const plan = planPayment(s, p, { mood: Math.min(amount, moodAvail), culture });
   if (!plan) return null;
   let rest = amount - Math.min(amount, moodAvail);
   for (const r of ['ideas', 'gold', 'wood', 'ore', 'food']) {
@@ -607,35 +838,55 @@ function happinessPlan(s, p, amount, explicit) {
 
 export const happinessRoom = (c) => ({ angry: 2, neutral: 1, happy: 0 })[c.mood];
 
+/**
+ * Increase Happiness. Hammurabi ('hammurabi' on a city's entry) raises his city straight to Happy for 1 Culture token; Caesar
+ * (`a.caesar`) activates his city for it as a Free action.
+ */
 export function* happinessAction(g, a) {
   const s = g.s;
   const p = g.cur;
   const list = a.cities || [];
   if (!list.length) fail('Choose at least one city.');
-  const free = !!a.free;
+  const caesar = !!a.caesar;
+  const free = !!a.free && !caesar;
   if (free && !hasAdv(s, p, 'voting')) fail('You need Voting.');
+  if (caesar && list.length !== 1) fail('Caesar improves the one city he is in.');
   let total = free ? 1 : 0;
+  let culture = 0;
   const seen = new Set();
   const todo = [];
   for (const e of list) {
     const c = ownCity(g, e.city, p);
     if (seen.has(c.id)) fail('Each city can only appear once.');
     seen.add(c.id);
+    if (caesar) {
+      if (!leaderAt(s, p, 'caesar', c.hex)) fail('Caesar must be in that city.');
+      checkActivatable(g, c);
+      markStart(g, c);
+    }
+    if (e.hammurabi) {
+      if (!leaderAt(s, p, 'hammurabi', c.hex)) fail('Hammurabi must be in that city.');
+      if (!happinessRoom(c)) fail('A city cannot be raised above Happy.');
+      culture += 1;
+      todo.push([c, happinessRoom(c)]);
+      continue;
+    }
     const steps = e.steps | 0;
     if (steps < 1) fail('Choose at least one step.');
     if (steps > happinessRoom(c)) fail('A city cannot be raised above Happy.');
     total += steps * citySize(c);
     todo.push([c, steps]);
   }
-  const plan = happinessPlan(s, p, total, a.pay);
-  if (!plan) fail(`You need ${plural(total, 'Mood token')}.`);
-  if (!free) g.spendAction();
+  const plan = happinessPlan(s, p, total, a.pay, culture);
+  if (!plan) fail(culture ? `You need ${plural(total, 'Mood token')} and ${plural(culture, 'Culture token')}.` : `You need ${plural(total, 'Mood token')}.`);
+  if (!free && !caesar) g.spendAction();
   applyPayment(g, p, plan);
   for (const [c, steps] of todo) {
     moodUp(c, steps);
     g.emit({ type: 'mood', city: c.id });
   }
   g.log(`${g.name(p)} raises the Mood of ${plural(todo.length, 'city', 'cities')}.`);
+  if (caesar) yield* finishActivation(g, todo[0][0]);
   yield* [];
 }
 
@@ -658,12 +909,21 @@ export function* sportsAction(g, a) {
 }
 
 // -------------------------------------------------------------- taxation etc.
+/** Taxation. Cnut (`a.cnut` names the Happy city he is in) activates that city and collects the taxes for no Mood. */
 export function* taxationAction(g, a) {
   const s = g.s;
   const p = g.cur;
   const t = s.turn;
   if (!hasAdv(s, p, 'taxation')) fail('You need Taxation.');
   if (t.used.taxation) fail('Taxation can be used once per turn.');
+  let city = null;
+  if (a.cnut) {
+    city = ownCity(g, a.cnut, p);
+    if (!leaderAt(s, p, 'cnut', city.hex)) fail('Cnut must be in that city.');
+    if (effMood(s, city) !== 'happy') fail('Cnut needs a Happy city.');
+    checkActivatable(g, city);
+    markStart(g, city);
+  }
   const cities = citiesOf(s, p).length;
   const allowed = ['food', 'wood', 'ore'];
   if (hasAdv(s, p, 'currency')) allowed.push('gold');
@@ -676,14 +936,15 @@ export function* taxationAction(g, a) {
     n += v | 0;
   }
   if (n !== cities) fail(`Choose exactly ${plural(cities, 'Resource')}.`);
-  const plan = planPayment(s, p, { mood: 1 });
+  const plan = city ? {} : planPayment(s, p, { mood: 1 });
   if (!plan) fail('Taxation costs 1 Mood token.');
   g.spendAction();
   applyPayment(g, p, plan);
   t.used.taxation = true;
   gainRes(g, p, gain);
   if (gain.gold) t.goldCollected = true;
-  g.log(`${g.name(p)} collects taxes.`);
+  g.log(`${g.name(p)} collects taxes${city ? ' (Cnut)' : ''}.`);
+  if (city) yield* finishActivation(g, city);
   yield* [];
 }
 
@@ -724,6 +985,8 @@ const immuneBuilding = (s, target, b) => b === 'obelisk' || (b === 'port' && has
 export function influenceTypes(s, p, target) {
   const immune = target.owner !== BARBARIAN && target.owner !== p && target.wonders.length && owns(s, target.owner, 'monuments');
   if (immune) return [];
+  // Sulla's city cannot be the target of foreign Cultural Influence.
+  if (target.owner !== p && leaderAt(s, target.owner, 'sulla', target.hex)) return [];
   const types = Object.keys(target.buildings).filter((b) => target.buildings[b] !== p && buildingsLeft(s, p, b) > 0 && !immuneBuilding(s, target, b));
   if (target.owner === BARBARIAN && hasCivAdv(s, p, 'druidic_influence') && target.druid === undefined) types.push('druid');
   return types;
@@ -752,13 +1015,15 @@ export function influenceOrigins(s, p) {
 /** The range of an attempt before any boost: the city's size (+1 per own Settler there with Proselytism), or 2 + the other Settlers. */
 export function influenceRange(s, p, origin) {
   if (origin.settlers) return 1 + origin.settlers;
-  return citySize(origin) + (hasCivAdv(s, p, 'proselytism') ? settlersAt(s, origin.hex, p) : 0);
+  // Cleopatra gives the city she is in 1 more space of range.
+  const cleopatra = origin.owner === p && leaderAt(s, p, 'cleopatra', origin.hex) ? 1 : 0;
+  return citySize(origin) + cleopatra + (hasCivAdv(s, p, 'proselytism') ? settlersAt(s, origin.hex, p) : 0);
 }
 
-/** Zoroastrianism: enemy Army Units outside cities, on land, of a type the player still has in supply. */
+/** Zoroastrianism: enemy Army Units outside cities, on land, of a type the player still has in supply (Leaders cannot be turned). */
 export function zoroastrianTargets(s, p) {
   if (!hasCivAdv(s, p, 'zoroastrianism')) return [];
-  return s.units.filter((u) => u.owner !== p && u.owner !== PIRATE && isArmy(u) && isLand(s, u.hex) && !cityAt(s, u.hex) && unitsLeft(s, p, u.type) > 0);
+  return s.units.filter((u) => u.owner !== p && u.owner !== PIRATE && isArmy(u) && u.type !== 'leader' && isLand(s, u.hex) && !cityAt(s, u.hex) && unitsLeft(s, p, u.type) > 0);
 }
 
 /** A city bound by an Influence of its own: it can only target itself. */
@@ -782,6 +1047,7 @@ export function influenceBlocked(s, p, acting, target, rangeBoost = 0, extraRang
     if (!zoroastrianTargets(s, p).some((u) => u.id === target.id)) return 'That unit cannot be influenced.';
   } else {
     if (acting.settlers && target.owner === p) return 'Settlers can only influence enemy cities.';
+    if (target.owner !== p && leaderAt(s, target.owner, 'sulla', target.hex)) return 'Sulla protects this city from foreign Influence.';
     if (!influenceTypes(s, p, target).length) return 'That city has no Building you can influence.';
   }
   if (rangeBoost > 0 && !canBoostInfluence(s, p, acting, target)) return 'You cannot boost this attempt.';
@@ -816,6 +1082,9 @@ export function* influenceAction(g, a) {
   const unitTarget = aimsAtUnit ? target : null;
   const free = !!a.free;
   if (free && (!hasAdv(s, p, 'arts') || t.used.arts)) fail('Arts can be used once per turn.');
+  // Siyaj Kak's free attempt: from his city, at no action cost (only offered by `freeInfluence`).
+  const granted = !!a.grant;
+  if (granted && (acting.settlers || t.siyajKak !== acting.id || !leaderAt(s, p, 'siyaj_kak', acting.hex))) fail('Siyaj Kak must be in the city that makes the attempt.');
   const artsMood = free && !!a.artsMood;
   if (artsMood && !hasCivAdv(s, p, 'hellenization')) fail('Only Hellenization lets Arts be paid with Mood.');
   const rangeBoost = a.rangeBoost | 0;
@@ -831,10 +1100,26 @@ export function* influenceAction(g, a) {
   if (!plan) fail(`You need ${[artsMood ? '2 Mood tokens' : '', upfront.culture ? plural(upfront.culture, 'Culture token') : ''].filter(Boolean).join(' and ')}.`);
   if (soft) useCard(g, p, soft);
   if (free) t.used.arts = true;
-  else g.spendAction();
+  else if (!granted) g.spendAction();
   applyPayment(g, p, plan);
 
   let result = roll(s, 6) + (hasAdv(s, p, 'conversion') ? 1 : 0);
+  // Ashoka: once per turn his city may reroll a failed attempt if it has a Temple or aims at a Temple.
+  if (result < 5 && !acting.settlers && !t.used.ashoka && leaderAt(s, p, 'ashoka', acting.hex) && (hasBuilding(acting, 'temple') || building === 'temple')) {
+    const again = yield* confirm(g, p, {
+      kind: 'ashoka_reroll',
+      title: 'Ashoka the Great',
+      text: `Your roll is ${result}. Reroll the attempt (once per turn)?`,
+      yes: 'Reroll',
+      no: 'Keep the roll',
+      default: true,
+    });
+    if (again) {
+      t.used.ashoka = true;
+      result = roll(s, 6) + (hasAdv(s, p, 'conversion') ? 1 : 0);
+      g.log(`${g.name(p)} rerolls the attempt (Ashoka): ${result}.`);
+    }
+  }
   let boosted = 0;
   const need = 5 - result;
   if (need > 0 && canBoostInfluence(s, p, acting, target) && canPay(s, p, { culture: need })) {
@@ -864,6 +1149,10 @@ export function* influenceAction(g, a) {
   t.influenceSuccess = true;
   s.players[p].stats.influenced += 1;
   if (hasAdv(s, p, 'conversion')) gainRes(g, p, { culture: 1 });
+  if (!acting.settlers && leaderAt(s, p, 'darius', acting.hex)) {
+    gainRes(g, p, { mood: 1 });
+    g.log(`${g.name(p)} gains 1 Mood token (Darius).`);
+  }
   if (unitTarget) yield* convertUnit(g, p, unitTarget);
   else if (building === 'druid') {
     target.druid = p;
@@ -877,6 +1166,44 @@ export function* influenceAction(g, a) {
     yield* drawActionCard(g, p);
     g.log(`${g.name(p)} draws an Action card (Code of Laws).`);
   }
+}
+
+/** Siyaj Kak: a Cultural Influence attempt from his city at no action cost. The player picks the target (only a boost costs Culture). */
+export function* freeInfluence(g, p, city, who) {
+  const s = g.s;
+  if (s.turn && s.turn.influenceSuccess) return;
+  const targets = s.cities.filter((c) => !influenceBlocked(s, p, city, c));
+  if (!targets.length) return;
+  const yes = yield* confirm(g, p, {
+    kind: 'leader_influence',
+    title: who,
+    text: `${who} lets you make a Cultural Influence attempt from this city at no action cost. Make one now?`,
+    yes: 'Make an attempt',
+    no: 'No thanks',
+    default: true,
+  });
+  if (!yes) return;
+  const id = yield* choose(g, p, {
+    kind: 'leader_influence_target',
+    title: who,
+    text: 'Choose the city to influence.',
+    options: targets.map(cityOption),
+    default: targets[0].id,
+  });
+  const target = cityById(s, id) || targets[0];
+  const types = influenceTypes(s, p, target);
+  const building = types.length > 1
+    ? yield* choose(g, p, {
+      kind: 'leader_influence_building',
+      title: who,
+      text: 'Choose the building to influence.',
+      options: types.map((b) => ({ id: b, label: b === 'druid' ? 'Druid token' : b })),
+      default: types[0],
+    })
+    : types[0];
+  s.turn.siyajKak = city.id;
+  yield* influenceAction(g, { type: 'influence', city: city.id, target: target.id, building, grant: true });
+  delete s.turn.siyajKak;
 }
 
 /** Zoroastrianism: the Army Unit joins the player; if enemies share its space, a battle follows at once. */

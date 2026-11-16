@@ -10,7 +10,7 @@ import { plural } from './text.js';
 import { sacrificeForEvent } from './civs.js';
 import { barbarianMove, barbarianSpawn } from './barbarians.js';
 import { pirateSpawn } from './pirates.js';
-import { bySize, cityOption, eventMoodLoss, exhaustedLand, pickCity, placeSettler, victim } from './eventTools.js';
+import { bySize, cityOption, eventMoodLoss, eventUnitLoss, exhaustedLand, pickCity, placeSettler, victim } from './eventTools.js';
 import { WORLD_EFFECTS } from './worldEvents.js';
 
 // Events whose Barbarian spawn may land on a space held by player units, which then retreat.
@@ -71,9 +71,10 @@ const EFFECTS = {
     }
     const inf = unitsOf(s, p, 'infantry');
     const set = unitsOf(s, p, 'settler');
-    const dead = [];
+    let dead = [];
     if (inf.length) dead.push(victim(s, inf).id);
     if (set.length) dead.push(victim(s, set).id);
+    dead = yield* eventUnitLoss(g, p, dead);
     if (dead.length) {
       removeUnits(g, dead);
       g.log(`${g.name(p)} loses ${plural(dead.length, 'unit')} to the Epidemic.`);
@@ -132,9 +133,10 @@ const EFFECTS = {
     for (const c of citiesOf(s, p)) {
       if (c.mood !== 'angry') continue;
       const army = unitsAt(s, c.hex).filter((u) => u.owner === p && isArmy(u));
-      if (army.length) {
-        removeUnits(g, army.map((u) => u.id));
-        g.log(`Civil war: ${plural(army.length, 'Army unit')} desert${army.length === 1 ? 's' : ''} the angry city at ${c.hex}.`);
+      const gone = yield* eventUnitLoss(g, p, army.map((u) => u.id));
+      if (gone.length) {
+        removeUnits(g, gone);
+        g.log(`Civil war: ${plural(gone.length, 'Army unit')} desert${gone.length === 1 ? 's' : ''} the angry city at ${c.hex}.`);
       }
     }
   },

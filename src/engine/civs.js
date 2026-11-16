@@ -4,10 +4,10 @@ import { BARBARIAN } from './data/constants.js';
 import { ADVANCES, GROUPS } from './data/advances.js';
 import { ACTION_CARDS, EVENT_CARDS } from './data/cards.js';
 import { CIVS, CIV_ADVANCES } from './data/civs.js';
-import { discardCard, drawFrom, fail, gainRes, removeUnits } from './core.js';
+import { discardCard, drawFrom, fail, gainRes, removeUnits, spendCaptive } from './core.js';
 import { choose, confirm } from './prompts.js';
 import {
-  armyOf, cityAt, citiesOf, hasBuilding, hasCivAdv, hexDistance, isArmy, isPortCity, resLimit, terrainOf, unitsAt,
+  armyOf, cityAt, citiesOf, hasBuilding, hasCivAdv, hexDistance, isArmy, isPortCity, leaderAt, resLimit, terrainOf, unitsAt,
 } from './queries.js';
 
 export { hasCivAdv };
@@ -47,12 +47,17 @@ export function formalTraining(g, p, city) {
   if (got.ideas) g.log(`${g.name(p)} gains 1 idea (Formal Training).`);
 }
 
-/** What raising a city's size (a Building or Wonder) may be paid with, as planPayment options. */
-export function sizePay(s, p, building = null) {
+/**
+ * What raising a city's size (a Building or Wonder in `city`) may be paid with, as planPayment options. Leaders: Acamapichtli lets
+ * his Aztec Captives pay 1:1 as any resource, and Pakal lets each Culture token pay 2 resources, in the city they are in.
+ */
+export function sizePay(s, p, building = null, city = null) {
   const opts = {};
   if (hasCivAdv(s, p, 'architecture')) opts.moodFor = true;
   else if (hasCivAdv(s, p, 'slave_economy')) opts.moodFor = 'resources';
   if (building === 'temple' && hasCivAdv(s, p, 'ziggurats')) opts.ideasFor = true;
+  if (city && leaderAt(s, p, 'acamapichtli', city.hex)) opts.captives = s.players[p].captives.length;
+  if (city && leaderAt(s, p, 'pakal', city.hex)) opts.cultureAs2 = true;
   return opts;
 }
 
@@ -171,14 +176,8 @@ export function* starCatalogs(g, p) {
   g.log(`${g.name(p)} gains ${pick === 'culture' ? '1 culture' : '1 idea'} (Star Catalogs).`);
 }
 
-/** Spend one Captive. A Barbarian one goes first: handing an opponent's Army unit back to its owner would help them. */
-export function spendCaptive(g, p) {
-  const list = g.s.players[p].captives;
-  const at = list.findIndex((c) => c.owner === BARBARIAN);
-  const [gone] = list.splice(at < 0 ? 0 : at, 1);
-  g.emit({ type: 'sacrifice', player: p, unit: gone.type, from: gone.owner });
-  return gone;
-}
+/** Spend one Captive: see core.js. */
+export { spendCaptive };
 
 /**
  * Human Sacrifice (Aztecs): a Captive cancels the Event card that was just drawn, its icon too. Returns the card drawn in its

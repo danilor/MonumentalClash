@@ -1,4 +1,5 @@
 // The "How to play" window: a short manual for the rules and the interface.
+import { LEADER_CAPTURE_VP, LEADER_RECRUIT_COST } from '../engine/data/leaders.js';
 import { C, TXT } from './theme.js';
 import { Choice } from './modals.js';
 import { Modal, txt } from './widgets.js';
@@ -139,13 +140,30 @@ export const TOPICS = [
     body: [
       'When Civilizations are on (a switch on the title screen), every player is dealt one of fifteen cultures. Each has four Advances of its own, which it gets the moment it researches the ordinary Advance printed on them. They need no tracker cube and cannot trigger an Event.',
       '# Finding your powers',
-      '• Click your Civilization on your player card to read its four powers and see which are active. In the Advances window a gold star marks an Advance that also gives you one of them.',
+      '• Click your Civilization on your player card to read its four powers and see which are active. In the Advances window a gold star marks an Advance that also gives you one of them. The same window has a Leaders tab (see Leaders).',
       '• Powers you start yourself have a button in the Abilities window: Hegemony, Sprawling, Fighting Bands, Tribal Allies, Human Sacrifice and the Calendar. Most others work by themselves, or ask you a question when they apply.',
       '• Some change the usual windows: Recruit can use Ballcourts, Mounts and Pirate Allies, and Influence can start from Settlers (Proselytism) or a Greek city (Hellenization).',
       '# Scoring and extras',
       '• Captives are worth ½ VP each (at most 4). Runestones (Vikings) and the Druid tokens under captured cities (Celts) are worth 1 VP each. The VP tooltip shows them as one line.',
       '• Two more Buildings exist: the Obelisk (needs Arts; it cannot be Influenced, and it stays yours when its city is captured) and the Observatory (needs Math; building it draws an Action card).',
       '• Changing Government moves your tracker cubes, and the Civilization Advances that hang on the Advances they land on come with them.',
+    ],
+  },
+  {
+    id: 'leaders',
+    title: 'Leaders',
+    body: [
+      'Leaders belong to the Civilizations module. Each people has three of them, and only one can be in play at a time. A Leader is an Army unit with two abilities of its own.',
+      '# Recruiting',
+      `• Recruit a Leader in a city from the Recruit window. He or she takes one of the city's recruit places and costs ${LEADER_RECRUIT_COST.culture} Culture and ${LEADER_RECRUIT_COST.mood} Mood on top of the units.`,
+      '• Recruiting another Leader replaces the one in play. A Leader who is replaced or killed is gone for good, and once all three are gone you cannot recruit another.',
+      '# On the board',
+      '• A Leader moves and fights with your other Army units and counts towards the limit of Army units in a space (4, or 5 with Xerxes).',
+      `• Killing an enemy Leader in battle wins his or her card, worth ${LEADER_CAPTURE_VP} VP. It is counted with the other Civilization points on the VP tooltip.`,
+      '# Abilities',
+      '• Passive abilities are always on, usually in the Leader\'s city or in the battles he or she fights.',
+      '• An Action ability costs one of your 3 actions; a Free Action costs none. Both have a button in the Abilities window.',
+      '• Read all three Leaders of your people in the Leaders tab of your Civilization window, or hover over the Leader line on a player card.',
     ],
   },
   {
@@ -237,7 +255,7 @@ export function helpDialog(ctl, startId = 'goal') {
     const row = new Choice(scene, listX, y, listW, { id: topic.id, label: topic.title, size: 15, minH: 40, onClick: () => show(topic.id) });
     modal.add(row);
     rows.push([topic.id, row]);
-    y += row.h + 6;
+    y += row.h + 4;
   }
   modal.add(txt(scene, listX, h - 54, 'Esc closes this window.\nHover over anything in the game\nfor a short explanation.', { size: 12, color: TXT.dim }));
   show(startId);

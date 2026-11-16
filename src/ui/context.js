@@ -1,13 +1,15 @@
 // The context panel (top right): explains what is selected and offers the actions that apply to it.
 import { BARBARIAN, PIRATE, RECRUIT_TYPES } from '../engine/data/constants.js';
+import { LEADERS } from '../engine/data/leaders.js';
 import { WONDERS } from '../engine/data/wonders.js';
-import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, settlerOrigin, wonderBlocked } from '../engine/city.js';
+import { checkActivatable, cityCapacity, collectCandidates, constructBlocked, effMood, foundBlocked, recruitBlocked, settlerOrigin, wonderBlocked, wonderChoices } from '../engine/city.js';
 import { canPay, heldModifier } from '../engine/core.js';
-import { buildingsIn, cityAt, citySize, foesOf, hasAdv, hasCivAdv, terrainOf } from '../engine/queries.js';
-import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, cap, seatLabel, seatOwner, turnLabel } from './theme.js';
+import { leadersAvailable } from '../engine/leaders.js';
+import { buildingsIn, cityAt, citySize, foesOf, hasAdv, hasCivAdv, leaderIdOf, terrainOf } from '../engine/queries.js';
+import { BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, PLAYER_HEX, RES, TERRAIN, TERRAIN_HELP, TXT, LAYOUT, cap, plural, seatLabel, seatOwner, turnLabel } from './theme.js';
 import { RIGHT_X, LOG_Y } from './panels.js';
 import { Button, Checkbox, Stepper, drawPanel, hitBox, icon, tip, txt } from './widgets.js';
-import { countText, freeMoveText, ownedBy, ownerName, unitCounts, unitPlural, UNIT_NAME } from './info.js';
+import { LEADER_KIND, LEADER_KIND_HELP, countText, ericTokenLines, freeMoveText, leaderAbilityLines, leaderLabel, ownedBy, ownerName, short, unitCounts, unitPlural, UNIT_NAME } from './info.js';
 import { unitTexture } from './textures.js';
 import { influenceTargets } from './citydialogs.js';
 
@@ -16,7 +18,8 @@ const WIDTH = LAYOUT.right - 16;
 const TOP = 48;
 const BOTTOM = LOG_Y - 6;
 const PAD = 12;
-const UNIT_ROWS = ['ship', 'infantry', 'cavalry', 'elephant', 'settler'];
+const UNIT_ROWS = ['ship', 'leader', 'infantry', 'cavalry', 'elephant', 'settler'];
+const KIND_COLOR = { passive: TXT.link, action: TXT.warn, free: TXT.good }; // the tag of a Leader's ability
 
 export class Context {
   constructor(scene, ctl) {
@@ -133,6 +136,7 @@ export class Context {
     this.text(title, { size: 17, bold: true, serif: true, color: TXT.gold, gap: 2 });
     if (terr === null) this.text('Move a unit next to this region or sail a Ship beside it to reveal it.', { size: 12, color: TXT.muted });
     else this.text(TERRAIN_HELP[terr], { size: 12, color: TXT.muted });
+    for (const line of ericTokenLines(ctl.g, k)) this.text(line, { size: 12, color: '#c79bef', gap: 2 });
     const city = cityAt(s, k);
     if (city) {
       this.rule();
@@ -163,6 +167,7 @@ export class Context {
     this.text(`Buildings: ${blds.length ? blds.join(', ') : 'none'}`, { size: 12, color: TXT.muted, gap: 2 });
     if (city.wonders.length) this.text(`Wonders: ${city.wonders.map((w) => WONDERS[w.id].name).join(', ')}`, { size: 12, color: '#ffe9a8', gap: 2 });
     if (city.druid !== undefined) this.text(`${cap(seatOwner(s, city.druid))} Culture token lies under this city (Druidic Influence: worth 1 VP until the city is captured).`, { size: 12, color: '#c79bef', gap: 2 });
+    if (city.beloved > 0) this.text(`Beloved by Cleopatra: ${plural(city.beloved, 'Culture token')} placed here. An attacker must pay as many Culture tokens first.`, { size: 12, color: '#c79bef', gap: 2 });
     if (!own) {
       if (can) this.hellenization(city);
       return;
@@ -244,14 +249,16 @@ export class Context {
         return `No building is possible right now:\n${why.map(([b, r]) => `${BUILDING_NAME[b]}: ${r}`).join('\n')}`;
       }
       case 'recruit': {
-        const tries = RECRUIT_TYPES.map((u) => [u, recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
+        const tries = RECRUIT_TYPES.map((u) => [UNIT_NAME[u], recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
+        const leaders = leadersAvailable(s, 0).map((id) => recruitBlocked(g, 0, city, { units: {}, leader: id }).why);
+        if (leaders.length) tries.push(['Leader', leaders.every(Boolean) ? leaders[0] : '']);
         if (tries.some(([, r]) => !r)) return '';
-        return `You cannot recruit anything here now:\n${tries.map(([u, r]) => `${UNIT_NAME[u]}: ${r}`).join('\n')}`;
+        return `You cannot recruit anything here now:\n${tries.map(([u, r]) => `${u}: ${r}`).join('\n')}`;
       }
       case 'wonder': {
-        const hand = s.players[0].hand.wonder;
-        if (!hand.length) return 'You hold no Wonder cards.';
-        const why = hand.map((w) => [w, wonderBlocked(s, 0, city, w)]);
+        const choices = wonderChoices(s, 0, city); // the hand, plus the Wonder some Leaders may build without its card
+        if (!choices.length) return 'You hold no Wonder cards.';
+        const why = choices.map((w) => [w, wonderBlocked(s, 0, city, w)]);
         if (why.some(([, r]) => !r)) return '';
         return `No Wonder can be built here now:\n${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join('\n')}`;
       }
@@ -273,7 +280,7 @@ export class Context {
     const items = [
       ['collect', 'Collect', () => ctl.startCollect(city.id), 'Gather resources from this city and the spaces around it.', 'ic_food'],
       ['construct', 'Construct', () => d.construct(city), `Build an ${buildable}.`, 'b_academy'],
-      ['recruit', 'Recruit', () => d.recruit(city), 'Train Infantry, Cavalry, Elephants, Settlers or Ships.', 'u_infantry'],
+      ['recruit', 'Recruit', () => d.recruit(city), `Train Infantry, Cavalry, Elephants, Settlers or Ships${ctl.g.s.civs ? ', or recruit a Leader' : ''}.`, 'u_infantry'],
       ['wonder', 'Wonder', () => d.wonder(city), 'Build a Wonder (needs a Happy city and Engineering).', 'ic_wonder'],
       ['happiness', 'Happiness', () => d.happiness(city), 'Spend Mood tokens to raise the Mood of your cities.', 'mood_happy'],
       ['influence', 'Influence', () => d.influence(city), 'Try to win over a building in another city with Culture.', 'ic_culture'],
@@ -308,12 +315,15 @@ export class Context {
         const free = gr[type].free.length;
         const locked = gr[type].locked.length;
         if (!free && !locked) continue;
-        const label = `${unitPlural(type)}${sea && type !== 'ship' ? ' aboard' : ''}`;
+        const lead = type === 'leader';
+        const label = `${lead ? leaderLabel(s, 0) : unitPlural(type)}${sea && type !== 'ship' ? ' aboard' : ''}`;
         const img = icon(this.scene, unitTexture(type, 0), X + PAD + 11, this.y + 13, 22).setTint(PLAYER_COLORS[0]);
         this.box.add(img);
-        this.box.add(txt(this.scene, X + PAD + 28, this.y + 13, `${label}`, { size: 13, origin: [0, 0.5] }));
+        const name = txt(this.scene, X + PAD + 28, this.y + 13, `${label}`, { size: 13, origin: [0, 0.5] });
+        this.box.add(name);
         const total = free + locked;
-        this.box.add(txt(this.scene, X + WIDTH - 94, this.y + 13, `of ${total}`, { size: 12, color: TXT.muted, origin: [1, 0.5] }));
+        if (lead) this.leaderRow(name);
+        else this.box.add(txt(this.scene, X + WIDTH - 94, this.y + 13, `of ${total}`, { size: 12, color: TXT.muted, origin: [1, 0.5] }));
         if (free && can) {
           let max = free;
           if (sea && type !== 'ship' && c.ship > 0) {
@@ -330,9 +340,47 @@ export class Context {
       }
       for (const [why, n] of stuck) this.text(`${n} cannot move: ${why}.`, { size: 11, color: TXT.warn, indent: 4, gap: 2 });
       if (can) this.moveHelp(sea);
+      if (gr.leader.free.length + gr.leader.locked.length) this.leaderBlock(0);
     }
     for (const [o, cnt] of foes) {
-      this.text(`${ownerName(ctl.g, o)} units: ${countText(cnt)}`, { size: 13, bold: true, color: PLAYER_HEX[o] });
+      this.text(`${ownerName(ctl.g, o)} units: ${countText(cnt, leaderLabel(s, o))}`, { size: 13, bold: true, color: PLAYER_HEX[o] });
+      if (cnt.leader) this.leaderBlock(o);
+    }
+  }
+
+  /** The Leader's row in the list of units: the name shrinks to fit beside the stepper, the hover text tells what he or she can do. */
+  leaderRow(name) {
+    const room = 116;
+    if (name.width > room) name.setScale(room / name.width);
+    const id = leaderIdOf(this.ctl.g.s, 0);
+    const hit = hitBox(this.scene, X + PAD, this.y, room + 28, 26);
+    tip(hit, [LEADERS[id]?.name ?? 'Leader', ...leaderAbilityLines(id)].join('\n'));
+    this.box.add(hit);
+  }
+
+  /** The Leader on this space: the name and both abilities. It gets what room is left (the hover text has all of it). */
+  leaderBlock(owner) {
+    const def = LEADERS[leaderIdOf(this.ctl.g.s, owner)];
+    if (!def || this.y > BOTTOM - 70) return;
+    this.gap(2);
+    this.text(def.name, { size: 14, bold: true, serif: true, color: owner === 0 ? TXT.gold : PLAYER_HEX[owner], gap: 2 });
+    for (const a of def.abilities) {
+      const top = this.y;
+      const tag = this.text(LEADER_KIND[a.kind].toUpperCase(), { size: 10, bold: true, color: KIND_COLOR[a.kind], gap: 0 });
+      const body = this.text(a.text, { size: 11, color: TXT.muted });
+      if (this.y > BOTTOM - 6) {
+        body.setText(short(a.text, 70));
+        this.y = body.y + body.height + 4;
+        if (this.y > BOTTOM - 6) {
+          tag.destroy();
+          body.destroy();
+          this.y = top;
+          return;
+        }
+      }
+      const hit = hitBox(this.scene, X + PAD, top, WIDTH - 2 * PAD, this.y - top);
+      tip(hit, `${def.name}: ${LEADER_KIND_HELP[a.kind]}\n${a.text}`);
+      this.box.add(hit);
     }
   }
 

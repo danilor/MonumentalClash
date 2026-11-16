@@ -1,15 +1,16 @@
 // Shared helpers for the test suite and the simulation script.
 import { Game } from '../src/engine/game.js';
 import { enumerateActions } from '../src/engine/enumerate.js';
-import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, PIRATE, RESOURCES, STACK_LIMIT } from '../src/engine/data/constants.js';
+import { BARBARIAN, MAX_PLAYERS, PIECE_LIMITS, PIRATE, RESOURCES } from '../src/engine/data/constants.js';
 import { ACTION_DECK_LIST } from '../src/engine/data/cards.js';
 import { OBJECTIVE_CARD_LIST } from '../src/engine/data/cards.js';
 import { WONDER_IDS } from '../src/engine/data/wonders.js';
 import { ADVANCES, GROUPS } from '../src/engine/data/advances.js';
 import { CIVS } from '../src/engine/data/civs.js';
+import { LEADERS, LEADERS_OF } from '../src/engine/data/leaders.js';
 import { CAPTIVE_LIMIT, grantCivAdvances } from '../src/engine/civs.js';
 import { randInt, seedFromString } from '../src/engine/rng.js';
-import { allOwners, captivesOf, isArmy, resLimit, shipCapacityAt, totalAges } from '../src/engine/queries.js';
+import { allOwners, captivesOf, isArmy, resLimit, shipCapacityAt, stackLimit, totalAges } from '../src/engine/queries.js';
 
 export function makeRand(seed) {
   const st = { rng: seedFromString(String(seed)) };
@@ -45,11 +46,23 @@ export function checkInvariants(g) {
     if (govs.length === 0 && pl.government) bad(`${pl.name} has a government without advances`);
     if (!s.civs) {
       if (pl.civ || pl.civAdv.length || pl.captives.length) bad(`${pl.name} has Civilization state without the module`);
+      if (pl.leader || pl.leaderLost.length || pl.leaderCaptured.length || pl.ericTokens.length) bad(`${pl.name} has Leader state without the module`);
       continue;
     }
     const civ = CIVS[pl.civ];
     if (!civ) { bad(`${pl.name} has no Civilization (${pl.civ})`); continue; }
     if (s.players.filter((o) => o.civ === pl.civ).length > 1) bad(`${pl.name}: the Civilization ${pl.civ} is played twice`);
+    // A people's Leaders: one in play at most, none of the gone ones, and the captured cards are those of others.
+    const mine = LEADERS_OF[pl.civ] || [];
+    if (pl.leader && !mine.includes(pl.leader)) bad(`${pl.name} (${pl.civ}) has the foreign Leader ${pl.leader}`);
+    if (pl.leader && pl.leaderLost.includes(pl.leader)) bad(`${pl.name} has ${pl.leader} in play and lost`);
+    if (new Set(pl.leaderLost).size !== pl.leaderLost.length || pl.leaderLost.some((id) => !mine.includes(id))) bad(`${pl.name} lost Leaders ${pl.leaderLost}`);
+    for (const c of pl.leaderCaptured) {
+      if (!LEADERS[c.id] || c.from === pl.idx || s.players[c.from]?.civ === undefined || !LEADERS_OF[s.players[c.from].civ].includes(c.id)) bad(`${pl.name} holds the odd Leader card ${JSON.stringify(c)}`);
+      else if (!s.players[c.from].leaderLost.includes(c.id)) bad(`${pl.name} holds ${c.id} that its owner has not lost`);
+    }
+    if (new Set(pl.ericTokens).size !== pl.ericTokens.length) bad(`${pl.name} has two Eric tokens on a Region`);
+    if (pl.ericTokens.length && !mine.includes('eric')) bad(`${pl.name} has Eric tokens`);
     if (new Set(pl.civAdv).size !== pl.civAdv.length) bad(`${pl.name} has duplicate Civilization Advances`);
     for (const id of pl.civAdv) {
       const a = civ.advances.find((x) => x.id === id);
@@ -92,7 +105,15 @@ export function checkInvariants(g) {
     if (!(shipsAtHex[hex] > 0)) bad(`land units at sea ${hex} without ships`);
     else if (n > shipCapacityAt(s, hex)) bad(`too much cargo at ${hex}: ${n} on ${shipsAtHex[hex]} ships`);
   }
-  for (const [k, n] of Object.entries(stack)) if (n > STACK_LIMIT) bad(`stack of ${n} at ${k}`);
+  for (const [k, n] of Object.entries(stack)) {
+    const [hex, owner] = k.split(':');
+    if (n > stackLimit(s, Number(owner), hex)) bad(`stack of ${n} at ${k}`);
+  }
+  // A Leader stands on the board exactly while a player has one in play.
+  for (const pl of s.players) {
+    const n = count[`${pl.idx}:leader`] || 0;
+    if (n !== (pl.leader ? 1 : 0)) bad(`${pl.name} has ${n} Leader units and ${pl.leader} in play`);
+  }
   // Carthage's Pirate Allies share a space with Pirate Ships.
   const sharing = (set) => set.size === 2 && set.has(PIRATE) && [...set].some((o) => o !== PIRATE && s.civs && s.players[o] && s.players[o].civAdv.includes('pirate_allies'));
   for (const [hex, set] of Object.entries(owners)) if (set.size > 1 && !sharing(set)) bad(`mixed owners at ${hex}: ${[...set]}`);
@@ -102,7 +123,7 @@ export function checkInvariants(g) {
       ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }[type] ?? 0
       : Number(o) === PIRATE
         ? { ship: PIECE_LIMITS.pirateShips }[type] ?? 0
-        : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers }[type];
+        : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers, leader: 1 }[type];
     // Captives are pieces that left the board for their captor's hand.
     if (n + captivesOf(s, Number(o), type) > lim) bad(`owner ${o} has ${n} ${type} (limit ${lim})`);
   }
@@ -197,7 +218,7 @@ export function randomAnswer(rand, prompt) {
   return rand.pick(prompt.options).id;
 }
 
-const WEIGHT = { end: 0.5, move: 1.2, advance: 2, collect: 1.5, recruit: 1.5, found: 3, construct: 2, wonder: 3 };
+const WEIGHT = { end: 0.5, move: 1.2, advance: 2, collect: 1.5, recruit: 1.5, found: 3, construct: 2, wonder: 3, leader: 3 };
 
 /**
  * Play a whole game with a random chooser. `chooser(g, p, list, rand)` may be supplied to override the choice.

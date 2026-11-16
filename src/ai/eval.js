@@ -1,6 +1,7 @@
 // Position evaluation for the AI. Values are in "points" where one Victory Point is worth about 2.2.
 import { GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES, OBJECTIVE_CARDS } from '../engine/data/cards.js';
+import { ERIC_TOKEN_VP, LEADER_CAPTURE_VP } from '../engine/data/leaders.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { checkStatus } from '../engine/objectives.js';
 import { citySize, citySizeCap, foesOf, hasBuilding, hexDistance, isArmy, isHidden, isNpc, nbrs, resLimit } from '../engine/queries.js';
@@ -52,6 +53,9 @@ const CIV_ADV_BONUS = {
 export const civAdvanceValue = (id) => CIV_ADV_BASE + (CIV_ADV_BONUS[id] ?? 0.5);
 
 const BUILDING_VALUE = { academy: 2.6, fortress: 2.1, market: 2.3, port: 2.4, temple: 2.6, obelisk: 2.3, observatory: 2.5 };
+// A Leader in play: what his abilities are worth on top of the Army unit he is. Whoever kills him scores LEADER_CAPTURE_VP.
+const LEADER_VALUE = 1.6;
+const VP = 2.2;
 const CITY_BASE = 5;
 const WONDER_BUILT = 14;
 const WONDER_HELD = 4.4;
@@ -257,10 +261,11 @@ function danger(s, q, ix) {
     acc.n += 1;
     if (u.type === 'cavalry') acc.horse += 1;
     else if (u.type === 'elephant') acc.tusk += 1;
+    else if (u.type === 'leader' && acc.leader !== undefined) acc.leader += 1;
   };
-  /** The Army units `owner` has on a hex: how many, and how many of them are Cavalry and Elephants. */
+  /** The Army units `owner` has on a hex: how many, how many of them are Cavalry and Elephants, and whether a Leader is among them. */
   const armyOf = (k, owner) => {
-    const acc = { n: 0, horse: 0, tusk: 0 };
+    const acc = { n: 0, horse: 0, tusk: 0, leader: 0 };
     for (const u of ix.units.get(k) || []) if (u.owner === owner && isArmy(u)) tally(acc, u);
     return acc;
   };
@@ -279,7 +284,7 @@ function danger(s, q, ix) {
       fortress: hasBuilding(c, 'fortress'), horseA: worst.horse, horseD: def.horse, elephantA: worst.tusk, elephantD: def.tusk,
     });
     const worth = CITY_BASE + 0.6 * (citySize(c) - 1) + 2.2 * Object.keys(c.buildings).length + 9 * c.wonders.length;
-    pen += odds.win * (worth + 2 * def.n) * 0.55;
+    pen += odds.win * (worth + 2 * def.n + def.leader * LEADER_CAPTURE_VP * VP) * 0.55;
   }
   // Armies standing outside a city next to enemy armies
   const seen = new Set();
@@ -294,7 +299,7 @@ function danger(s, q, ix) {
     if (!foes.n) continue;
     const mine = armyOf(u.hex, q);
     const odds = battleOdds(Math.min(foes.n, 5), mine.n, { horseA: foes.horse, horseD: mine.horse, elephantA: foes.tusk, elephantD: mine.tusk });
-    pen += odds.win * mine.n * 1.4 * 0.5;
+    pen += odds.win * (mine.n * 1.4 + mine.leader * LEADER_CAPTURE_VP * VP) * 0.5;
   }
   return pen;
 }
@@ -331,6 +336,9 @@ export function sideValue(s, q, cfg = DEFAULTS, ix = null) {
   v += 0.8 * Math.min(pl.hand.action.length, 3) + 0.3 * Math.max(0, pl.hand.action.length - 3);
   for (const id of pl.hand.wonder) v += pl.advances.includes(WONDERS[id].advance) ? 1.7 : 0.9;
   v += pl.vpBonus * 2.2;
+  // Leaders (Civilizations): the one in play, the enemy Leaders taken in battle and the Culture tokens of Eric the Red are worth VP.
+  if (pl.leader) v += LEADER_VALUE;
+  v += ((pl.leaderCaptured || []).length * LEADER_CAPTURE_VP + (pl.ericTokens || []).length * ERIC_TOKEN_VP) * VP;
 
   // Units
   const tactics = pl.advances.includes('tactics');

@@ -4,16 +4,19 @@ import { WONDERS } from '../engine/data/wonders.js';
 import { ADVANCES, ADVANCE_GROUPS } from '../engine/data/advances.js';
 import { CIVS, CIV_ADVANCES } from '../engine/data/civs.js';
 import { PIRATE } from '../engine/data/constants.js';
+import { LEADERS } from '../engine/data/leaders.js';
 import { objectiveSatisfiedNow } from '../engine/objectives.js';
 import { canSpawnBarbarians } from '../engine/barbarians.js';
 import { hegemonyShips, hegemonySites } from '../engine/civActions.js';
-import { cityAt, citiesOf, citySize, hasAdv, hasCivAdv, isSea, owns, playerOwnsWonder, resLimit, terrainOf } from '../engine/queries.js';
-import { C, PLAYER_COLORS, RES, TERRAIN, TXT } from './theme.js';
+import { leaderActionList } from '../engine/leaderActions.js';
+import { cityAt, citiesOf, citySize, hasAdv, hasCivAdv, isSea, leaderCity, leaderIdOf, leaderUnit, owns, playerOwnsWonder, resLimit, seaNbrs, terrainOf, unitById } from '../engine/queries.js';
+import { BUILDING_HELP, BUILDING_NAME, C, MOOD_NAME, PLAYER_COLORS, RES, TERRAIN, TXT, plural, seatName } from './theme.js';
 import { Button, Modal, Stepper, drawPanel, icon, resRow, txt } from './widgets.js';
 import { Flow, optionModal } from './modals.js';
 import { haveLine, stepRow, submit } from './citydialogs.js';
 import { advancesDialog } from './advdialog.js';
-import { countText, freeMoveText } from './info.js';
+import { KIND_TAG } from './civdialog.js';
+import { UNIT_NAME, countText, freeMoveText } from './info.js';
 import { unitTexture } from './textures.js';
 
 const TILE_W = 442;
@@ -200,8 +203,8 @@ const cardOption = (id) => {
   return { id, label: `${OBJECTIVES[o.dev].name} / ${OBJECTIVES[o.mil].name}`, desc: `Objective card. ${OBJECTIVES[o.dev].text} Or: ${OBJECTIVES[o.mil].text}` };
 };
 
-/** Choose which Resources Taxation collects. */
-function taxationDialog(ctl, back) {
+/** Choose which Resources Taxation collects. `leader` names the Leader (Cnut) whose city collects them at no Mood cost. */
+function taxationDialog(ctl, back, leader = null) {
   const scene = ctl.scene;
   const s = ctl.g.s;
   const pl = s.players[0];
@@ -213,7 +216,7 @@ function taxationDialog(ctl, back) {
     amount[k] += 1;
   }
   const f = new Flow(scene, 580, { top: 80 });
-  f.text(`Pay 1 Mood token and 1 action to collect ${n} Resource${n === 1 ? '' : 's'} (one for each of your cities). Split them as you like. Anything over your storage limit is lost.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+  f.text(`${leader ? 'Spend 1 action' : 'Pay 1 Mood token and 1 action'} to collect ${n} Resource${n === 1 ? '' : 's'} (one for each of your cities). Split them as you like. Anything over your storage limit is lost.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
   haveLine(f, s);
   let modal = null;
   let confirm = null;
@@ -243,8 +246,9 @@ function taxationDialog(ctl, back) {
   status = f.text('', { center: true, size: 13, color: TXT.gold, gap: 2 });
   err = f.text(' ', { center: true, size: 13, color: TXT.bad, gap: 6 });
   const gain = () => Object.fromEntries(kinds.filter((k) => amount[k]).map((k) => [k, amount[k]]));
+  const action = () => (leader ? { type: 'leader', ability: 'cnut_b', gain: gain() } : { type: 'taxation', gain: gain() });
   [confirm] = f.buttons([
-    { label: 'Collect taxes', style: 'primary', w: 170, fn: () => submit(ctl, modal, { type: 'taxation', gain: gain() }, err) },
+    { label: 'Collect taxes', style: 'primary', w: 170, fn: () => submit(ctl, modal, action(), err) },
     {
       label: 'Back',
       w: 120,
@@ -254,7 +258,7 @@ function taxationDialog(ctl, back) {
       },
     },
   ]);
-  modal = f.finish({ title: 'Taxation', subtitle: 'Costs 1 action and 1 Mood token', closable: false });
+  modal = f.finish({ title: 'Taxation', subtitle: leader ? `${leader} collects them: costs 1 action, no Mood token` : 'Costs 1 action and 1 Mood token', closable: false });
   sync();
 }
 
@@ -403,6 +407,201 @@ async function hegemonyPick(ctl) {
   await ctl.act({ type: 'hegemony', unit: ship.id, to });
 }
 
+// ----------------------------------------------------------------- leaders
+/** Leader abilities that work once per turn, with the flag the engine keeps for them in `turn.used`. */
+const LEADER_ONCE = { ahuitzotl_b: 'ahuitzotl', augustus_a: 'augustus', cleopatra_b: 'cleopatra', cnut_b: 'taxation', darius_b: 'darius', hanno_a: 'hanno', marqzen_b: 'marqzen' };
+const LEADER_AT_SEA = ['eric_a', 'eric_b', 'hanno_a'];
+/** Abilities that do not need the Leader to be in one of your cities. */
+const LEADER_ROAMING = [...LEADER_AT_SEA, 'marqzen_b'];
+/** Advances bought with a Culture or a Mood token. */
+const LEADER_TOKEN_BUY = ['hiram_b', 'pericles_a', 'sun_tzu_a', 'wu_zetian_a'];
+/** What is missing when nothing is on offer and the checks above it pass. */
+const LEADER_NONE = {
+  ahuitzotl_b: 'Nothing can be built in his city now.',
+  darius_b: 'Nothing can be built in his city for its price and 2 Culture tokens.',
+  eric_b: 'There is no Land space he can go ashore to.',
+  hanno_a: 'None of the Ships with Hanno can sail now.',
+  marqzen_b: 'No enemy Land unit next to Marqzen can be moved.',
+  suiko_a: 'There is no piece of another player in her city to take back.',
+};
+const BUY = 'Buy an Advance...';
+const LEADER_BUTTON = {
+  ahuitzotl_b: 'Sacrifice...',
+  augustus_a: 'Draw a card...',
+  caesar_a: 'Increase Happiness...',
+  cleopatra_b: 'Place a token',
+  cnut_b: 'Collect taxes...',
+  cyrus_a: 'Take tokens...',
+  darius_b: 'Build...',
+  eric_a: 'Place a token',
+  eric_b: 'Go ashore...',
+  hanno_a: 'Sail...',
+  hiram_b: BUY,
+  maharaja_a: BUY,
+  marqzen_b: 'Move an enemy...',
+  pericles_a: BUY,
+  suiko_a: 'Revert a piece...',
+  sun_tzu_a: BUY,
+  wu_zetian_a: BUY,
+};
+
+const tokenOption = (kind, sign = '') => ({ id: kind, label: `${sign}1 ${kind === 'mood' ? 'Mood' : 'Culture'} token`, icon: `ic_${kind}` });
+const unitName = (s, u) => (u.type === 'leader' ? LEADERS[leaderIdOf(s, u.owner)]?.name : UNIT_NAME[u.type]) || u.type;
+
+/** The first of `list` for every distinct `key`. */
+const firstBy = (list, key) => {
+  const seen = new Map();
+  for (const c of list) if (!seen.has(key(c))) seen.set(key(c), c);
+  return [...seen.values()];
+};
+
+/** Click one of `list` (candidate actions) on the map. Resolves with it, or null when the player cancels. */
+async function pickMove(ctl, { title, text, list, spaces, label, tag }) {
+  const options = list.flatMap((c, i) => spaces(c).map((hex) => ({ id: String(i), label, hex, tag: tag(c) })));
+  const k = await ctl.mapPick({ title, text, options: [...options, { id: '__cancel', label: 'Cancel' }] });
+  return k === '__cancel' || k == null ? null : list[Number(k)];
+}
+
+/**
+ * Ask for the choices a Leader's ability needs, among the candidate actions `leaderActionList` found for it.
+ * Resolves with the action to play, or null when the player backs out.
+ */
+async function leaderPlan(ctl, leader, ability, cands) {
+  const s = ctl.g.s;
+  const ask = (o) => optionModal(ctl, { title: leader.name, text: ability.text, closable: true, cancel: 'Back', depth: SUB_DEPTH, ...o });
+  const city = leaderCity(s, 0, leader.id);
+  const [one] = cands;
+
+  if (one.advance) {
+    const options = [...new Set(cands.map((c) => c.advance))];
+    const id = await advancesDialog(ctl, { pick: { title: leader.name, text: ability.text, options, default: options[0], skip: 'Back' }, depth: SUB_DEPTH });
+    if (!id || id === 'none') return null;
+    const paid = cands.filter((c) => c.advance === id);
+    if (paid.length === 1) return paid[0].action;
+    const token = await ask({ text: `Pay for ${ADVANCES[id].name} with which token?`, options: paid.map((c) => tokenOption(c.action.token)) });
+    return token ? paid.find((c) => c.action.token === token).action : null;
+  }
+
+  if (one.building || one.wonder) {
+    const options = [...new Set(cands.filter((c) => c.building).map((c) => c.building))].map((b) => {
+      const holder = city.buildings[b];
+      return {
+        id: b,
+        label: BUILDING_NAME[b],
+        desc: holder === undefined ? BUILDING_HELP[b].replace(/^[^:]+: /, '') : `Held by ${seatName(s, holder)}.`,
+        icon: `b_${b}`,
+        iconTint: PLAYER_COLORS[holder ?? 0],
+      };
+    });
+    for (const c of cands.filter((x) => x.wonder)) options.push({ id: `wonder:${c.wonder}`, label: WONDERS[c.wonder].name, desc: WONDERS[c.wonder].text, icon: 'ic_wonder' });
+    const pick = await ask({ options });
+    if (!pick) return null;
+    if (pick.startsWith('wonder:')) return cands.find((c) => c.wonder === pick.slice(7)).action;
+    let list = cands.filter((c) => c.building === pick);
+    if (list.length > 1) {
+      const bonus = await ask({ title: 'Temple blessing', text: 'Choose the token the new Temple gives you.', options: list.map((c) => tokenOption(c.action.templeBonus, '+')) });
+      if (!bonus) return null;
+      list = list.filter((c) => c.action.templeBonus === bonus);
+    }
+    const action = { ...list[0].action };
+    const seas = seaNbrs(s, city.hex);
+    if (pick === 'port' && seas.length > 1) {
+      const k = await ctl.mapPick({
+        title: 'Where does the Port open?',
+        text: 'Click the Sea space the new Port will face. Ships built here appear on that space.',
+        options: [...seas.map((hex) => ({ id: hex, label: 'Sea space', hex, tag: 'Port here' })), { id: '__cancel', label: 'Cancel' }],
+      });
+      if (k === '__cancel' || k == null) return null;
+      action.port = k;
+    }
+    return action;
+  }
+
+  if (one.draw) {
+    const draw = await ask({ options: cands.map((c) => ({ id: c.draw, label: `Draw ${c.draw === 'action' ? 'an Action' : 'an Objective'} card` })) });
+    return draw ? cands.find((c) => c.draw === draw).action : null;
+  }
+
+  if (one.culture !== undefined) {
+    const n = Math.max(...cands.map((c) => c.culture));
+    const pl = s.players[0];
+    const split = await ask({
+      text: `${ability.text}\nYou take ${plural(n, 'token')}. You hold ${pl.culture} Culture and ${pl.mood} Mood tokens now. How many are Culture tokens?`,
+      options: Array.from({ length: n + 1 }, (_, k) => ({ id: String(k), label: `${k} Culture, ${n - k} Mood` })),
+    });
+    return split ? { ...one.action, culture: Number(split) } : null;
+  }
+
+  if (one.steps) {
+    const ladder = ['angry', 'neutral', 'happy'];
+    const now = ladder.indexOf(city.mood);
+    const steps = await ask({
+      options: cands.map((c) => ({
+        id: String(c.steps),
+        label: c.steps === 1 ? 'Once' : `${c.steps} times`,
+        desc: `${MOOD_NAME[city.mood]} to ${MOOD_NAME[ladder[Math.min(2, now + c.steps)]]}: pay ${plural(c.steps * citySize(city), 'Mood token')}.`,
+      })),
+    });
+    return steps ? cands.find((c) => c.steps === Number(steps)).action : null;
+  }
+
+  if (one.target !== undefined) {
+    const at = (c) => unitById(s, c.target).hex;
+    const from = await pickMove(ctl, {
+      title: leader.name,
+      text: 'Click the space of the enemy unit to move.',
+      list: firstBy(cands, at),
+      spaces: (c) => [at(c)],
+      label: 'Move an enemy unit from here',
+      tag: () => 'Enemy',
+    });
+    if (!from) return null;
+    const units = firstBy(cands.filter((c) => at(c) === at(from)), (c) => unitById(s, c.target).type);
+    let unit = units[0];
+    if (units.length > 1) {
+      const id = await ask({ text: 'Which unit do you move?', options: units.map((c) => ({ id: String(c.target), label: unitName(s, unitById(s, c.target)) })) });
+      if (!id) return null;
+      unit = units.find((c) => String(c.target) === id);
+    }
+    const to = await pickMove(ctl, {
+      title: leader.name,
+      text: 'Click the space where the unit goes.',
+      list: cands.filter((c) => c.target === unit.target),
+      spaces: (c) => [c.to],
+      label: 'Move it here',
+      tag: () => 'Move',
+    });
+    return to ? to.action : null;
+  }
+
+  if (one.to) {
+    const ships = !!one.action.ships;
+    const members = (c) => c.action.ships || c.action.units;
+    const sizes = [...new Set(cands.map((c) => members(c).length))].sort((a, b) => b - a);
+    let size = sizes[0];
+    if (sizes.length > 1) {
+      const picked = await ask({
+        text: ships ? 'Which Ships sail?' : `Who goes ashore with ${leader.name}?`,
+        options: sizes.map((n) => ({ id: String(n), label: ships ? (n > 1 ? `All ${n} Ships` : 'One Ship') : n > 1 ? `${leader.name} and ${plural(n - 1, 'Land unit')} on board` : `${leader.name} alone` })),
+      });
+      if (!picked) return null;
+      size = Number(picked);
+    }
+    const group = JSON.stringify(members(cands.find((c) => members(c).length === size)));
+    const hit = await pickMove(ctl, {
+      title: leader.name,
+      text: ships ? 'Click the space where the Ships sail.' : 'Click the Land space where they go ashore.',
+      list: firstBy(cands.filter((c) => JSON.stringify(members(c)) === group), (c) => c.to),
+      spaces: (c) => (c.explore ? s.map.regions[s.map.hexes[c.to].region].keys : [c.to]),
+      label: ships ? 'Sail here' : 'Go ashore here',
+      tag: (c) => (c.explore ? 'Explore' : c.battle ? 'Attack' : ships ? 'Sail' : 'Land'),
+    });
+    return hit ? hit.action : null;
+  }
+
+  return one.action;
+}
+
 export function abilitiesDialog(ctl) {
   const scene = ctl.scene;
   const s = ctl.g.s;
@@ -429,6 +628,59 @@ export function abilitiesDialog(ctl) {
   };
   const direct = (action) => run(() => ctl.act(action));
   const rows = [];
+
+  const lid = s.civs ? leaderIdOf(s, 0) : null;
+  const leader = lid ? LEADERS[lid] : null;
+  if (leader) {
+    const unit = leaderUnit(s, 0);
+    const home = leaderCity(s, 0, lid);
+    const cands = can && unit ? leaderActionList(ctl.g, 0) : [];
+    const passive = leader.abilities.filter((a) => a.kind === 'passive');
+    if (passive.length) {
+      rows.push({
+        name: leader.name,
+        text: passive.map((a) => (passive.length > 1 ? `• ${a.text}` : a.text)).join('\n'),
+        tag: `Leader · ${KIND_TAG.passive}, always on`,
+        buttons: [],
+      });
+    }
+    // Why an ability has no candidate action: what can be seen from here, else the engine's own answer.
+    const whyNot = (a) => {
+      if (LEADER_AT_SEA.includes(a.id) && !(unit && isSea(s, unit.hex))) return `${leader.name} must be on a Ship at sea.`;
+      if (!home && !LEADER_ROAMING.includes(a.id)) return `${leader.name} must be in one of your cities.`;
+      if (a.id === 'ahuitzotl_b' && pl.captives.length < 2) return 'You need 2 Captives.';
+      if (LEADER_TOKEN_BUY.includes(a.id) && pl.culture + pl.mood < 1) return 'You need 1 Culture or 1 Mood token.';
+      if (a.id === 'maharaja_a' && pl.culture < 1) return 'You need 1 Culture token.';
+      if (LEADER_NONE[a.id]) return LEADER_NONE[a.id];
+      const why = ctl.check({ type: 'leader', ability: a.id }).error;
+      return why && !why.startsWith('Choose') ? why : 'Not possible right now.';
+    };
+    for (const a of leader.abilities.filter((x) => x.kind !== 'passive')) {
+      const list = cands.filter((c) => c.ability === a.id);
+      const once = LEADER_ONCE[a.id];
+      const costs = a.kind === 'action' && !(a.id === 'suiko_a' && hasAdv(s, 0, 'state_religion'));
+      const spent = !!once && !!used[once];
+      let reason = notNow;
+      if (!reason && spent) reason = `${a.id === 'cnut_b' ? 'Taxation' : leader.name} can be used once per turn.`;
+      if (!reason && costs) reason = noAction;
+      if (!reason && !list.length) reason = whyNot(a);
+      rows.push({
+        name: leader.name,
+        text: a.text,
+        tag: ['Leader', costs ? `${KIND_TAG.action} (costs 1 action)` : KIND_TAG.free, once && (spent ? 'Already used this turn' : 'once per turn')].filter(Boolean).join(' · '),
+        buttons: [{
+          label: LEADER_BUTTON[a.id] || 'Use...', w: 190,
+          ...off(reason),
+          fn: run(async () => {
+            if (a.id === 'cnut_b') return taxationDialog(ctl, reopen, leader.name);
+            const action = await leaderPlan(ctl, leader, a, list);
+            if (action) return ctl.act(action);
+            return reopen();
+          }),
+        }],
+      });
+    }
+  }
 
   if (hasAdv(s, 0, 'bartering')) {
     const cards = [...new Set([...hand.action, ...hand.objective])];

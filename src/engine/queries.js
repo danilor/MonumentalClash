@@ -175,7 +175,7 @@ export function unitsLeft(s, p, type) {
     ? { ship: PIECE_LIMITS.pirateShips }
     : p === BARBARIAN
       ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants }
-      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers };
+      : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers, leader: PIECE_LIMITS.leaders };
   return limits[type] - s.units.filter((u) => u.owner === p && u.type === type).length - captivesOf(s, p, type);
 }
 
@@ -186,3 +186,34 @@ export const coords = parse;
 /** Number of Army units a player has in a land hex (stacking limit applies to these). */
 export const stackSize = (s, k, p) => armyAt(s, k, p).length;
 export const STACK = STACK_LIMIT;
+
+// ------------------------------------------------------------- leaders
+/** The Leader (card id) a player has in play, or null. */
+export const leaderIdOf = (s, p) => (isNpc(p) ? null : s.players[p].leader ?? null);
+/** The Leader's unit on the board. */
+export const leaderUnit = (s, p) => (leaderIdOf(s, p) ? s.units.find((u) => u.owner === p && u.type === 'leader') || null : null);
+/** Whether player p has Leader `id` in play. */
+export const hasLeader = (s, p, id) => leaderIdOf(s, p) === id && !!leaderUnit(s, p);
+/** The unit of Leader `id` when p has it in play, else null. */
+export const leaderOf = (s, p, id) => (leaderIdOf(s, p) === id ? leaderUnit(s, p) : null);
+/** Whether p's Leader `id` stands on `hex`. */
+export const leaderAt = (s, p, id, hex) => {
+  const u = leaderOf(s, p, id);
+  return !!u && u.hex === hex;
+};
+/** Whether p's Leader `id` is within `range` spaces of `hex`. */
+export const leaderWithin = (s, p, id, hex, range) => {
+  const u = leaderOf(s, p, id);
+  return !!u && distance(u.hex, hex) <= range;
+};
+/** The city that p's Leader `id` is in (a city of p), or null. */
+export const leaderCity = (s, p, id) => {
+  const u = leaderOf(s, p, id);
+  const c = u ? cityAt(s, u.hex) : null;
+  return c && c.owner === p ? c : null;
+};
+/** Xerxes' Army stacks up to 5: the limit for p's Army arriving on (or already standing on) `hex`. */
+export const stackLimit = (s, p, hex, arriving = []) => {
+  const x = leaderOf(s, p, 'xerxes');
+  return STACK_LIMIT + (x && (x.hex === hex || arriving.some((u) => u.id === x.id)) ? 1 : 0);
+};

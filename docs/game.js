@@ -984,8 +984,8 @@
             void 0 === i3 && (i3 = new c());
             var s2 = this.matrix.matrix, n2 = s2[0], r2 = s2[1], o2 = s2[2], a2 = s2[3], h2 = s2[4], l2 = s2[5], u2 = n2 * a2 - r2 * o2;
             if (!u2) return i3.x = t3, i3.y = e3, i3;
-            var d2 = a2 * (u2 = 1 / u2), f = -r2 * u2, p = -o2 * u2, v = n2 * u2, g = (o2 * l2 - a2 * h2) * u2, m = (r2 * h2 - n2 * l2) * u2, y = Math.cos(this.rotation), x = Math.sin(this.rotation), T = this.zoomX, w = this.zoomY, b = this.scrollX, S2 = this.scrollY, E2 = t3 + (b * y - S2 * x) * T, A3 = e3 + (b * x + S2 * y) * w;
-            return i3.x = E2 * d2 + A3 * p + g, i3.y = E2 * f + A3 * v + m, i3;
+            var d2 = a2 * (u2 = 1 / u2), f = -r2 * u2, p = -o2 * u2, v = n2 * u2, g = (o2 * l2 - a2 * h2) * u2, m = (r2 * h2 - n2 * l2) * u2, y = Math.cos(this.rotation), x = Math.sin(this.rotation), T = this.zoomX, w = this.zoomY, b = this.scrollX, S2 = this.scrollY, E2 = t3 + (b * y - S2 * x) * T, A4 = e3 + (b * x + S2 * y) * w;
+            return i3.x = E2 * d2 + A4 * p + g, i3.y = E2 * f + A4 * v + m, i3;
           }, ignore: function(t3) {
             var e3 = this.id;
             Array.isArray(t3) || (t3 = [t3]);
@@ -1144,8 +1144,8 @@
             this.roundPixels && (p = Math.floor(p), v = Math.floor(v)), this.useBounds && (p = this.clampX(p), v = this.clampY(v)), this.scrollX = p, this.scrollY = v;
             var T = p + i3, w = v + s2;
             this.midPoint.set(T, w);
-            var b = Math.floor(t3 / r2 + 0.5), S2 = Math.floor(e3 / o2 + 0.5), E2 = Math.floor(T - b / 2 + 0.5), A3 = Math.floor(w - S2 / 2 + 0.5);
-            this.worldView.setTo(E2, A3, b, S2), a2.applyITRS(Math.floor(this.x + h2 + 0.5), Math.floor(this.y + c2 + 0.5), this.rotation, r2, o2), a2.translate(-h2, -c2), this.shakeEffect.preRender(), g && this.emit(l.FOLLOW_UPDATE, this, d2);
+            var b = Math.floor(t3 / r2 + 0.5), S2 = Math.floor(e3 / o2 + 0.5), E2 = Math.floor(T - b / 2 + 0.5), A4 = Math.floor(w - S2 / 2 + 0.5);
+            this.worldView.setTo(E2, A4, b, S2), a2.applyITRS(Math.floor(this.x + h2 + 0.5), Math.floor(this.y + c2 + 0.5), this.rotation, r2, o2), a2.translate(-h2, -c2), this.shakeEffect.preRender(), g && this.emit(l.FOLLOW_UPDATE, this, d2);
           }, setLerp: function(t3, e3) {
             return void 0 === t3 && (t3 = 1), void 0 === e3 && (e3 = t3), this.lerp.set(t3, e3), this;
           }, setFollowOffset: function(t3, e3) {
@@ -1566,14 +1566,14 @@
             }
           };
         }, 50127: (t2, e2, i2) => {
-          var s = i2(40366), n = i2(60848), r = i2(24047), o = i2(27919), a = i2(83419), h = i2(69547), l = i2(83719), u = i2(86054), c = i2(45893), d = i2(96391), f = i2(82264), p = i2(57264), v = i2(50792), g = i2(8443), m = i2(7003), y = i2(37277), x = i2(77332), T = i2(76531), w = i2(60903), b = i2(69442), S2 = i2(17130), E2 = i2(65898), A3 = i2(51085), C4 = i2(14747), _ = new a({ initialize: function(t3) {
+          var s = i2(40366), n = i2(60848), r = i2(24047), o = i2(27919), a = i2(83419), h = i2(69547), l = i2(83719), u = i2(86054), c = i2(45893), d = i2(96391), f = i2(82264), p = i2(57264), v = i2(50792), g = i2(8443), m = i2(7003), y = i2(37277), x = i2(77332), T = i2(76531), w = i2(60903), b = i2(69442), S2 = i2(17130), E2 = i2(65898), A4 = i2(51085), C4 = i2(14747), _ = new a({ initialize: function(t3) {
             this.config = new h(t3), this.renderer = null, this.domContainer = null, this.canvas = null, this.context = null, this.isBooted = false, this.isRunning = false, this.events = new v(), this.anims = new n(this), this.textures = new S2(this), this.cache = new r(this), this.registry = new c(this, new v()), this.input = new m(this, this.config), this.scene = new w(this, this.config.sceneConfig), this.device = f, this.scale = new T(this, this.config), this.sound = null, this.sound = C4.create(this), this.loop = new E2(this, this.config.fps), this.plugins = new x(this, this.config), this.pendingDestroy = false, this.removeCanvas = false, this.noReturn = false, this.hasFocus = false, this.isPaused = false, p(this.boot.bind(this));
           }, boot: function() {
             y.hasCore("EventEmitter") ? (this.isBooted = true, this.config.preBoot(this), this.scale.preBoot(), u(this), l(this), d(this), s(this.canvas, this.config.parent), this.textures.once(b.READY, this.texturesReady, this), this.events.emit(g.BOOT)) : console.warn("Aborting. Core Plugins missing.");
           }, texturesReady: function() {
             this.events.emit(g.READY), this.start();
           }, start: function() {
-            this.isRunning = true, this.config.postBoot(this), this.renderer ? this.loop.start(this.step.bind(this)) : this.loop.start(this.headlessStep.bind(this)), A3(this);
+            this.isRunning = true, this.config.postBoot(this), this.renderer ? this.loop.start(this.step.bind(this)) : this.loop.start(this.headlessStep.bind(this)), A4(this);
             var t3 = this.events;
             t3.on(g.HIDDEN, this.onHidden, this), t3.on(g.VISIBLE, this.onVisible, this), t3.on(g.BLUR, this.onBlur, this), t3.on(g.FOCUS, this.onFocus, this);
           }, step: function(t3, e3) {
@@ -3454,13 +3454,13 @@
           r.register("UpdateList", a, "updateList"), t2.exports = a;
         }, 3217: (t2) => {
           t2.exports = function(t3, e2, i2, s, n, r, o, a, h, l, u, c, d, f, p) {
-            var v = i2.x - e2.displayOriginX + n, g = i2.y - e2.displayOriginY + r, m = v + i2.w, y = g + i2.h, x = o.a, T = o.b, w = o.c, b = o.d, S2 = o.e, E2 = o.f, A3 = v * x + g * w + S2, C4 = v * T + g * b + E2, _ = v * x + y * w + S2, M = v * T + y * b + E2, P = m * x + y * w + S2, R = m * T + y * b + E2, L = m * x + g * w + S2, O2 = m * T + g * b + E2;
-            a && (A3 = Math.round(A3), C4 = Math.round(C4), _ = Math.round(_), M = Math.round(M), P = Math.round(P), R = Math.round(R), L = Math.round(L), O2 = Math.round(O2)), t3.batchQuad(e2, A3, C4, _, M, P, R, L, O2, s.u0, s.v0, s.u1, s.v1, h, l, u, c, d, f, p);
+            var v = i2.x - e2.displayOriginX + n, g = i2.y - e2.displayOriginY + r, m = v + i2.w, y = g + i2.h, x = o.a, T = o.b, w = o.c, b = o.d, S2 = o.e, E2 = o.f, A4 = v * x + g * w + S2, C4 = v * T + g * b + E2, _ = v * x + y * w + S2, M = v * T + y * b + E2, P2 = m * x + y * w + S2, R = m * T + y * b + E2, L2 = m * x + g * w + S2, O2 = m * T + g * b + E2;
+            a && (A4 = Math.round(A4), C4 = Math.round(C4), _ = Math.round(_), M = Math.round(M), P2 = Math.round(P2), R = Math.round(R), L2 = Math.round(L2), O2 = Math.round(O2)), t3.batchQuad(e2, A4, C4, _, M, P2, R, L2, O2, s.u0, s.v0, s.u1, s.v1, h, l, u, c, d, f, p);
           };
         }, 53048: (t2) => {
           t2.exports = function(t3, e2, i2, s) {
             if (void 0 === i2 && (i2 = false), void 0 === s) return s = { local: { x: 0, y: 0, width: 0, height: 0 }, global: { x: 0, y: 0, width: 0, height: 0 }, lines: { shortest: 0, longest: 0, lengths: null, height: 0 }, wrappedText: "", words: [], characters: [], scaleX: 0, scaleY: 0 };
-            var n, r, o, a = t3.text, h = a.length, l = t3.maxWidth, u = t3.wordWrapCharCode, c = Number.MAX_VALUE, d = Number.MAX_VALUE, f = 0, p = 0, v = t3.fontData.chars, g = t3.fontData.lineHeight, m = t3.letterSpacing, y = t3.lineSpacing, x = 0, T = 0, w = 0, b = null, S2 = t3._align, E2 = 0, A3 = 0, C4 = t3.fontSize / t3.fontData.size, _ = C4 * t3.scaleX, M = C4 * t3.scaleY, P = null, R = 0, L = [], O2 = Number.MAX_VALUE, F = 0, D = 0, I = 0, k = [], B = [], N = null, U = function(t4, e3) {
+            var n, r, o, a = t3.text, h = a.length, l = t3.maxWidth, u = t3.wordWrapCharCode, c = Number.MAX_VALUE, d = Number.MAX_VALUE, f = 0, p = 0, v = t3.fontData.chars, g = t3.fontData.lineHeight, m = t3.letterSpacing, y = t3.lineSpacing, x = 0, T = 0, w = 0, b = null, S2 = t3._align, E2 = 0, A4 = 0, C4 = t3.fontSize / t3.fontData.size, _ = C4 * t3.scaleX, M = C4 * t3.scaleY, P2 = null, R = 0, L2 = [], O2 = Number.MAX_VALUE, F2 = 0, D = 0, I = 0, k = [], B = [], N = null, U = function(t4, e3) {
               for (var i3 = 0, s2 = 0; s2 < t4.length; s2++) {
                 var n2 = t4.charCodeAt(s2), r2 = e3.chars[n2];
                 r2 && (i3 += r2.xAdvance);
@@ -3482,29 +3482,29 @@
             var H2 = 0;
             for (n = 0; n < h; n++) if (10 !== (w = a.charCodeAt(n))) {
               if (b = v[w]) {
-                if (E2 = x, A3 = T, null !== P) {
+                if (E2 = x, A4 = T, null !== P2) {
                   var j = b.kerning[R];
                   E2 += void 0 !== j ? j : 0;
                 }
-                c > E2 && (c = E2), d > A3 && (d = A3);
-                var q = E2 + b.xAdvance, K = A3 + g;
+                c > E2 && (c = E2), d > A4 && (d = A4);
+                var q = E2 + b.xAdvance, K = A4 + g;
                 f < q && (f = q), p < K && (p = K);
                 var Z2 = b.xOffset + b.xAdvance + (void 0 !== j ? j : 0);
-                w === u ? null !== N && (k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), N = null) : (null === N && (N = { word: "", i: H2, x, y: T, w: 0, h: g }), N.word = N.word.concat(a[n]), N.w += Z2), B.push({ i: H2, idx: n, char: a[n], code: w, x: (b.xOffset + E2) * C4, y: (b.yOffset + T) * C4, w: b.width * C4, h: b.height * C4, t: T * C4, r: q * C4, b: g * C4, line: D, glyph: b }), x += b.xAdvance + m + (void 0 !== j ? j : 0), P = b, R = w, I = q * C4, H2++;
+                w === u ? null !== N && (k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), N = null) : (null === N && (N = { word: "", i: H2, x, y: T, w: 0, h: g }), N.word = N.word.concat(a[n]), N.w += Z2), B.push({ i: H2, idx: n, char: a[n], code: w, x: (b.xOffset + E2) * C4, y: (b.yOffset + T) * C4, w: b.width * C4, h: b.height * C4, t: T * C4, r: q * C4, b: g * C4, line: D, glyph: b }), x += b.xAdvance + m + (void 0 !== j ? j : 0), P2 = b, R = w, I = q * C4, H2++;
               }
-            } else null !== N && (k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), N = null), P = null, L[D] = I, I > F && (F = I), I < O2 && (O2 = I), I = 0, x = 0, T = (g + y) * ++D;
-            if (null !== N && k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), L[D] = I, I > F && (F = I), I < O2 && (O2 = I), S2 > 0) for (var J = 0; J < B.length; J++) {
+            } else null !== N && (k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), N = null), P2 = null, L2[D] = I, I > F2 && (F2 = I), I < O2 && (O2 = I), I = 0, x = 0, T = (g + y) * ++D;
+            if (null !== N && k.push({ word: N.word, i: N.i, x: N.x * _, y: N.y * M, w: N.w * _, h: N.h * M }), L2[D] = I, I > F2 && (F2 = I), I < O2 && (O2 = I), S2 > 0) for (var J = 0; J < B.length; J++) {
               var Q = B[J];
               if (1 === S2) {
-                var $ = (F - L[Q.line]) / 2;
+                var $ = (F2 - L2[Q.line]) / 2;
                 Q.x += $, Q.r += $;
               } else if (2 === S2) {
-                var tt = F - L[Q.line];
+                var tt = F2 - L2[Q.line];
                 Q.x += tt, Q.r += tt;
               }
             }
             var et = s.local, it = s.global;
-            return o = s.lines, et.x = c * C4, et.y = d * C4, et.width = f * C4, et.height = p * C4, it.x = t3.x - t3._displayOriginX + c * _, it.y = t3.y - t3._displayOriginY + d * M, it.width = f * _, it.height = p * M, o.shortest = O2, o.longest = F, o.lengths = L, e2 && (et.x = Math.ceil(et.x), et.y = Math.ceil(et.y), et.width = Math.ceil(et.width), et.height = Math.ceil(et.height), it.x = Math.ceil(it.x), it.y = Math.ceil(it.y), it.width = Math.ceil(it.width), it.height = Math.ceil(it.height), o.shortest = Math.ceil(O2), o.longest = Math.ceil(F)), i2 && (t3._displayOriginX = t3.originX * et.width, t3._displayOriginY = t3.originY * et.height, it.x = t3.x - t3._displayOriginX * t3.scaleX, it.y = t3.y - t3._displayOriginY * t3.scaleY, e2 && (it.x = Math.ceil(it.x), it.y = Math.ceil(it.y))), s.words = k, s.characters = B, s.lines.height = g, s.scale = C4, s.scaleX = t3.scaleX, s.scaleY = t3.scaleY, s;
+            return o = s.lines, et.x = c * C4, et.y = d * C4, et.width = f * C4, et.height = p * C4, it.x = t3.x - t3._displayOriginX + c * _, it.y = t3.y - t3._displayOriginY + d * M, it.width = f * _, it.height = p * M, o.shortest = O2, o.longest = F2, o.lengths = L2, e2 && (et.x = Math.ceil(et.x), et.y = Math.ceil(et.y), et.width = Math.ceil(et.width), et.height = Math.ceil(et.height), it.x = Math.ceil(it.x), it.y = Math.ceil(it.y), it.width = Math.ceil(it.width), it.height = Math.ceil(it.height), o.shortest = Math.ceil(O2), o.longest = Math.ceil(F2)), i2 && (t3._displayOriginX = t3.originX * et.width, t3._displayOriginY = t3.originY * et.height, it.x = t3.x - t3._displayOriginX * t3.scaleX, it.y = t3.y - t3._displayOriginY * t3.scaleY, e2 && (it.x = Math.ceil(it.x), it.y = Math.ceil(it.y))), s.words = k, s.characters = B, s.lines.height = g, s.scale = C4, s.scaleX = t3.scaleX, s.scaleY = t3.scaleY, s;
           };
         }, 61327: (t2, e2, i2) => {
           var s = i2(21859);
@@ -3524,8 +3524,8 @@
               var h = s(e3, "image", ""), l = t3.sys.textures.getFrame(h), u = l.cutX, c = l.cutY, d = l.source.width, f = l.source.height, p = s(e3, "offset.x", 0), v = s(e3, "offset.y", 0), g = s(e3, "spacing.x", 0), m = s(e3, "spacing.y", 0), y = s(e3, "lineSpacing", 0), x = s(e3, "charsPerRow", null);
               null === x && (x = d / i3) > a.length && (x = a.length);
               for (var T = p, w = v, b = { retroFont: true, font: h, size: i3, lineHeight: n + y, chars: {} }, S2 = 0, E2 = 0; E2 < a.length; E2++) {
-                var A3 = a.charCodeAt(E2), C4 = (u + T) / d, _ = (c + w) / f, M = (u + T + i3) / d, P = (c + w + n) / f;
-                b.chars[A3] = { x: T, y: w, width: i3, height: n, centerX: r, centerY: o, xOffset: 0, yOffset: 0, xAdvance: i3, data: {}, kerning: {}, u0: C4, v0: _, u1: M, v1: P }, ++S2 === x ? (S2 = 0, T = p, w += n + m) : T += i3 + g;
+                var A4 = a.charCodeAt(E2), C4 = (u + T) / d, _ = (c + w) / f, M = (u + T + i3) / d, P2 = (c + w + n) / f;
+                b.chars[A4] = { x: T, y: w, width: i3, height: n, centerX: r, centerY: o, xOffset: 0, yOffset: 0, xAdvance: i3, data: {}, kerning: {}, u0: C4, v0: _, u1: M, v1: P2 }, ++S2 === x ? (S2 = 0, T = p, w += n + m) : T += i3 + g;
               }
               return { data: b, frame: null, texture: h };
             }
@@ -3541,18 +3541,18 @@
             var p = t3.getElementsByTagName("char"), v = void 0 !== i2 && i2.trimmed;
             if (v) var g = i2.height, m = i2.width;
             for (var y = 0; y < p.length; y++) {
-              var x = p[y], T = e2(x, "id"), w = String.fromCharCode(T), b = e2(x, "x"), S2 = e2(x, "y"), E2 = e2(x, "width"), A3 = e2(x, "height");
+              var x = p[y], T = e2(x, "id"), w = String.fromCharCode(T), b = e2(x, "x"), S2 = e2(x, "y"), E2 = e2(x, "width"), A4 = e2(x, "height");
               v && (b < m && (m = b), S2 < g && (g = S2)), v && 0 !== g && 0 !== m && (b -= i2.x, S2 -= i2.y);
-              var C4 = (o + b) / h, _ = (a + S2) / l, M = (o + b + E2) / h, P = (a + S2 + A3) / l;
-              if (c.chars[T] = { x: b, y: S2, width: E2, height: A3, centerX: Math.floor(E2 / 2), centerY: Math.floor(A3 / 2), xOffset: e2(x, "xoffset"), yOffset: e2(x, "yoffset"), xAdvance: e2(x, "xadvance") + s, data: {}, kerning: {}, u0: C4, v0: _, u1: M, v1: P }, r && 0 !== E2 && 0 !== A3) {
-                var R = r.add(w, u, b, S2, E2, A3);
-                R && R.setUVs(E2, A3, C4, _, M, P);
+              var C4 = (o + b) / h, _ = (a + S2) / l, M = (o + b + E2) / h, P2 = (a + S2 + A4) / l;
+              if (c.chars[T] = { x: b, y: S2, width: E2, height: A4, centerX: Math.floor(E2 / 2), centerY: Math.floor(A4 / 2), xOffset: e2(x, "xoffset"), yOffset: e2(x, "yoffset"), xAdvance: e2(x, "xadvance") + s, data: {}, kerning: {}, u0: C4, v0: _, u1: M, v1: P2 }, r && 0 !== E2 && 0 !== A4) {
+                var R = r.add(w, u, b, S2, E2, A4);
+                R && R.setUVs(E2, A4, C4, _, M, P2);
               }
             }
-            var L = t3.getElementsByTagName("kerning");
-            for (y = 0; y < L.length; y++) {
-              var O2 = L[y], F = e2(O2, "first"), D = e2(O2, "second"), I = e2(O2, "amount");
-              c.chars[D].kerning[F] = I;
+            var L2 = t3.getElementsByTagName("kerning");
+            for (y = 0; y < L2.length; y++) {
+              var O2 = L2[y], F2 = e2(O2, "first"), D = e2(O2, "second"), I = e2(O2, "amount");
+              c.chars[D].kerning[F2] = I;
             }
             return c;
           };
@@ -3580,26 +3580,26 @@
             var r = e3._text, o = r.length, a = t3.currentContext;
             if (0 !== o && s(t3, a, e3, i3, n)) {
               i3.addToRenderList(e3);
-              var h = e3.fromAtlas ? e3.frame : e3.texture.frames.__BASE, l = e3.displayCallback, u = e3.callbackData, c = e3.fontData.chars, d = e3.fontData.lineHeight, f = e3._letterSpacing, p = 0, v = 0, g = 0, m = null, y = 0, x = 0, T = 0, w = 0, b = 0, S2 = 0, E2 = null, A3 = 0, C4 = e3.frame.source.image, _ = h.cutX, M = h.cutY, P = 0, R = 0, L = e3._fontSize / e3.fontData.size, O2 = e3._align, F = 0, D = 0;
+              var h = e3.fromAtlas ? e3.frame : e3.texture.frames.__BASE, l = e3.displayCallback, u = e3.callbackData, c = e3.fontData.chars, d = e3.fontData.lineHeight, f = e3._letterSpacing, p = 0, v = 0, g = 0, m = null, y = 0, x = 0, T = 0, w = 0, b = 0, S2 = 0, E2 = null, A4 = 0, C4 = e3.frame.source.image, _ = h.cutX, M = h.cutY, P2 = 0, R = 0, L2 = e3._fontSize / e3.fontData.size, O2 = e3._align, F2 = 0, D = 0;
               e3.getTextBounds(false);
               var I = e3._bounds.lines;
               1 === O2 ? D = (I.longest - I.lengths[0]) / 2 : 2 === O2 && (D = I.longest - I.lengths[0]), a.translate(-e3.displayOriginX, -e3.displayOriginY);
               var k = i3.roundPixels;
               e3.cropWidth > 0 && e3.cropHeight > 0 && (a.beginPath(), a.rect(0, 0, e3.cropWidth, e3.cropHeight), a.clip());
-              for (var B = 0; B < o; B++) if (R = L, P = 0, 10 !== (g = r.charCodeAt(B))) {
+              for (var B = 0; B < o; B++) if (R = L2, P2 = 0, 10 !== (g = r.charCodeAt(B))) {
                 if (m = c[g]) {
                   if (y = _ + m.x, x = M + m.y, T = m.width, w = m.height, b = m.xOffset + p - e3.scrollX, S2 = m.yOffset + v - e3.scrollY, null !== E2) {
-                    var N = m.kerning[A3];
+                    var N = m.kerning[A4];
                     b += void 0 !== N ? N : 0;
                   }
                   if (l) {
-                    u.index = B, u.charCode = g, u.x = b, u.y = S2, u.scale = R, u.rotation = P, u.data = m.data;
+                    u.index = B, u.charCode = g, u.x = b, u.y = S2, u.scale = R, u.rotation = P2, u.data = m.data;
                     var U = l(u);
-                    b = U.x, S2 = U.y, R = U.scale, P = U.rotation;
+                    b = U.x, S2 = U.y, R = U.scale, P2 = U.rotation;
                   }
-                  b *= R, S2 *= R, b += D, p += m.xAdvance + f + (void 0 !== N ? N : 0), E2 = m, A3 = g, 0 !== T && 0 !== w && 32 !== g && (k && (b = Math.round(b), S2 = Math.round(S2)), a.save(), a.translate(b, S2), a.rotate(P), a.scale(R, R), a.drawImage(C4, y, x, T, w, 0, 0, T, w), a.restore());
+                  b *= R, S2 *= R, b += D, p += m.xAdvance + f + (void 0 !== N ? N : 0), E2 = m, A4 = g, 0 !== T && 0 !== w && 32 !== g && (k && (b = Math.round(b), S2 = Math.round(S2)), a.save(), a.translate(b, S2), a.rotate(P2), a.scale(R, R), a.drawImage(C4, y, x, T, w, 0, 0, T, w), a.restore());
                 }
-              } else F++, 1 === O2 ? D = (I.longest - I.lengths[F]) / 2 : 2 === O2 && (D = I.longest - I.lengths[F]), p = 0, v += d, E2 = null;
+              } else F2++, 1 === O2 ? D = (I.longest - I.lengths[F2]) / 2 : 2 === O2 && (D = I.longest - I.lengths[F2]), p = 0, v += d, E2 = null;
               a.restore();
             }
           };
@@ -3628,30 +3628,30 @@
               t3.pipelines.preBatch(e3);
               var c = u.sprite, d = u.calc, f = o, p = e3.cropWidth > 0 || e3.cropHeight > 0;
               p && (l.flush(), t3.pushScissor(d.tx, d.ty, e3.cropWidth * d.scaleX, e3.cropHeight * d.scaleY));
-              var v, g, m = e3.frame.glTexture, y = e3.tintFill, x = r.getTintAppendFloatAlpha(e3.tintTopLeft, i3.alpha * e3._alphaTL), T = r.getTintAppendFloatAlpha(e3.tintTopRight, i3.alpha * e3._alphaTR), w = r.getTintAppendFloatAlpha(e3.tintBottomLeft, i3.alpha * e3._alphaBL), b = r.getTintAppendFloatAlpha(e3.tintBottomRight, i3.alpha * e3._alphaBR), S2 = l.setGameObject(e3), E2 = 0, A3 = 0, C4 = 0, _ = 0, M = e3.letterSpacing, P = 0, R = 0, L = e3.scrollX, O2 = e3.scrollY, F = e3.fontData, D = F.chars, I = F.lineHeight, k = e3.fontSize / F.size, B = 0, N = e3._align, U = 0, X2 = 0, Y = e3.getTextBounds(false);
+              var v, g, m = e3.frame.glTexture, y = e3.tintFill, x = r.getTintAppendFloatAlpha(e3.tintTopLeft, i3.alpha * e3._alphaTL), T = r.getTintAppendFloatAlpha(e3.tintTopRight, i3.alpha * e3._alphaTR), w = r.getTintAppendFloatAlpha(e3.tintBottomLeft, i3.alpha * e3._alphaBL), b = r.getTintAppendFloatAlpha(e3.tintBottomRight, i3.alpha * e3._alphaBR), S2 = l.setGameObject(e3), E2 = 0, A4 = 0, C4 = 0, _ = 0, M = e3.letterSpacing, P2 = 0, R = 0, L2 = e3.scrollX, O2 = e3.scrollY, F2 = e3.fontData, D = F2.chars, I = F2.lineHeight, k = e3.fontSize / F2.size, B = 0, N = e3._align, U = 0, X2 = 0, Y = e3.getTextBounds(false);
               e3.maxWidth > 0 && (h = (a = Y.wrappedText).length);
               var z = e3._bounds.lines;
               1 === N ? X2 = (z.longest - z.lengths[0]) / 2 : 2 === N && (X2 = z.longest - z.lengths[0]);
               for (var G = i3.roundPixels, V2 = e3.displayCallback, W2 = e3.callbackData, H2 = 0; H2 < h; H2++) if (10 !== (C4 = a.charCodeAt(H2))) {
                 if (v = D[C4]) {
-                  P = v.width, R = v.height;
-                  var j = v.xOffset + E2 - L, q = v.yOffset + A3 - O2;
+                  P2 = v.width, R = v.height;
+                  var j = v.xOffset + E2 - L2, q = v.yOffset + A4 - O2;
                   if (null !== g) {
                     var K = v.kerning[_] || 0;
                     j += K, E2 += K;
                   }
-                  if (E2 += v.xAdvance + M, g = v, _ = C4, 0 !== P && 0 !== R && 32 !== C4) {
+                  if (E2 += v.xAdvance + M, g = v, _ = C4, 0 !== P2 && 0 !== R && 32 !== C4) {
                     if (k = e3.fontSize / e3.fontData.size, B = 0, V2) {
                       W2.color = 0, W2.tint.topLeft = x, W2.tint.topRight = T, W2.tint.bottomLeft = w, W2.tint.bottomRight = b, W2.index = H2, W2.charCode = C4, W2.x = j, W2.y = q, W2.scale = k, W2.rotation = B, W2.data = v.data;
                       var Z2 = V2(W2);
                       j = Z2.x, q = Z2.y, k = Z2.scale, B = Z2.rotation, Z2.color ? (x = Z2.color, T = Z2.color, w = Z2.color, b = Z2.color) : (x = Z2.tint.topLeft, T = Z2.tint.topRight, w = Z2.tint.bottomLeft, b = Z2.tint.bottomRight), x = r.getTintAppendFloatAlpha(x, i3.alpha * e3._alphaTL), T = r.getTintAppendFloatAlpha(T, i3.alpha * e3._alphaTR), w = r.getTintAppendFloatAlpha(w, i3.alpha * e3._alphaBL), b = r.getTintAppendFloatAlpha(b, i3.alpha * e3._alphaBR);
                     }
                     j *= k, q *= k, j -= e3.displayOriginX, q -= e3.displayOriginY, j += X2, f.applyITRS(j, q, B, k, k), d.multiply(f, c);
-                    var J = v.u0, Q = v.v0, $ = v.u1, tt = v.v1, et = P, it = R, st = c.e, nt = c.f, rt = it * c.c + c.e, ot = it * c.d + c.f, at = et * c.a + it * c.c + c.e, ht = et * c.b + it * c.d + c.f, lt = et * c.a + c.e, ut = et * c.b + c.f;
+                    var J = v.u0, Q = v.v0, $ = v.u1, tt = v.v1, et = P2, it = R, st = c.e, nt = c.f, rt = it * c.c + c.e, ot = it * c.d + c.f, at = et * c.a + it * c.c + c.e, ht = et * c.b + it * c.d + c.f, lt = et * c.a + c.e, ut = et * c.b + c.f;
                     G && (st = Math.round(st), nt = Math.round(nt), rt = Math.round(rt), ot = Math.round(ot), at = Math.round(at), ht = Math.round(ht), lt = Math.round(lt), ut = Math.round(ut)), l.shouldFlush(6) && (l.flush(), S2 = l.setGameObject(e3)), l.batchQuad(e3, st, nt, rt, ot, at, ht, lt, ut, J, Q, $, tt, x, T, w, b, y, m, S2);
                   }
                 }
-              } else U++, 1 === N ? X2 = (z.longest - z.lengths[U]) / 2 : 2 === N && (X2 = z.longest - z.lengths[U]), E2 = 0, A3 += I, g = null;
+              } else U++, 1 === N ? X2 = (z.longest - z.lengths[U]) / 2 : 2 === N && (X2 = z.longest - z.lengths[U]), E2 = 0, A4 += I, g = null;
               p && (l.flush(), t3.popScissor()), t3.pipelines.postBatch(e3);
             }
           };
@@ -3771,19 +3771,19 @@
             var r = e3._text, o = r.length, a = t3.currentContext;
             if (0 !== o && s(t3, a, e3, i3, n)) {
               i3.addToRenderList(e3);
-              var h = e3.fromAtlas ? e3.frame : e3.texture.frames.__BASE, l = e3.fontData.chars, u = e3.fontData.lineHeight, c = e3._letterSpacing, d = e3._lineSpacing, f = 0, p = 0, v = 0, g = null, m = 0, y = 0, x = 0, T = 0, w = 0, b = 0, S2 = null, E2 = 0, A3 = h.source.image, C4 = h.cutX, _ = h.cutY, M = e3._fontSize / e3.fontData.size, P = e3._align, R = 0, L = 0, O2 = e3.getTextBounds(false);
+              var h = e3.fromAtlas ? e3.frame : e3.texture.frames.__BASE, l = e3.fontData.chars, u = e3.fontData.lineHeight, c = e3._letterSpacing, d = e3._lineSpacing, f = 0, p = 0, v = 0, g = null, m = 0, y = 0, x = 0, T = 0, w = 0, b = 0, S2 = null, E2 = 0, A4 = h.source.image, C4 = h.cutX, _ = h.cutY, M = e3._fontSize / e3.fontData.size, P2 = e3._align, R = 0, L2 = 0, O2 = e3.getTextBounds(false);
               e3.maxWidth > 0 && (o = (r = O2.wrappedText).length);
-              var F = e3._bounds.lines;
-              1 === P ? L = (F.longest - F.lengths[0]) / 2 : 2 === P && (L = F.longest - F.lengths[0]), a.translate(-e3.displayOriginX, -e3.displayOriginY);
+              var F2 = e3._bounds.lines;
+              1 === P2 ? L2 = (F2.longest - F2.lengths[0]) / 2 : 2 === P2 && (L2 = F2.longest - F2.lengths[0]), a.translate(-e3.displayOriginX, -e3.displayOriginY);
               for (var D = i3.roundPixels, I = 0; I < o; I++) if (10 !== (v = r.charCodeAt(I))) {
                 if (g = l[v]) {
                   if (m = C4 + g.x, y = _ + g.y, x = g.width, T = g.height, w = g.xOffset + f, b = g.yOffset + p, null !== S2) {
                     var k = g.kerning[E2];
                     w += void 0 !== k ? k : 0;
                   }
-                  w *= M, b *= M, w += L, f += g.xAdvance + c + (void 0 !== k ? k : 0), S2 = g, E2 = v, 0 !== x && 0 !== T && 32 !== v && (D && (w = Math.round(w), b = Math.round(b)), a.save(), a.translate(w, b), a.scale(M, M), a.drawImage(A3, m, y, x, T, 0, 0, x, T), a.restore());
+                  w *= M, b *= M, w += L2, f += g.xAdvance + c + (void 0 !== k ? k : 0), S2 = g, E2 = v, 0 !== x && 0 !== T && 32 !== v && (D && (w = Math.round(w), b = Math.round(b)), a.save(), a.translate(w, b), a.scale(M, M), a.drawImage(A4, m, y, x, T, 0, 0, x, T), a.restore());
                 }
-              } else R++, 1 === P ? L = (F.longest - F.lengths[R]) / 2 : 2 === P && (L = F.longest - F.lengths[R]), f = 0, p += u + d, S2 = null;
+              } else R++, 1 === P2 ? L2 = (F2.longest - F2.lengths[R]) / 2 : 2 === P2 && (L2 = F2.longest - F2.lengths[R]), f = 0, p += u + d, S2 = null;
               a.restore();
             }
           };
@@ -3809,14 +3809,14 @@
               i3.addToRenderList(e3);
               var a = t3.pipelines.set(e3.pipeline, e3), h = n(e3, i3, o).calc;
               t3.pipelines.preBatch(e3);
-              var l, u, c, d = i3.roundPixels, f = i3.alpha, p = e3.charColors, v = e3.tintFill, g = r.getTintAppendFloatAlpha, m = g(e3.tintTopLeft, f * e3._alphaTL), y = g(e3.tintTopRight, f * e3._alphaTR), x = g(e3.tintBottomLeft, f * e3._alphaBL), T = g(e3.tintBottomRight, f * e3._alphaBR), w = e3.frame.glTexture, b = a.setGameObject(e3), S2 = e3.getTextBounds(false).characters, E2 = e3.dropShadowX, A3 = e3.dropShadowY;
-              if (0 !== E2 || 0 !== A3) {
-                var C4 = e3.dropShadowColor, _ = e3.dropShadowAlpha, M = g(C4, f * _ * e3._alphaTL), P = g(C4, f * _ * e3._alphaTR), R = g(C4, f * _ * e3._alphaBL), L = g(C4, f * _ * e3._alphaBR);
-                for (l = 0; l < S2.length; l++) c = (u = S2[l]).glyph, 32 !== u.code && 0 !== c.width && 0 !== c.height && s(a, e3, u, c, E2, A3, h, d, M, P, R, L, 1, w, b);
+              var l, u, c, d = i3.roundPixels, f = i3.alpha, p = e3.charColors, v = e3.tintFill, g = r.getTintAppendFloatAlpha, m = g(e3.tintTopLeft, f * e3._alphaTL), y = g(e3.tintTopRight, f * e3._alphaTR), x = g(e3.tintBottomLeft, f * e3._alphaBL), T = g(e3.tintBottomRight, f * e3._alphaBR), w = e3.frame.glTexture, b = a.setGameObject(e3), S2 = e3.getTextBounds(false).characters, E2 = e3.dropShadowX, A4 = e3.dropShadowY;
+              if (0 !== E2 || 0 !== A4) {
+                var C4 = e3.dropShadowColor, _ = e3.dropShadowAlpha, M = g(C4, f * _ * e3._alphaTL), P2 = g(C4, f * _ * e3._alphaTR), R = g(C4, f * _ * e3._alphaBL), L2 = g(C4, f * _ * e3._alphaBR);
+                for (l = 0; l < S2.length; l++) c = (u = S2[l]).glyph, 32 !== u.code && 0 !== c.width && 0 !== c.height && s(a, e3, u, c, E2, A4, h, d, M, P2, R, L2, 1, w, b);
               }
               for (l = 0; l < S2.length; l++) if (c = (u = S2[l]).glyph, 32 !== u.code && 0 !== c.width && 0 !== c.height) if (a.shouldFlush(6) && (a.flush(), b = a.setGameObject(e3)), p[u.i]) {
-                var O2 = p[u.i], F = O2.tintEffect, D = g(O2.tintTL, f * e3._alphaTL), I = g(O2.tintTR, f * e3._alphaTR), k = g(O2.tintBL, f * e3._alphaBL), B = g(O2.tintBR, f * e3._alphaBR);
-                s(a, e3, u, c, 0, 0, h, d, D, I, k, B, F, w, b);
+                var O2 = p[u.i], F2 = O2.tintEffect, D = g(O2.tintTL, f * e3._alphaTL), I = g(O2.tintTR, f * e3._alphaTR), k = g(O2.tintBL, f * e3._alphaBL), B = g(O2.tintBR, f * e3._alphaBR);
+                s(a, e3, u, c, 0, 0, h, d, D, I, k, B, F2, w, b);
               } else s(a, e3, u, c, 0, 0, h, d, m, y, x, T, v, w, b);
               t3.pipelines.postBatch(e3);
             }
@@ -3897,12 +3897,12 @@
                 if (0 !== x) {
                   var T = y.width, w = y.height, b = d + m.x + y.x, S2 = f + m.y + y.y;
                   m.flipX && (T *= -1, b += y.width), m.flipY && (w *= -1, S2 += y.height);
-                  var E2 = c.setQuad(b, S2, b + T, S2 + w, v), A3 = n.getTintAppendFloatAlpha(m.tint, x);
+                  var E2 = c.setQuad(b, S2, b + T, S2 + w, v), A4 = n.getTintAppendFloatAlpha(m.tint, x);
                   if (y.sourceIndex !== p) {
                     var C4 = h.setGameObject(e3, y);
                     p = y.sourceIndex;
                   }
-                  h.batchQuad(e3, E2[0], E2[1], E2[2], E2[3], E2[4], E2[5], E2[6], E2[7], y.u0, y.v0, y.u1, y.v1, A3, A3, A3, A3, false, y.glTexture, C4) && (p = -1);
+                  h.batchQuad(e3, E2[0], E2[1], E2[2], E2[3], E2[4], E2[5], E2[6], E2[7], y.u0, y.v0, y.u1, y.v1, A4, A4, A4, A4, false, y.glTexture, C4) && (p = -1);
                 }
               }
               t3.pipelines.postBatch(e3);
@@ -5196,31 +5196,31 @@
               i3.addToRenderList(e3);
               var c = t3.pipelines.set(e3.pipeline, e3);
               t3.pipelines.preBatch(e3);
-              for (var d = n(e3, i3, r2).calc, f = u.loadIdentity(), p = e3.commandBuffer, v = i3.alpha * e3.alpha, g = 1, m = c.fillTint, y = c.strokeTint, x = 0, T = 0, w = 0, b = 2 * Math.PI, S2 = [], E2 = 0, A3 = true, C4 = null, _ = o.getTintAppendFloatAlpha, M = 0; M < p.length; M++) switch (p[M]) {
+              for (var d = n(e3, i3, r2).calc, f = u.loadIdentity(), p = e3.commandBuffer, v = i3.alpha * e3.alpha, g = 1, m = c.fillTint, y = c.strokeTint, x = 0, T = 0, w = 0, b = 2 * Math.PI, S2 = [], E2 = 0, A4 = true, C4 = null, _ = o.getTintAppendFloatAlpha, M = 0; M < p.length; M++) switch (p[M]) {
                 case s.BEGIN_PATH:
-                  S2.length = 0, C4 = null, A3 = true;
+                  S2.length = 0, C4 = null, A4 = true;
                   break;
                 case s.CLOSE_PATH:
-                  A3 = false, C4 && C4.points.length && C4.points.push(C4.points[0]);
+                  A4 = false, C4 && C4.points.length && C4.points.push(C4.points[0]);
                   break;
                 case s.FILL_PATH:
                   for (E2 = 0; E2 < S2.length; E2++) c.batchFillPath(S2[E2].points, f, d);
                   break;
                 case s.STROKE_PATH:
-                  for (E2 = 0; E2 < S2.length; E2++) c.batchStrokePath(S2[E2].points, g, A3, f, d);
+                  for (E2 = 0; E2 < S2.length; E2++) c.batchStrokePath(S2[E2].points, g, A4, f, d);
                   break;
                 case s.LINE_STYLE:
                   g = p[++M];
-                  var P = _(p[++M], p[++M] * v);
-                  y.TL = P, y.TR = P, y.BL = P, y.BR = P;
+                  var P2 = _(p[++M], p[++M] * v);
+                  y.TL = P2, y.TR = P2, y.BL = P2, y.BR = P2;
                   break;
                 case s.FILL_STYLE:
                   var R = _(p[++M], p[++M] * v);
                   m.TL = R, m.TR = R, m.BL = R, m.BR = R;
                   break;
                 case s.GRADIENT_FILL_STYLE:
-                  var L = p[++M] * v, O2 = p[++M] * v, F = p[++M] * v, D = p[++M] * v;
-                  m.TL = _(p[++M], L), m.TR = _(p[++M], O2), m.BL = _(p[++M], F), m.BR = _(p[++M], D);
+                  var L2 = p[++M] * v, O2 = p[++M] * v, F2 = p[++M] * v, D = p[++M] * v;
+                  m.TL = _(p[++M], L2), m.TR = _(p[++M], O2), m.BL = _(p[++M], F2), m.BR = _(p[++M], D);
                   break;
                 case s.GRADIENT_LINE_STYLE:
                   g = p[++M];
@@ -5303,16 +5303,16 @@
               s.SetXY(o2, w, b, S2, E2);
             }
             if (u(t3, "setRotation")) {
-              var A3 = l(t3, "setRotation.value", 0), C4 = l(t3, "setRotation.step", 0);
-              s.SetRotation(o2, A3, C4);
+              var A4 = l(t3, "setRotation.value", 0), C4 = l(t3, "setRotation.step", 0);
+              s.SetRotation(o2, A4, C4);
             }
             if (u(t3, "setScale")) {
-              var _ = l(t3, "setScale.x", 1), M = l(t3, "setScale.y", _), P = l(t3, "setScale.stepX", 0), R = l(t3, "setScale.stepY", 0);
-              s.SetScale(o2, _, M, P, R);
+              var _ = l(t3, "setScale.x", 1), M = l(t3, "setScale.y", _), P2 = l(t3, "setScale.stepX", 0), R = l(t3, "setScale.stepY", 0);
+              s.SetScale(o2, _, M, P2, R);
             }
             if (u(t3, "setOrigin")) {
-              var L = l(t3, "setOrigin.x", 0.5), O2 = l(t3, "setOrigin.y", L), F = l(t3, "setOrigin.stepX", 0), D = l(t3, "setOrigin.stepY", 0);
-              s.SetOrigin(o2, L, O2, F, D);
+              var L2 = l(t3, "setOrigin.x", 0.5), O2 = l(t3, "setOrigin.y", L2), F2 = l(t3, "setOrigin.stepX", 0), D = l(t3, "setOrigin.stepY", 0);
+              s.SetOrigin(o2, L2, O2, F2, D);
             }
             if (u(t3, "setAlpha")) {
               var I = l(t3, "setAlpha.value", 1), k = l(t3, "setAlpha.step", 0);
@@ -5843,9 +5843,9 @@
               i3.addToRenderList(e3);
               var a = t3.pipelines.set(e3.pipeline, e3), h = s(e3, i3, n).calc;
               t3.pipelines.preBatch(e3);
-              for (var l = a.setGameObject(e3), u = a.vertexViewF32, c = a.vertexViewU32, d = a.vertexCount * a.currentShader.vertexComponentCount - 1, f = e3.tintFill, p = [], v = e3.debugCallback, g = h.a, m = h.b, y = h.c, x = h.d, T = h.e, w = h.f, b = e3.viewPosition.z, S2 = e3.hideCCW, E2 = i3.roundPixels, A3 = i3.alpha * e3.alpha, C4 = 0, _ = 0; _ < o; _++) {
+              for (var l = a.setGameObject(e3), u = a.vertexViewF32, c = a.vertexViewU32, d = a.vertexCount * a.currentShader.vertexComponentCount - 1, f = e3.tintFill, p = [], v = e3.debugCallback, g = h.a, m = h.b, y = h.c, x = h.d, T = h.e, w = h.f, b = e3.viewPosition.z, S2 = e3.hideCCW, E2 = i3.roundPixels, A4 = i3.alpha * e3.alpha, C4 = 0, _ = 0; _ < o; _++) {
                 var M = r[_];
-                M.isInView(i3, S2, b, A3, g, m, y, x, T, w, E2) && (a.shouldFlush(3) && (a.flush(), l = a.setGameObject(e3), d = a.vertexCount * a.currentShader.vertexComponentCount - 1), d = M.load(u, c, d, l, f), C4++, a.vertexCount += 3, a.currentBatch.count = a.vertexCount - a.currentBatch.start, v && p.push(M));
+                M.isInView(i3, S2, b, A4, g, m, y, x, T, w, E2) && (a.shouldFlush(3) && (a.flush(), l = a.setGameObject(e3), d = a.vertexCount * a.currentShader.vertexComponentCount - 1), d = M.load(u, c, d, l, f), C4++, a.vertexCount += 3, a.currentBatch.count = a.vertexCount - a.currentBatch.start, v && p.push(M));
               }
               e3.totalFrame += C4, v && v.call(e3, e3, p), t3.pipelines.postBatch(e3);
             }
@@ -6212,8 +6212,8 @@
           } });
           t2.exports = o;
         }, 31600: (t2, e2, i2) => {
-          var s = i2(83419), n = i2(31401), r = i2(53774), o = i2(43459), a = i2(26388), h = i2(19909), l = i2(76472), u = i2(44777), c = i2(20696), d = i2(95643), f = i2(95540), p = i2(26546), v = i2(24502), g = i2(69036), m = i2(1985), y = i2(97022), x = i2(86091), T = i2(73162), w = i2(20074), b = i2(269), S2 = i2(56480), E2 = i2(69601), A3 = i2(68875), C4 = i2(87841), _ = i2(59996), M = i2(72905), P = i2(90668), R = i2(19186), L = i2(61340), O2 = i2(26099), F = i2(15994), D = ["active", "advance", "blendMode", "colorEase", "deathCallback", "deathCallbackScope", "duration", "emitCallback", "emitCallbackScope", "follow", "frequency", "gravityX", "gravityY", "maxAliveParticles", "maxParticles", "name", "emitting", "particleBringToTop", "particleClass", "radial", "sortCallback", "sortOrderAsc", "sortProperty", "stopAfter", "tintFill", "timeScale", "trackVisible", "visible"], I = ["accelerationX", "accelerationY", "alpha", "angle", "bounce", "color", "delay", "hold", "lifespan", "maxVelocityX", "maxVelocityY", "moveToX", "moveToY", "quantity", "rotate", "scaleX", "scaleY", "speedX", "speedY", "tint", "x", "y"], k = new s({ Extends: d, Mixins: [n.AlphaSingle, n.BlendMode, n.Depth, n.Mask, n.Pipeline, n.PostPipeline, n.ScrollFactor, n.Texture, n.Transform, n.Visible, P], initialize: function(t3, e3, i3, s2, n2) {
-            d.call(this, t3, "ParticleEmitter"), this.particleClass = S2, this.config = null, this.ops = { accelerationX: new u("accelerationX", 0), accelerationY: new u("accelerationY", 0), alpha: new u("alpha", 1), angle: new u("angle", { min: 0, max: 360 }, true), bounce: new u("bounce", 0), color: new l("color"), delay: new u("delay", 0, true), hold: new u("hold", 0, true), lifespan: new u("lifespan", 1e3, true), maxVelocityX: new u("maxVelocityX", 1e4), maxVelocityY: new u("maxVelocityY", 1e4), moveToX: new u("moveToX", 0), moveToY: new u("moveToY", 0), quantity: new u("quantity", 1, true), rotate: new u("rotate", 0), scaleX: new u("scaleX", 1), scaleY: new u("scaleY", 1), speedX: new u("speedX", 0, true), speedY: new u("speedY", 0, true), tint: new u("tint", 16777215), x: new u("x", 0), y: new u("y", 0) }, this.radial = true, this.gravityX = 0, this.gravityY = 0, this.acceleration = false, this.moveTo = false, this.emitCallback = null, this.emitCallbackScope = null, this.deathCallback = null, this.deathCallbackScope = null, this.maxParticles = 0, this.maxAliveParticles = 0, this.stopAfter = 0, this.duration = 0, this.frequency = 0, this.emitting = true, this.particleBringToTop = true, this.timeScale = 1, this.emitZones = [], this.deathZones = [], this.viewBounds = null, this.follow = null, this.followOffset = new O2(), this.trackVisible = false, this.frames = [], this.randomFrame = true, this.frameQuantity = 1, this.anims = [], this.randomAnim = true, this.animQuantity = 1, this.dead = [], this.alive = [], this.counters = new Float32Array(10), this.skipping = false, this.worldMatrix = new L(), this.sortProperty = "", this.sortOrderAsc = true, this.sortCallback = this.depthSortCallback, this.processors = new T(this), this.tintFill = false, this.initPipeline(), this.initPostPipeline(), this.setPosition(e3, i3), this.setTexture(s2), n2 && this.setConfig(n2);
+          var s = i2(83419), n = i2(31401), r = i2(53774), o = i2(43459), a = i2(26388), h = i2(19909), l = i2(76472), u = i2(44777), c = i2(20696), d = i2(95643), f = i2(95540), p = i2(26546), v = i2(24502), g = i2(69036), m = i2(1985), y = i2(97022), x = i2(86091), T = i2(73162), w = i2(20074), b = i2(269), S2 = i2(56480), E2 = i2(69601), A4 = i2(68875), C4 = i2(87841), _ = i2(59996), M = i2(72905), P2 = i2(90668), R = i2(19186), L2 = i2(61340), O2 = i2(26099), F2 = i2(15994), D = ["active", "advance", "blendMode", "colorEase", "deathCallback", "deathCallbackScope", "duration", "emitCallback", "emitCallbackScope", "follow", "frequency", "gravityX", "gravityY", "maxAliveParticles", "maxParticles", "name", "emitting", "particleBringToTop", "particleClass", "radial", "sortCallback", "sortOrderAsc", "sortProperty", "stopAfter", "tintFill", "timeScale", "trackVisible", "visible"], I = ["accelerationX", "accelerationY", "alpha", "angle", "bounce", "color", "delay", "hold", "lifespan", "maxVelocityX", "maxVelocityY", "moveToX", "moveToY", "quantity", "rotate", "scaleX", "scaleY", "speedX", "speedY", "tint", "x", "y"], k = new s({ Extends: d, Mixins: [n.AlphaSingle, n.BlendMode, n.Depth, n.Mask, n.Pipeline, n.PostPipeline, n.ScrollFactor, n.Texture, n.Transform, n.Visible, P2], initialize: function(t3, e3, i3, s2, n2) {
+            d.call(this, t3, "ParticleEmitter"), this.particleClass = S2, this.config = null, this.ops = { accelerationX: new u("accelerationX", 0), accelerationY: new u("accelerationY", 0), alpha: new u("alpha", 1), angle: new u("angle", { min: 0, max: 360 }, true), bounce: new u("bounce", 0), color: new l("color"), delay: new u("delay", 0, true), hold: new u("hold", 0, true), lifespan: new u("lifespan", 1e3, true), maxVelocityX: new u("maxVelocityX", 1e4), maxVelocityY: new u("maxVelocityY", 1e4), moveToX: new u("moveToX", 0), moveToY: new u("moveToY", 0), quantity: new u("quantity", 1, true), rotate: new u("rotate", 0), scaleX: new u("scaleX", 1), scaleY: new u("scaleY", 1), speedX: new u("speedX", 0, true), speedY: new u("speedY", 0, true), tint: new u("tint", 16777215), x: new u("x", 0), y: new u("y", 0) }, this.radial = true, this.gravityX = 0, this.gravityY = 0, this.acceleration = false, this.moveTo = false, this.emitCallback = null, this.emitCallbackScope = null, this.deathCallback = null, this.deathCallbackScope = null, this.maxParticles = 0, this.maxAliveParticles = 0, this.stopAfter = 0, this.duration = 0, this.frequency = 0, this.emitting = true, this.particleBringToTop = true, this.timeScale = 1, this.emitZones = [], this.deathZones = [], this.viewBounds = null, this.follow = null, this.followOffset = new O2(), this.trackVisible = false, this.frames = [], this.randomFrame = true, this.frameQuantity = 1, this.anims = [], this.randomAnim = true, this.animQuantity = 1, this.dead = [], this.alive = [], this.counters = new Float32Array(10), this.skipping = false, this.worldMatrix = new L2(), this.sortProperty = "", this.sortOrderAsc = true, this.sortCallback = this.depthSortCallback, this.processors = new T(this), this.tintFill = false, this.initPipeline(), this.initPostPipeline(), this.setPosition(e3, i3), this.setTexture(s2), n2 && this.setConfig(n2);
           }, addedToScene: function() {
             this.scene.sys.updateList.add(this);
           }, removedFromScene: function() {
@@ -6269,7 +6269,7 @@
             if (1 === e3) return t3[0];
             if (this.randomAnim) return p(t3);
             var i3 = t3[this.currentAnim];
-            return this.animCounter++, this.animCounter >= this.animQuantity && (this.animCounter = 0, this.currentAnim = F(this.currentAnim + 1, 0, e3)), i3;
+            return this.animCounter++, this.animCounter >= this.animQuantity && (this.animCounter = 0, this.currentAnim = F2(this.currentAnim + 1, 0, e3)), i3;
           }, setAnim: function(t3, e3, i3) {
             void 0 === e3 && (e3 = true), void 0 === i3 && (i3 = 1), this.randomAnim = e3, this.animQuantity = i3, this.currentAnim = 0;
             var s2 = typeof t3;
@@ -6325,12 +6325,12 @@
           }, addEmitZone: function(t3) {
             var e3;
             Array.isArray(t3) || (t3 = [t3]);
-            for (var i3 = [], s2 = 0; s2 < t3.length; s2++) if ((e3 = t3[s2]) instanceof A3 || e3 instanceof h) i3.push(e3);
+            for (var i3 = [], s2 = 0; s2 < t3.length; s2++) if ((e3 = t3[s2]) instanceof A4 || e3 instanceof h) i3.push(e3);
             else {
               var n2 = f(e3, "source", null);
               if (n2) {
                 var r2 = f(e3, "type", "random");
-                if ("random" === r2 && "function" == typeof n2.getRandomPoint) e3 = new A3(n2), i3.push(e3);
+                if ("random" === r2 && "function" == typeof n2.getRandomPoint) e3 = new A4(n2), i3.push(e3);
                 else if ("edge" === r2 && "function" == typeof n2.getPoints) {
                   var o2 = f(e3, "quantity", 1), a2 = f(e3, "stepRate", 0), l2 = f(e3, "yoyo", false), u2 = f(e3, "seamless", true), c2 = f(e3, "total", -1);
                   e3 = new h(n2, o2, a2, l2, u2, c2), i3.push(e3);
@@ -6636,10 +6636,10 @@
                 var S2 = m[b], E2 = S2.alpha * g * v;
                 if (!(E2 <= 0 || 0 === S2.scaleX || 0 === S2.scaleY)) {
                   c.applyITRS(S2.x, S2.y, S2.rotation, S2.scaleX, S2.scaleY), l.copyFrom(i3.matrix), l.multiplyWithOffset(d, -i3.scrollX * T, -i3.scrollY * w), c.e = S2.x, c.f = S2.y, l.multiply(c, u);
-                  var A3 = S2.frame, C4 = A3.canvasData;
+                  var A4 = S2.frame, C4 = A4.canvasData;
                   if (C4.width > 0 && C4.height > 0) {
-                    var _ = -A3.halfWidth, M = -A3.halfHeight;
-                    f.globalAlpha = E2, f.save(), u.setToContext(f), p && (_ = Math.round(_), M = Math.round(M)), f.imageSmoothingEnabled = !A3.source.scaleMode, f.drawImage(A3.source.image, C4.x, C4.y, C4.width, C4.height, _, M, C4.width, C4.height), f.restore();
+                    var _ = -A4.halfWidth, M = -A4.halfHeight;
+                    f.globalAlpha = E2, f.save(), u.setToContext(f), p && (_ = Math.round(_), M = Math.round(M)), f.imageSmoothingEnabled = !A4.source.scaleMode, f.drawImage(A4.source.image, C4.x, C4.y, C4.width, C4.height, _, M, C4.width, C4.height), f.restore();
                   }
                 }
               }
@@ -6672,13 +6672,13 @@
             if (0 !== x && (!T || s(T, i3.worldView))) {
               e3.sortCallback && e3.depthSort(), i3.addToRenderList(e3), c.copyFrom(i3.matrix), c.multiplyWithOffset(p, -i3.scrollX * e3.scrollFactorX, -i3.scrollY * e3.scrollFactorY), t3.setBlendMode(e3.blendMode), e3.mask && (e3.mask.preRenderWebGL(t3, e3, i3), t3.pipelines.set(e3.pipeline));
               for (var w, b, S2 = e3.tintFill, E2 = 0; E2 < x; E2++) {
-                var A3 = y[E2], C4 = A3.alpha * m * g;
-                if (!(C4 <= 0 || 0 === A3.scaleX || 0 === A3.scaleY)) {
-                  f.applyITRS(A3.x, A3.y, A3.rotation, A3.scaleX, A3.scaleY), f.e = A3.x, f.f = A3.y, c.multiply(f, d);
-                  var _ = A3.frame;
+                var A4 = y[E2], C4 = A4.alpha * m * g;
+                if (!(C4 <= 0 || 0 === A4.scaleX || 0 === A4.scaleY)) {
+                  f.applyITRS(A4.x, A4.y, A4.rotation, A4.scaleX, A4.scaleY), f.e = A4.x, f.f = A4.y, c.multiply(f, d);
+                  var _ = A4.frame;
                   _.glTexture !== b && (b = _.glTexture, w = u.setGameObject(e3, _));
-                  var M = -_.halfWidth, P = -_.halfHeight, R = d.setQuad(M, P, M + _.width, P + _.height), L = v(A3.tint, C4);
-                  u.shouldFlush(6) && (u.flush(), w = u.setGameObject(e3, _)), u.batchQuad(e3, R[0], R[1], R[2], R[3], R[4], R[5], R[6], R[7], _.u0, _.v0, _.u1, _.v1, L, L, L, L, S2, b, w);
+                  var M = -_.halfWidth, P2 = -_.halfHeight, R = d.setQuad(M, P2, M + _.width, P2 + _.height), L2 = v(A4.tint, C4);
+                  u.shouldFlush(6) && (u.flush(), w = u.setGameObject(e3, _)), u.batchQuad(e3, R[0], R[1], R[2], R[3], R[4], R[5], R[6], R[7], _.u0, _.v0, _.u1, _.v1, L2, L2, L2, L2, S2, b, w);
                 }
               }
               e3.mask && e3.mask.postRenderWebGL(t3, i3), t3.pipelines.postBatch(e3);
@@ -7054,9 +7054,9 @@
             o.flush(), t3.pipelines.preBatch(e3);
             var m = o.setGameObject(e3), y = o.vertexViewF32, x = o.vertexViewU32, T = o.vertexCount * o.currentShader.vertexComponentCount - 1, w = 0, b = e3.tintFill;
             e3.dirty && e3.updateVertices();
-            for (var S2 = e3.debugCallback, E2 = [], A3 = 0; A3 < v; A3 += 2) {
-              var C4 = h[A3 + 0], _ = h[A3 + 1], M = C4 * a.a + _ * a.c + a.e, P = C4 * a.b + _ * a.d + a.f;
-              p && (M = Math.round(M), P = Math.round(P)), y[++T] = M, y[++T] = P, y[++T] = l[A3 + 0], y[++T] = l[A3 + 1], y[++T] = m, y[++T] = b, x[++T] = f(u[w], i3.alpha * (c[w] * d)), w++, S2 && (E2[A3 + 0] = M, E2[A3 + 1] = P);
+            for (var S2 = e3.debugCallback, E2 = [], A4 = 0; A4 < v; A4 += 2) {
+              var C4 = h[A4 + 0], _ = h[A4 + 1], M = C4 * a.a + _ * a.c + a.e, P2 = C4 * a.b + _ * a.d + a.f;
+              p && (M = Math.round(M), P2 = Math.round(P2)), y[++T] = M, y[++T] = P2, y[++T] = l[A4 + 0], y[++T] = l[A4 + 1], y[++T] = m, y[++T] = b, x[++T] = f(u[w], i3.alpha * (c[w] * d)), w++, S2 && (E2[A4 + 0] = M, E2[A4 + 1] = P2);
             }
             S2 && S2.call(e3, e3, v, E2), o.vertexCount += g, o.currentBatch.count = o.vertexCount - o.currentBatch.start, t3.pipelines.postBatch(e3);
           };
@@ -7217,8 +7217,8 @@
           var s = i2(70554);
           t2.exports = function(t3, e3, i3, n, r, o) {
             for (var a = s.getTintAppendFloatAlpha(i3.fillColor, i3.fillAlpha * n), h = i3.pathData, l = i3.pathIndexes, u = 0; u < l.length; u += 3) {
-              var c = 2 * l[u], d = 2 * l[u + 1], f = 2 * l[u + 2], p = h[c + 0] - r, v = h[c + 1] - o, g = h[d + 0] - r, m = h[d + 1] - o, y = h[f + 0] - r, x = h[f + 1] - o, T = e3.getX(p, v), w = e3.getY(p, v), b = e3.getX(g, m), S2 = e3.getY(g, m), E2 = e3.getX(y, x), A3 = e3.getY(y, x);
-              t3.batchTri(i3, T, w, b, S2, E2, A3, 0, 0, 1, 1, a, a, a, 2);
+              var c = 2 * l[u], d = 2 * l[u + 1], f = 2 * l[u + 2], p = h[c + 0] - r, v = h[c + 1] - o, g = h[d + 0] - r, m = h[d + 1] - o, y = h[f + 0] - r, x = h[f + 1] - o, T = e3.getX(p, v), w = e3.getY(p, v), b = e3.getX(g, m), S2 = e3.getY(g, m), E2 = e3.getX(y, x), A4 = e3.getY(y, x);
+              t3.batchTri(i3, T, w, b, S2, E2, A4, 0, 0, 1, 1, a, a, a, 2);
             }
           };
         }, 65960: (t2) => {
@@ -7446,16 +7446,16 @@
             i3.addToRenderList(e3);
             var a = t3.currentContext;
             if (r(t3, a, e3, i3, o)) {
-              var h = -e3._displayOriginX, l = -e3._displayOriginY, u = i3.alpha * e3.alpha, c = e3.width, d = e3.height, f = e3.cellWidth, p = e3.cellHeight, v = Math.ceil(c / f), g = Math.ceil(d / p), m = f, y = p, x = f - (v * f - c), T = p - (g * p - d), w = e3.showCells, b = e3.showAltCells, S2 = e3.showOutline, E2 = 0, A3 = 0, C4 = 0, _ = 0, M = 0;
-              if (S2 && (m--, y--, x === f && x--, T === p && T--), w && e3.fillAlpha > 0) for (s(a, e3), A3 = 0; A3 < g; A3++) for (b && (C4 = A3 % 2), E2 = 0; E2 < v; E2++) b && C4 ? C4 = 0 : (C4++, _ = E2 < v - 1 ? m : x, M = A3 < g - 1 ? y : T, a.fillRect(h + E2 * f, l + A3 * p, _, M));
-              if (b && e3.altFillAlpha > 0) for (s(a, e3, e3.altFillColor, e3.altFillAlpha * u), A3 = 0; A3 < g; A3++) for (b && (C4 = A3 % 2), E2 = 0; E2 < v; E2++) !b || C4 ? (C4 = 0, _ = E2 < v - 1 ? m : x, M = A3 < g - 1 ? y : T, a.fillRect(h + E2 * f, l + A3 * p, _, M)) : C4 = 1;
+              var h = -e3._displayOriginX, l = -e3._displayOriginY, u = i3.alpha * e3.alpha, c = e3.width, d = e3.height, f = e3.cellWidth, p = e3.cellHeight, v = Math.ceil(c / f), g = Math.ceil(d / p), m = f, y = p, x = f - (v * f - c), T = p - (g * p - d), w = e3.showCells, b = e3.showAltCells, S2 = e3.showOutline, E2 = 0, A4 = 0, C4 = 0, _ = 0, M = 0;
+              if (S2 && (m--, y--, x === f && x--, T === p && T--), w && e3.fillAlpha > 0) for (s(a, e3), A4 = 0; A4 < g; A4++) for (b && (C4 = A4 % 2), E2 = 0; E2 < v; E2++) b && C4 ? C4 = 0 : (C4++, _ = E2 < v - 1 ? m : x, M = A4 < g - 1 ? y : T, a.fillRect(h + E2 * f, l + A4 * p, _, M));
+              if (b && e3.altFillAlpha > 0) for (s(a, e3, e3.altFillColor, e3.altFillAlpha * u), A4 = 0; A4 < g; A4++) for (b && (C4 = A4 % 2), E2 = 0; E2 < v; E2++) !b || C4 ? (C4 = 0, _ = E2 < v - 1 ? m : x, M = A4 < g - 1 ? y : T, a.fillRect(h + E2 * f, l + A4 * p, _, M)) : C4 = 1;
               if (S2 && e3.outlineFillAlpha > 0) {
                 for (n(a, e3, e3.outlineFillColor, e3.outlineFillAlpha * u), E2 = 1; E2 < v; E2++) {
-                  var P = E2 * f;
-                  a.beginPath(), a.moveTo(P + h, l), a.lineTo(P + h, d + l), a.stroke();
+                  var P2 = E2 * f;
+                  a.beginPath(), a.moveTo(P2 + h, l), a.lineTo(P2 + h, d + l), a.stroke();
                 }
-                for (A3 = 1; A3 < g; A3++) {
-                  var R = A3 * p;
+                for (A4 = 1; A4 < g; A4++) {
+                  var R = A4 * p;
                   a.beginPath(), a.moveTo(h, R + l), a.lineTo(h + c, R + l), a.stroke();
                 }
               }
@@ -7476,17 +7476,17 @@
             i3.addToRenderList(e3);
             var o = t3.pipelines.set(e3.pipeline), a = s(e3, i3, r);
             o.calcMatrix.copyFrom(a.calc).translate(-e3._displayOriginX, -e3._displayOriginY);
-            var h, l, u = i3.alpha * e3.alpha, c = e3.width, d = e3.height, f = e3.cellWidth, p = e3.cellHeight, v = Math.ceil(c / f), g = Math.ceil(d / p), m = f, y = p, x = f - (v * f - c), T = p - (g * p - d), w = e3.showCells, b = e3.showAltCells, S2 = e3.showOutline, E2 = 0, A3 = 0, C4 = 0, _ = 0, M = 0;
-            if (S2 && (m--, y--, x === f && x--, T === p && T--), t3.pipelines.preBatch(e3), w && e3.fillAlpha > 0) for (h = o.fillTint, l = n.getTintAppendFloatAlpha(e3.fillColor, e3.fillAlpha * u), h.TL = l, h.TR = l, h.BL = l, h.BR = l, A3 = 0; A3 < g; A3++) for (b && (C4 = A3 % 2), E2 = 0; E2 < v; E2++) b && C4 ? C4 = 0 : (C4++, _ = E2 < v - 1 ? m : x, M = A3 < g - 1 ? y : T, o.batchFillRect(E2 * f, A3 * p, _, M));
-            if (b && e3.altFillAlpha > 0) for (h = o.fillTint, l = n.getTintAppendFloatAlpha(e3.altFillColor, e3.altFillAlpha * u), h.TL = l, h.TR = l, h.BL = l, h.BR = l, A3 = 0; A3 < g; A3++) for (b && (C4 = A3 % 2), E2 = 0; E2 < v; E2++) !b || C4 ? (C4 = 0, _ = E2 < v - 1 ? m : x, M = A3 < g - 1 ? y : T, o.batchFillRect(E2 * f, A3 * p, _, M)) : C4 = 1;
+            var h, l, u = i3.alpha * e3.alpha, c = e3.width, d = e3.height, f = e3.cellWidth, p = e3.cellHeight, v = Math.ceil(c / f), g = Math.ceil(d / p), m = f, y = p, x = f - (v * f - c), T = p - (g * p - d), w = e3.showCells, b = e3.showAltCells, S2 = e3.showOutline, E2 = 0, A4 = 0, C4 = 0, _ = 0, M = 0;
+            if (S2 && (m--, y--, x === f && x--, T === p && T--), t3.pipelines.preBatch(e3), w && e3.fillAlpha > 0) for (h = o.fillTint, l = n.getTintAppendFloatAlpha(e3.fillColor, e3.fillAlpha * u), h.TL = l, h.TR = l, h.BL = l, h.BR = l, A4 = 0; A4 < g; A4++) for (b && (C4 = A4 % 2), E2 = 0; E2 < v; E2++) b && C4 ? C4 = 0 : (C4++, _ = E2 < v - 1 ? m : x, M = A4 < g - 1 ? y : T, o.batchFillRect(E2 * f, A4 * p, _, M));
+            if (b && e3.altFillAlpha > 0) for (h = o.fillTint, l = n.getTintAppendFloatAlpha(e3.altFillColor, e3.altFillAlpha * u), h.TL = l, h.TR = l, h.BL = l, h.BR = l, A4 = 0; A4 < g; A4++) for (b && (C4 = A4 % 2), E2 = 0; E2 < v; E2++) !b || C4 ? (C4 = 0, _ = E2 < v - 1 ? m : x, M = A4 < g - 1 ? y : T, o.batchFillRect(E2 * f, A4 * p, _, M)) : C4 = 1;
             if (S2 && e3.outlineFillAlpha > 0) {
-              var P = o.strokeTint, R = n.getTintAppendFloatAlpha(e3.outlineFillColor, e3.outlineFillAlpha * u);
-              for (P.TL = R, P.TR = R, P.BL = R, P.BR = R, E2 = 1; E2 < v; E2++) {
-                var L = E2 * f;
-                o.batchLine(L, 0, L, d, e3.lineWidth, e3.lineWidth, 1, 0, false);
+              var P2 = o.strokeTint, R = n.getTintAppendFloatAlpha(e3.outlineFillColor, e3.outlineFillAlpha * u);
+              for (P2.TL = R, P2.TR = R, P2.BL = R, P2.BR = R, E2 = 1; E2 < v; E2++) {
+                var L2 = E2 * f;
+                o.batchLine(L2, 0, L2, d, e3.lineWidth, e3.lineWidth, 1, 0, false);
               }
-              for (A3 = 1; A3 < g; A3++) {
-                var O2 = A3 * p;
+              for (A4 = 1; A4 < g; A4++) {
+                var O2 = A4 * p;
                 o.batchLine(0, O2, c, O2, e3.lineWidth, e3.lineWidth, 1, 0, false);
               }
             }
@@ -8068,7 +8068,7 @@
               }
               this.autoRound && (c2 = Math.round(c2), d2 = Math.round(d2));
               var b = this.letterSpacing;
-              if (i3.strokeThickness && 0 === b && (i3.syncShadow(e3, i3.shadowStroke), e3.strokeText(a2[v], c2, d2)), i3.color) if (i3.syncShadow(e3, i3.shadowFill), 0 !== b) for (var S2 = 0, E2 = a2[v].split(""), A3 = 0; A3 < E2.length; A3++) i3.strokeThickness && (i3.syncShadow(e3, i3.shadowStroke), e3.strokeText(E2[A3], c2 + S2, d2), i3.syncShadow(e3, i3.shadowFill)), e3.fillText(E2[A3], c2 + S2, d2), S2 += e3.measureText(E2[A3]).width + b;
+              if (i3.strokeThickness && 0 === b && (i3.syncShadow(e3, i3.shadowStroke), e3.strokeText(a2[v], c2, d2)), i3.color) if (i3.syncShadow(e3, i3.shadowFill), 0 !== b) for (var S2 = 0, E2 = a2[v].split(""), A4 = 0; A4 < E2.length; A4++) i3.strokeThickness && (i3.syncShadow(e3, i3.shadowStroke), e3.strokeText(E2[A4], c2 + S2, d2), i3.syncShadow(e3, i3.shadowFill)), e3.fillText(E2[A4], c2 + S2, d2), S2 += e3.measureText(E2[A4]).width + b;
               else e3.fillText(a2[v], c2, d2);
             }
             e3.restore(), this.renderer && this.renderer.gl && (this.frame.source.glTexture = this.renderer.canvasToTexture(t3, this.frame.source.glTexture, true));
@@ -9321,8 +9321,8 @@
               var d = i3.a, f = i3.b, p = i3.c, v = i3.d, g = i3.e, m = i3.f;
               o2 = s2.vx * d + s2.vy * p + g, a2 = s2.vx * f + s2.vy * v + m, h = n2.vx * d + n2.vy * p + g, l = n2.vx * f + n2.vy * v + m, u = r2.vx * d + r2.vy * p + g, c = r2.vx * f + r2.vy * v + m;
             }
-            var y = u - o2, x = c - a2, T = h - o2, w = l - a2, b = t3 - o2, S2 = e3 - a2, E2 = y * y + x * x, A3 = y * T + x * w, C4 = y * b + x * S2, _ = T * T + w * w, M = T * b + w * S2, P = E2 * _ - A3 * A3, R = 0 === P ? 0 : 1 / P, L = (_ * C4 - A3 * M) * R, O2 = (E2 * M - A3 * C4) * R;
-            return L >= 0 && O2 >= 0 && L + O2 < 1;
+            var y = u - o2, x = c - a2, T = h - o2, w = l - a2, b = t3 - o2, S2 = e3 - a2, E2 = y * y + x * x, A4 = y * T + x * w, C4 = y * b + x * S2, _ = T * T + w * w, M = T * b + w * S2, P2 = E2 * _ - A4 * A4, R = 0 === P2 ? 0 : 1 / P2, L2 = (_ * C4 - A4 * M) * R, O2 = (E2 * M - A4 * C4) * R;
+            return L2 >= 0 && O2 >= 0 && L2 + O2 < 1;
           }, isCounterClockwise: function(t3) {
             var e3 = this.vertex1, i3 = this.vertex2, s2 = this.vertex3, n2 = (i3.vx - e3.vx) * (s2.vy - e3.vy) - (i3.vy - e3.vy) * (s2.vx - e3.vx);
             return t3 <= 0 ? n2 >= 0 : n2 < 0;
@@ -9379,28 +9379,28 @@
         }, 48803: (t2, e2, i2) => {
           var s = i2(83997), n = i2(95540), r = i2(37867), o = i2(25836), a = i2(39318), h = new o(), l = new o(), u = new r();
           t2.exports = function(t3) {
-            var e3, i3 = n(t3, "mesh"), r2 = n(t3, "texture", null), o2 = n(t3, "frame"), c = n(t3, "width", 1), d = n(t3, "height", c), f = n(t3, "widthSegments", 1), p = n(t3, "heightSegments", f), v = n(t3, "x", 0), g = n(t3, "y", 0), m = n(t3, "z", 0), y = n(t3, "rotateX", 0), x = n(t3, "rotateY", 0), T = n(t3, "rotateZ", 0), w = n(t3, "zIsUp", true), b = n(t3, "isOrtho", !!i3 && i3.dirtyCache[11]), S2 = n(t3, "colors", [16777215]), E2 = n(t3, "alphas", [1]), A3 = n(t3, "tile", false), C4 = n(t3, "flipY", false), _ = n(t3, "width", null), M = { faces: [], verts: [] };
+            var e3, i3 = n(t3, "mesh"), r2 = n(t3, "texture", null), o2 = n(t3, "frame"), c = n(t3, "width", 1), d = n(t3, "height", c), f = n(t3, "widthSegments", 1), p = n(t3, "heightSegments", f), v = n(t3, "x", 0), g = n(t3, "y", 0), m = n(t3, "z", 0), y = n(t3, "rotateX", 0), x = n(t3, "rotateY", 0), T = n(t3, "rotateZ", 0), w = n(t3, "zIsUp", true), b = n(t3, "isOrtho", !!i3 && i3.dirtyCache[11]), S2 = n(t3, "colors", [16777215]), E2 = n(t3, "alphas", [1]), A4 = n(t3, "tile", false), C4 = n(t3, "flipY", false), _ = n(t3, "width", null), M = { faces: [], verts: [] };
             if (h.set(v, g, m), l.set(y, x, T), u.fromRotationXYTranslation(l, h, w), !r2 && i3) r2 = i3.texture, o2 || (e3 = i3.frame);
             else if (i3 && "string" == typeof r2) r2 = i3.scene.sys.textures.get(r2);
             else if (!r2) return M;
             e3 || (e3 = r2.get(o2)), !_ && b && r2 && i3 && (c = e3.width / i3.height, d = e3.height / i3.height);
-            var P, R, L = c / 2, O2 = d / 2, F = Math.floor(f), D = Math.floor(p), I = F + 1, k = D + 1, B = c / F, N = d / D, U = [], X2 = [], Y = 0, z = 1, G = 0, V2 = 1;
+            var P2, R, L2 = c / 2, O2 = d / 2, F2 = Math.floor(f), D = Math.floor(p), I = F2 + 1, k = D + 1, B = c / F2, N = d / D, U = [], X2 = [], Y = 0, z = 1, G = 0, V2 = 1;
             e3 && (Y = e3.u0, z = e3.u1, C4 ? (G = e3.v1, V2 = e3.v0) : (G = e3.v0, V2 = e3.v1));
             var W2 = z - Y, H2 = V2 - G;
             for (R = 0; R < k; R++) {
               var j = R * N - O2;
-              for (P = 0; P < I; P++) {
-                var q = P * B - L;
+              for (P2 = 0; P2 < I; P2++) {
+                var q = P2 * B - L2;
                 X2.push(q, -j);
-                var K = Y + W2 * (P / F), Z2 = G + H2 * (R / D);
+                var K = Y + W2 * (P2 / F2), Z2 = G + H2 * (R / D);
                 U.push(K, Z2);
               }
             }
             Array.isArray(S2) || (S2 = [S2]), Array.isArray(E2) || (E2 = [E2]);
             var J = 0, Q = 0;
-            for (R = 0; R < D; R++) for (P = 0; P < F; P++) {
-              var $ = 2 * (P + I * R), tt = 2 * (P + I * (R + 1)), et = 2 * (P + 1 + I * (R + 1)), it = 2 * (P + 1 + I * R), st = S2[Q], nt = E2[J], rt = new a(X2[$], X2[$ + 1], 0, U[$], U[$ + 1], st, nt).transformMat4(u), ot = new a(X2[tt], X2[tt + 1], 0, U[tt], U[tt + 1], st, nt).transformMat4(u), at = new a(X2[it], X2[it + 1], 0, U[it], U[it + 1], st, nt).transformMat4(u), ht = new a(X2[tt], X2[tt + 1], 0, U[tt], U[tt + 1], st, nt).transformMat4(u), lt = new a(X2[et], X2[et + 1], 0, U[et], U[et + 1], st, nt).transformMat4(u), ut = new a(X2[it], X2[it + 1], 0, U[it], U[it + 1], st, nt).transformMat4(u);
-              A3 && (rt.setUVs(Y, V2), ot.setUVs(Y, G), at.setUVs(z, V2), ht.setUVs(Y, G), lt.setUVs(z, G), ut.setUVs(z, V2)), ++Q === S2.length && (Q = 0), ++J === E2.length && (J = 0), M.verts.push(rt, ot, at, ht, lt, ut), M.faces.push(new s(rt, ot, at), new s(ht, lt, ut));
+            for (R = 0; R < D; R++) for (P2 = 0; P2 < F2; P2++) {
+              var $ = 2 * (P2 + I * R), tt = 2 * (P2 + I * (R + 1)), et = 2 * (P2 + 1 + I * (R + 1)), it = 2 * (P2 + 1 + I * R), st = S2[Q], nt = E2[J], rt = new a(X2[$], X2[$ + 1], 0, U[$], U[$ + 1], st, nt).transformMat4(u), ot = new a(X2[tt], X2[tt + 1], 0, U[tt], U[tt + 1], st, nt).transformMat4(u), at = new a(X2[it], X2[it + 1], 0, U[it], U[it + 1], st, nt).transformMat4(u), ht = new a(X2[tt], X2[tt + 1], 0, U[tt], U[tt + 1], st, nt).transformMat4(u), lt = new a(X2[et], X2[et + 1], 0, U[et], U[et + 1], st, nt).transformMat4(u), ut = new a(X2[it], X2[it + 1], 0, U[it], U[it + 1], st, nt).transformMat4(u);
+              A4 && (rt.setUVs(Y, V2), ot.setUVs(Y, G), at.setUVs(z, V2), ht.setUVs(Y, G), lt.setUVs(z, G), ut.setUVs(z, V2)), ++Q === S2.length && (Q = 0), ++J === E2.length && (J = 0), M.verts.push(rt, ot, at, ht, lt, ut), M.faces.push(new s(rt, ot, at), new s(ht, lt, ut));
             }
             return i3 && (i3.faces = i3.faces.concat(M.faces), i3.vertices = i3.vertices.concat(M.verts)), M;
           };
@@ -9411,9 +9411,9 @@
             var v = { faces: [], verts: [] }, g = t3.materials;
             a.set(n2, r2, u), h.set(c, d, f), l.fromRotationXYTranslation(h, a, p);
             for (var m = 0; m < t3.models.length; m++) for (var y = t3.models[m], x = y.vertices, T = y.textureCoords, w = y.faces, b = 0; b < w.length; b++) {
-              var S2 = w[b], E2 = S2.vertices[0], A3 = S2.vertices[1], C4 = S2.vertices[2], _ = x[E2.vertexIndex], M = x[A3.vertexIndex], P = x[C4.vertexIndex], R = E2.textureCoordsIndex, L = A3.textureCoordsIndex, O2 = C4.textureCoordsIndex, F = -1 === R ? { u: 0, v: 1 } : T[R], D = -1 === L ? { u: 0, v: 0 } : T[L], I = -1 === O2 ? { u: 1, v: 1 } : T[O2], k = 16777215;
+              var S2 = w[b], E2 = S2.vertices[0], A4 = S2.vertices[1], C4 = S2.vertices[2], _ = x[E2.vertexIndex], M = x[A4.vertexIndex], P2 = x[C4.vertexIndex], R = E2.textureCoordsIndex, L2 = A4.textureCoordsIndex, O2 = C4.textureCoordsIndex, F2 = -1 === R ? { u: 0, v: 1 } : T[R], D = -1 === L2 ? { u: 0, v: 0 } : T[L2], I = -1 === O2 ? { u: 1, v: 1 } : T[O2], k = 16777215;
               "" !== S2.material && g[S2.material] && (k = g[S2.material]);
-              var B = new o(_.x * i3, _.y * i3, _.z * i3, F.u, F.v, k).transformMat4(l), N = new o(M.x * i3, M.y * i3, M.z * i3, D.u, D.v, k).transformMat4(l), U = new o(P.x * i3, P.y * i3, P.z * i3, I.u, I.v, k).transformMat4(l);
+              var B = new o(_.x * i3, _.y * i3, _.z * i3, F2.u, F2.v, k).transformMat4(l), N = new o(M.x * i3, M.y * i3, M.z * i3, D.u, D.v, k).transformMat4(l), U = new o(P2.x * i3, P2.y * i3, P2.z * i3, I.u, I.v, k).transformMat4(l);
               v.verts.push(B, N, U), v.faces.push(new s(B, N, U));
             }
             return e3 && (e3.faces = e3.faces.concat(v.faces), e3.vertices = e3.vertices.concat(v.verts)), v;
@@ -9424,16 +9424,16 @@
             if (void 0 === r && (r = false), void 0 === a && (a = 16777215), void 0 === h && (h = 1), void 0 === l && (l = false), t3.length === e3.length || r) {
               var u, c, d, f, p, v, g, m, y, x, T, w = { faces: [], vertices: [] }, b = r ? 3 : 2, S2 = Array.isArray(a), E2 = Array.isArray(h);
               if (Array.isArray(i3) && i3.length > 0) for (u = 0; u < i3.length; u++) {
-                var A3 = i3[u], C4 = 2 * i3[u], _ = i3[u] * b;
-                c = t3[_], d = t3[_ + 1], f = r ? t3[_ + 2] : 0, p = e3[C4], v = e3[C4 + 1], l && (v = 1 - v), g = S2 ? a[A3] : a, m = E2 ? h[A3] : h, y = 0, x = 0, T = 0, o && (y = o[_], x = o[_ + 1], T = r ? o[_ + 2] : 0), w.vertices.push(new n(c, d, f, p, v, g, m, y, x, T));
+                var A4 = i3[u], C4 = 2 * i3[u], _ = i3[u] * b;
+                c = t3[_], d = t3[_ + 1], f = r ? t3[_ + 2] : 0, p = e3[C4], v = e3[C4 + 1], l && (v = 1 - v), g = S2 ? a[A4] : a, m = E2 ? h[A4] : h, y = 0, x = 0, T = 0, o && (y = o[_], x = o[_ + 1], T = r ? o[_ + 2] : 0), w.vertices.push(new n(c, d, f, p, v, g, m, y, x, T));
               }
               else {
-                var M = 0, P = 0;
-                for (u = 0; u < t3.length; u += b) c = t3[u], d = t3[u + 1], f = r ? t3[u + 2] : 0, p = e3[M], v = e3[M + 1], g = S2 ? a[P] : a, m = E2 ? h[P] : h, y = 0, x = 0, T = 0, o && (y = o[u], x = o[u + 1], T = r ? o[u + 2] : 0), w.vertices.push(new n(c, d, f, p, v, g, m, y, x, T)), M += 2, P++;
+                var M = 0, P2 = 0;
+                for (u = 0; u < t3.length; u += b) c = t3[u], d = t3[u + 1], f = r ? t3[u + 2] : 0, p = e3[M], v = e3[M + 1], g = S2 ? a[P2] : a, m = E2 ? h[P2] : h, y = 0, x = 0, T = 0, o && (y = o[u], x = o[u + 1], T = r ? o[u + 2] : 0), w.vertices.push(new n(c, d, f, p, v, g, m, y, x, T)), M += 2, P2++;
               }
               for (u = 0; u < w.vertices.length; u += 3) {
-                var R = w.vertices[u], L = w.vertices[u + 1], O2 = w.vertices[u + 2];
-                w.faces.push(new s(R, L, O2));
+                var R = w.vertices[u], L2 = w.vertices[u + 1], O2 = w.vertices[u + 2];
+                w.faces.push(new s(R, L2, O2));
               }
               return w;
             }
@@ -9878,17 +9878,17 @@
             return g(t3.prev, t3, t3.next) < 0 ? g(t3, e3, t3.next) >= 0 && g(t3, t3.prev, e3) >= 0 : g(t3, e3, t3.prev) < 0 || g(t3, t3.next, e3) < 0;
           }
           function b(t3, e3) {
-            var i3 = new A3(t3.i, t3.x, t3.y), s2 = new A3(e3.i, e3.x, e3.y), n2 = t3.next, r2 = e3.prev;
+            var i3 = new A4(t3.i, t3.x, t3.y), s2 = new A4(e3.i, e3.x, e3.y), n2 = t3.next, r2 = e3.prev;
             return t3.next = e3, e3.prev = t3, i3.next = n2, n2.prev = i3, s2.next = i3, i3.prev = s2, r2.next = s2, s2.prev = r2, s2;
           }
           function S2(t3, e3, i3, s2) {
-            var n2 = new A3(t3, e3, i3);
+            var n2 = new A4(t3, e3, i3);
             return s2 ? (n2.next = s2.next, n2.prev = s2, s2.next.prev = n2, s2.next = n2) : (n2.prev = n2, n2.next = n2), n2;
           }
           function E2(t3) {
             t3.next.prev = t3.prev, t3.prev.next = t3.next, t3.prevZ && (t3.prevZ.nextZ = t3.nextZ), t3.nextZ && (t3.nextZ.prevZ = t3.prevZ);
           }
-          function A3(t3, e3, i3) {
+          function A4(t3, e3, i3) {
             this.i = t3, this.x = e3, this.y = i3, this.prev = null, this.next = null, this.z = 0, this.prevZ = null, this.nextZ = null, this.steiner = false;
           }
           function C4(t3, e3, i3, s2) {
@@ -13172,8 +13172,8 @@
             var e3 = t3.x, i3 = t3.y, s2 = t3.z, n = t3.w, r = e3 + e3, o = i3 + i3, a = s2 + s2, h = e3 * r, l = e3 * o, u = e3 * a, c = i3 * o, d = i3 * a, f = s2 * a, p = n * r, v = n * o, g = n * a, m = this.val;
             return m[0] = 1 - (c + f), m[3] = l + g, m[6] = u - v, m[1] = l - g, m[4] = 1 - (h + f), m[7] = d + p, m[2] = u + v, m[5] = d - p, m[8] = 1 - (h + c), this;
           }, normalFromMat4: function(t3) {
-            var e3 = t3.val, i3 = this.val, s2 = e3[0], n = e3[1], r = e3[2], o = e3[3], a = e3[4], h = e3[5], l = e3[6], u = e3[7], c = e3[8], d = e3[9], f = e3[10], p = e3[11], v = e3[12], g = e3[13], m = e3[14], y = e3[15], x = s2 * h - n * a, T = s2 * l - r * a, w = s2 * u - o * a, b = n * l - r * h, S2 = n * u - o * h, E2 = r * u - o * l, A3 = c * g - d * v, C4 = c * m - f * v, _ = c * y - p * v, M = d * m - f * g, P = d * y - p * g, R = f * y - p * m, L = x * R - T * P + w * M + b * _ - S2 * C4 + E2 * A3;
-            return L ? (L = 1 / L, i3[0] = (h * R - l * P + u * M) * L, i3[1] = (l * _ - a * R - u * C4) * L, i3[2] = (a * P - h * _ + u * A3) * L, i3[3] = (r * P - n * R - o * M) * L, i3[4] = (s2 * R - r * _ + o * C4) * L, i3[5] = (n * _ - s2 * P - o * A3) * L, i3[6] = (g * E2 - m * S2 + y * b) * L, i3[7] = (m * w - v * E2 - y * T) * L, i3[8] = (v * S2 - g * w + y * x) * L, this) : null;
+            var e3 = t3.val, i3 = this.val, s2 = e3[0], n = e3[1], r = e3[2], o = e3[3], a = e3[4], h = e3[5], l = e3[6], u = e3[7], c = e3[8], d = e3[9], f = e3[10], p = e3[11], v = e3[12], g = e3[13], m = e3[14], y = e3[15], x = s2 * h - n * a, T = s2 * l - r * a, w = s2 * u - o * a, b = n * l - r * h, S2 = n * u - o * h, E2 = r * u - o * l, A4 = c * g - d * v, C4 = c * m - f * v, _ = c * y - p * v, M = d * m - f * g, P2 = d * y - p * g, R = f * y - p * m, L2 = x * R - T * P2 + w * M + b * _ - S2 * C4 + E2 * A4;
+            return L2 ? (L2 = 1 / L2, i3[0] = (h * R - l * P2 + u * M) * L2, i3[1] = (l * _ - a * R - u * C4) * L2, i3[2] = (a * P2 - h * _ + u * A4) * L2, i3[3] = (r * P2 - n * R - o * M) * L2, i3[4] = (s2 * R - r * _ + o * C4) * L2, i3[5] = (n * _ - s2 * P2 - o * A4) * L2, i3[6] = (g * E2 - m * S2 + y * b) * L2, i3[7] = (m * w - v * E2 - y * T) * L2, i3[8] = (v * S2 - g * w + y * x) * L2, this) : null;
           } });
           t2.exports = s;
         }, 37867: (t2, e2, i2) => {
@@ -13212,8 +13212,8 @@
           }, getInverse: function(t3) {
             return this.copy(t3), this.invert();
           }, invert: function() {
-            var t3 = this.val, e3 = t3[0], i3 = t3[1], s2 = t3[2], n2 = t3[3], r2 = t3[4], o2 = t3[5], a2 = t3[6], h2 = t3[7], l2 = t3[8], u2 = t3[9], c2 = t3[10], d = t3[11], f = t3[12], p = t3[13], v = t3[14], g = t3[15], m = e3 * o2 - i3 * r2, y = e3 * a2 - s2 * r2, x = e3 * h2 - n2 * r2, T = i3 * a2 - s2 * o2, w = i3 * h2 - n2 * o2, b = s2 * h2 - n2 * a2, S2 = l2 * p - u2 * f, E2 = l2 * v - c2 * f, A3 = l2 * g - d * f, C4 = u2 * v - c2 * p, _ = u2 * g - d * p, M = c2 * g - d * v, P = m * M - y * _ + x * C4 + T * A3 - w * E2 + b * S2;
-            return P ? (P = 1 / P, this.setValues((o2 * M - a2 * _ + h2 * C4) * P, (s2 * _ - i3 * M - n2 * C4) * P, (p * b - v * w + g * T) * P, (c2 * w - u2 * b - d * T) * P, (a2 * A3 - r2 * M - h2 * E2) * P, (e3 * M - s2 * A3 + n2 * E2) * P, (v * x - f * b - g * y) * P, (l2 * b - c2 * x + d * y) * P, (r2 * _ - o2 * A3 + h2 * S2) * P, (i3 * A3 - e3 * _ - n2 * S2) * P, (f * w - p * x + g * m) * P, (u2 * x - l2 * w - d * m) * P, (o2 * E2 - r2 * C4 - a2 * S2) * P, (e3 * C4 - i3 * E2 + s2 * S2) * P, (p * y - f * T - v * m) * P, (l2 * T - u2 * y + c2 * m) * P)) : this;
+            var t3 = this.val, e3 = t3[0], i3 = t3[1], s2 = t3[2], n2 = t3[3], r2 = t3[4], o2 = t3[5], a2 = t3[6], h2 = t3[7], l2 = t3[8], u2 = t3[9], c2 = t3[10], d = t3[11], f = t3[12], p = t3[13], v = t3[14], g = t3[15], m = e3 * o2 - i3 * r2, y = e3 * a2 - s2 * r2, x = e3 * h2 - n2 * r2, T = i3 * a2 - s2 * o2, w = i3 * h2 - n2 * o2, b = s2 * h2 - n2 * a2, S2 = l2 * p - u2 * f, E2 = l2 * v - c2 * f, A4 = l2 * g - d * f, C4 = u2 * v - c2 * p, _ = u2 * g - d * p, M = c2 * g - d * v, P2 = m * M - y * _ + x * C4 + T * A4 - w * E2 + b * S2;
+            return P2 ? (P2 = 1 / P2, this.setValues((o2 * M - a2 * _ + h2 * C4) * P2, (s2 * _ - i3 * M - n2 * C4) * P2, (p * b - v * w + g * T) * P2, (c2 * w - u2 * b - d * T) * P2, (a2 * A4 - r2 * M - h2 * E2) * P2, (e3 * M - s2 * A4 + n2 * E2) * P2, (v * x - f * b - g * y) * P2, (l2 * b - c2 * x + d * y) * P2, (r2 * _ - o2 * A4 + h2 * S2) * P2, (i3 * A4 - e3 * _ - n2 * S2) * P2, (f * w - p * x + g * m) * P2, (u2 * x - l2 * w - d * m) * P2, (o2 * E2 - r2 * C4 - a2 * S2) * P2, (e3 * C4 - i3 * E2 + s2 * S2) * P2, (p * y - f * T - v * m) * P2, (l2 * T - u2 * y + c2 * m) * P2)) : this;
           }, adjoint: function() {
             var t3 = this.val, e3 = t3[0], i3 = t3[1], s2 = t3[2], n2 = t3[3], r2 = t3[4], o2 = t3[5], a2 = t3[6], h2 = t3[7], l2 = t3[8], u2 = t3[9], c2 = t3[10], d = t3[11], f = t3[12], p = t3[13], v = t3[14], g = t3[15];
             return this.setValues(o2 * (c2 * g - d * v) - u2 * (a2 * g - h2 * v) + p * (a2 * d - h2 * c2), -(i3 * (c2 * g - d * v) - u2 * (s2 * g - n2 * v) + p * (s2 * d - n2 * c2)), i3 * (a2 * g - h2 * v) - o2 * (s2 * g - n2 * v) + p * (s2 * h2 - n2 * a2), -(i3 * (a2 * d - h2 * c2) - o2 * (s2 * d - n2 * c2) + u2 * (s2 * h2 - n2 * a2)), -(r2 * (c2 * g - d * v) - l2 * (a2 * g - h2 * v) + f * (a2 * d - h2 * c2)), e3 * (c2 * g - d * v) - l2 * (s2 * g - n2 * v) + f * (s2 * d - n2 * c2), -(e3 * (a2 * g - h2 * v) - r2 * (s2 * g - n2 * v) + f * (s2 * h2 - n2 * a2)), e3 * (a2 * d - h2 * c2) - r2 * (s2 * d - n2 * c2) + l2 * (s2 * h2 - n2 * a2), r2 * (u2 * g - d * p) - l2 * (o2 * g - h2 * p) + f * (o2 * d - h2 * u2), -(e3 * (u2 * g - d * p) - l2 * (i3 * g - n2 * p) + f * (i3 * d - n2 * u2)), e3 * (o2 * g - h2 * p) - r2 * (i3 * g - n2 * p) + f * (i3 * h2 - n2 * o2), -(e3 * (o2 * d - h2 * u2) - r2 * (i3 * d - n2 * u2) + l2 * (i3 * h2 - n2 * o2)), -(r2 * (u2 * v - c2 * p) - l2 * (o2 * v - a2 * p) + f * (o2 * c2 - a2 * u2)), e3 * (u2 * v - c2 * p) - l2 * (i3 * v - s2 * p) + f * (i3 * c2 - s2 * u2), -(e3 * (o2 * v - a2 * p) - r2 * (i3 * v - s2 * p) + f * (i3 * a2 - s2 * o2)), e3 * (o2 * c2 - a2 * u2) - r2 * (i3 * c2 - s2 * u2) + l2 * (i3 * a2 - s2 * o2));
@@ -13229,8 +13229,8 @@
           }, premultiply: function(t3) {
             return this.multiplyMatrices(t3, this);
           }, multiplyMatrices: function(t3, e3) {
-            var i3 = t3.val, s2 = e3.val, n2 = i3[0], r2 = i3[4], o2 = i3[8], a2 = i3[12], h2 = i3[1], l2 = i3[5], u2 = i3[9], c2 = i3[13], d = i3[2], f = i3[6], p = i3[10], v = i3[14], g = i3[3], m = i3[7], y = i3[11], x = i3[15], T = s2[0], w = s2[4], b = s2[8], S2 = s2[12], E2 = s2[1], A3 = s2[5], C4 = s2[9], _ = s2[13], M = s2[2], P = s2[6], R = s2[10], L = s2[14], O2 = s2[3], F = s2[7], D = s2[11], I = s2[15];
-            return this.setValues(n2 * T + r2 * E2 + o2 * M + a2 * O2, h2 * T + l2 * E2 + u2 * M + c2 * O2, d * T + f * E2 + p * M + v * O2, g * T + m * E2 + y * M + x * O2, n2 * w + r2 * A3 + o2 * P + a2 * F, h2 * w + l2 * A3 + u2 * P + c2 * F, d * w + f * A3 + p * P + v * F, g * w + m * A3 + y * P + x * F, n2 * b + r2 * C4 + o2 * R + a2 * D, h2 * b + l2 * C4 + u2 * R + c2 * D, d * b + f * C4 + p * R + v * D, g * b + m * C4 + y * R + x * D, n2 * S2 + r2 * _ + o2 * L + a2 * I, h2 * S2 + l2 * _ + u2 * L + c2 * I, d * S2 + f * _ + p * L + v * I, g * S2 + m * _ + y * L + x * I);
+            var i3 = t3.val, s2 = e3.val, n2 = i3[0], r2 = i3[4], o2 = i3[8], a2 = i3[12], h2 = i3[1], l2 = i3[5], u2 = i3[9], c2 = i3[13], d = i3[2], f = i3[6], p = i3[10], v = i3[14], g = i3[3], m = i3[7], y = i3[11], x = i3[15], T = s2[0], w = s2[4], b = s2[8], S2 = s2[12], E2 = s2[1], A4 = s2[5], C4 = s2[9], _ = s2[13], M = s2[2], P2 = s2[6], R = s2[10], L2 = s2[14], O2 = s2[3], F2 = s2[7], D = s2[11], I = s2[15];
+            return this.setValues(n2 * T + r2 * E2 + o2 * M + a2 * O2, h2 * T + l2 * E2 + u2 * M + c2 * O2, d * T + f * E2 + p * M + v * O2, g * T + m * E2 + y * M + x * O2, n2 * w + r2 * A4 + o2 * P2 + a2 * F2, h2 * w + l2 * A4 + u2 * P2 + c2 * F2, d * w + f * A4 + p * P2 + v * F2, g * w + m * A4 + y * P2 + x * F2, n2 * b + r2 * C4 + o2 * R + a2 * D, h2 * b + l2 * C4 + u2 * R + c2 * D, d * b + f * C4 + p * R + v * D, g * b + m * C4 + y * R + x * D, n2 * S2 + r2 * _ + o2 * L2 + a2 * I, h2 * S2 + l2 * _ + u2 * L2 + c2 * I, d * S2 + f * _ + p * L2 + v * I, g * S2 + m * _ + y * L2 + x * I);
           }, translate: function(t3) {
             return this.translateXYZ(t3.x, t3.y, t3.z);
           }, translateXYZ: function(t3, e3, i3) {
@@ -13248,8 +13248,8 @@
             var i3 = this.val, s2 = e3.x, n2 = e3.y, o2 = e3.z, a2 = Math.sqrt(s2 * s2 + n2 * n2 + o2 * o2);
             if (Math.abs(a2) < r) return this;
             s2 *= a2 = 1 / a2, n2 *= a2, o2 *= a2;
-            var h2 = Math.sin(t3), l2 = Math.cos(t3), u2 = 1 - l2, c2 = i3[0], d = i3[1], f = i3[2], p = i3[3], v = i3[4], g = i3[5], m = i3[6], y = i3[7], x = i3[8], T = i3[9], w = i3[10], b = i3[11], S2 = i3[12], E2 = i3[13], A3 = i3[14], C4 = i3[15], _ = s2 * s2 * u2 + l2, M = n2 * s2 * u2 + o2 * h2, P = o2 * s2 * u2 - n2 * h2, R = s2 * n2 * u2 - o2 * h2, L = n2 * n2 * u2 + l2, O2 = o2 * n2 * u2 + s2 * h2, F = s2 * o2 * u2 + n2 * h2, D = n2 * o2 * u2 - s2 * h2, I = o2 * o2 * u2 + l2;
-            return this.setValues(c2 * _ + v * M + x * P, d * _ + g * M + T * P, f * _ + m * M + w * P, p * _ + y * M + b * P, c2 * R + v * L + x * O2, d * R + g * L + T * O2, f * R + m * L + w * O2, p * R + y * L + b * O2, c2 * F + v * D + x * I, d * F + g * D + T * I, f * F + m * D + w * I, p * F + y * D + b * I, S2, E2, A3, C4);
+            var h2 = Math.sin(t3), l2 = Math.cos(t3), u2 = 1 - l2, c2 = i3[0], d = i3[1], f = i3[2], p = i3[3], v = i3[4], g = i3[5], m = i3[6], y = i3[7], x = i3[8], T = i3[9], w = i3[10], b = i3[11], S2 = i3[12], E2 = i3[13], A4 = i3[14], C4 = i3[15], _ = s2 * s2 * u2 + l2, M = n2 * s2 * u2 + o2 * h2, P2 = o2 * s2 * u2 - n2 * h2, R = s2 * n2 * u2 - o2 * h2, L2 = n2 * n2 * u2 + l2, O2 = o2 * n2 * u2 + s2 * h2, F2 = s2 * o2 * u2 + n2 * h2, D = n2 * o2 * u2 - s2 * h2, I = o2 * o2 * u2 + l2;
+            return this.setValues(c2 * _ + v * M + x * P2, d * _ + g * M + T * P2, f * _ + m * M + w * P2, p * _ + y * M + b * P2, c2 * R + v * L2 + x * O2, d * R + g * L2 + T * O2, f * R + m * L2 + w * O2, p * R + y * L2 + b * O2, c2 * F2 + v * D + x * I, d * F2 + g * D + T * I, f * F2 + m * D + w * I, p * F2 + y * D + b * I, S2, E2, A4, C4);
           }, rotateX: function(t3) {
             var e3 = this.val, i3 = Math.sin(t3), s2 = Math.cos(t3), n2 = e3[4], r2 = e3[5], o2 = e3[6], a2 = e3[7], h2 = e3[8], l2 = e3[9], u2 = e3[10], c2 = e3[11];
             return e3[4] = n2 * s2 + h2 * i3, e3[5] = r2 * s2 + l2 * i3, e3[6] = o2 * s2 + u2 * i3, e3[7] = a2 * s2 + c2 * i3, e3[8] = h2 * s2 - n2 * i3, e3[9] = l2 * s2 - r2 * i3, e3[10] = u2 * s2 - o2 * i3, e3[11] = c2 * s2 - a2 * i3, this;
@@ -13293,8 +13293,8 @@
           }, setWorldMatrix: function(t3, e3, i3, s2, n2) {
             return this.yawPitchRoll(t3.y, t3.x, t3.z), a.scaling(i3.x, i3.y, i3.z), h.xyz(e3.x, e3.y, e3.z), this.multiplyLocal(a), this.multiplyLocal(h), s2 && this.multiplyLocal(s2), n2 && this.multiplyLocal(n2), this;
           }, multiplyToMat4: function(t3, e3) {
-            var i3 = this.val, s2 = t3.val, n2 = i3[0], r2 = i3[1], o2 = i3[2], a2 = i3[3], h2 = i3[4], l2 = i3[5], u2 = i3[6], c2 = i3[7], d = i3[8], f = i3[9], p = i3[10], v = i3[11], g = i3[12], m = i3[13], y = i3[14], x = i3[15], T = s2[0], w = s2[1], b = s2[2], S2 = s2[3], E2 = s2[4], A3 = s2[5], C4 = s2[6], _ = s2[7], M = s2[8], P = s2[9], R = s2[10], L = s2[11], O2 = s2[12], F = s2[13], D = s2[14], I = s2[15];
-            return e3.setValues(T * n2 + w * h2 + b * d + S2 * g, w * r2 + w * l2 + b * f + S2 * m, b * o2 + w * u2 + b * p + S2 * y, S2 * a2 + w * c2 + b * v + S2 * x, E2 * n2 + A3 * h2 + C4 * d + _ * g, E2 * r2 + A3 * l2 + C4 * f + _ * m, E2 * o2 + A3 * u2 + C4 * p + _ * y, E2 * a2 + A3 * c2 + C4 * v + _ * x, M * n2 + P * h2 + R * d + L * g, M * r2 + P * l2 + R * f + L * m, M * o2 + P * u2 + R * p + L * y, M * a2 + P * c2 + R * v + L * x, O2 * n2 + F * h2 + D * d + I * g, O2 * r2 + F * l2 + D * f + I * m, O2 * o2 + F * u2 + D * p + I * y, O2 * a2 + F * c2 + D * v + I * x);
+            var i3 = this.val, s2 = t3.val, n2 = i3[0], r2 = i3[1], o2 = i3[2], a2 = i3[3], h2 = i3[4], l2 = i3[5], u2 = i3[6], c2 = i3[7], d = i3[8], f = i3[9], p = i3[10], v = i3[11], g = i3[12], m = i3[13], y = i3[14], x = i3[15], T = s2[0], w = s2[1], b = s2[2], S2 = s2[3], E2 = s2[4], A4 = s2[5], C4 = s2[6], _ = s2[7], M = s2[8], P2 = s2[9], R = s2[10], L2 = s2[11], O2 = s2[12], F2 = s2[13], D = s2[14], I = s2[15];
+            return e3.setValues(T * n2 + w * h2 + b * d + S2 * g, w * r2 + w * l2 + b * f + S2 * m, b * o2 + w * u2 + b * p + S2 * y, S2 * a2 + w * c2 + b * v + S2 * x, E2 * n2 + A4 * h2 + C4 * d + _ * g, E2 * r2 + A4 * l2 + C4 * f + _ * m, E2 * o2 + A4 * u2 + C4 * p + _ * y, E2 * a2 + A4 * c2 + C4 * v + _ * x, M * n2 + P2 * h2 + R * d + L2 * g, M * r2 + P2 * l2 + R * f + L2 * m, M * o2 + P2 * u2 + R * p + L2 * y, M * a2 + P2 * c2 + R * v + L2 * x, O2 * n2 + F2 * h2 + D * d + I * g, O2 * r2 + F2 * l2 + D * f + I * m, O2 * o2 + F2 * u2 + D * p + I * y, O2 * a2 + F2 * c2 + D * v + I * x);
           }, fromRotationXYTranslation: function(t3, e3, i3) {
             var s2 = e3.x, n2 = e3.y, r2 = e3.z, o2 = Math.sin(t3.x), a2 = Math.cos(t3.x), h2 = Math.sin(t3.y), l2 = Math.cos(t3.y), u2 = s2, c2 = n2, d = r2, f = -o2, p = 0 - f * h2, v = 0 - a2 * h2, g = f * l2, m = a2 * l2;
             return i3 || (u2 = l2 * s2 + h2 * r2, c2 = p * s2 + a2 * n2 + g * r2, d = v * s2 + o2 * n2 + m * r2), this.setValues(l2, p, v, 0, 0, a2, o2, 0, h2, g, m, 0, u2, c2, d, 1);
@@ -14817,8 +14817,8 @@
           } });
           t2.exports = u;
         }, 82248: (t2, e2, i2) => {
-          var s = i2(55495), n = i2(37742), r = i2(45319), o = i2(83419), a = i2(79342), h = i2(37747), l = i2(20339), u = i2(52816), c = i2(50792), d = i2(63012), f = i2(43855), p = i2(5470), v = i2(94977), g = i2(64897), m = i2(45170), y = i2(96523), x = i2(35154), T = i2(36383), w = i2(25774), b = i2(96602), S2 = i2(87841), E2 = i2(59542), A3 = i2(40012), C4 = i2(14087), _ = i2(89936), M = i2(35072), P = i2(72624), R = i2(2483), L = i2(61340), O2 = i2(26099), F = i2(15994), D = new o({ Extends: c, initialize: function(t3, e3) {
-            c.call(this), this.scene = t3, this.bodies = new M(), this.staticBodies = new M(), this.pendingDestroy = new M(), this.colliders = new w(), this.gravity = new O2(x(e3, "gravity.x", 0), x(e3, "gravity.y", 0)), this.bounds = new S2(x(e3, "x", 0), x(e3, "y", 0), x(e3, "width", t3.sys.scale.width), x(e3, "height", t3.sys.scale.height)), this.checkCollision = { up: x(e3, "checkCollision.up", true), down: x(e3, "checkCollision.down", true), left: x(e3, "checkCollision.left", true), right: x(e3, "checkCollision.right", true) }, this.fps = x(e3, "fps", 60), this.fixedStep = x(e3, "fixedStep", true), this._elapsed = 0, this._frameTime = 1 / this.fps, this._frameTimeMS = 1e3 * this._frameTime, this.stepsLastFrame = 0, this.timeScale = x(e3, "timeScale", 1), this.OVERLAP_BIAS = x(e3, "overlapBias", 4), this.TILE_BIAS = x(e3, "tileBias", 16), this.forceX = x(e3, "forceX", false), this.isPaused = x(e3, "isPaused", false), this._total = 0, this.drawDebug = x(e3, "debug", false), this.debugGraphic, this.defaults = { debugShowBody: x(e3, "debugShowBody", true), debugShowStaticBody: x(e3, "debugShowStaticBody", true), debugShowVelocity: x(e3, "debugShowVelocity", true), bodyDebugColor: x(e3, "debugBodyColor", 16711935), staticBodyDebugColor: x(e3, "debugStaticBodyColor", 255), velocityDebugColor: x(e3, "debugVelocityColor", 65280) }, this.maxEntries = x(e3, "maxEntries", 16), this.useTree = x(e3, "useTree", true), this.tree = new E2(this.maxEntries), this.staticTree = new E2(this.maxEntries), this.treeMinMax = { minX: 0, minY: 0, maxX: 0, maxY: 0 }, this._tempMatrix = new L(), this._tempMatrix2 = new L(), this.tileFilterOptions = { isColliding: true, isNotEmpty: true, hasInterestingFace: true }, this.drawDebug && this.createDebugGraphic();
+          var s = i2(55495), n = i2(37742), r = i2(45319), o = i2(83419), a = i2(79342), h = i2(37747), l = i2(20339), u = i2(52816), c = i2(50792), d = i2(63012), f = i2(43855), p = i2(5470), v = i2(94977), g = i2(64897), m = i2(45170), y = i2(96523), x = i2(35154), T = i2(36383), w = i2(25774), b = i2(96602), S2 = i2(87841), E2 = i2(59542), A4 = i2(40012), C4 = i2(14087), _ = i2(89936), M = i2(35072), P2 = i2(72624), R = i2(2483), L2 = i2(61340), O2 = i2(26099), F2 = i2(15994), D = new o({ Extends: c, initialize: function(t3, e3) {
+            c.call(this), this.scene = t3, this.bodies = new M(), this.staticBodies = new M(), this.pendingDestroy = new M(), this.colliders = new w(), this.gravity = new O2(x(e3, "gravity.x", 0), x(e3, "gravity.y", 0)), this.bounds = new S2(x(e3, "x", 0), x(e3, "y", 0), x(e3, "width", t3.sys.scale.width), x(e3, "height", t3.sys.scale.height)), this.checkCollision = { up: x(e3, "checkCollision.up", true), down: x(e3, "checkCollision.down", true), left: x(e3, "checkCollision.left", true), right: x(e3, "checkCollision.right", true) }, this.fps = x(e3, "fps", 60), this.fixedStep = x(e3, "fixedStep", true), this._elapsed = 0, this._frameTime = 1 / this.fps, this._frameTimeMS = 1e3 * this._frameTime, this.stepsLastFrame = 0, this.timeScale = x(e3, "timeScale", 1), this.OVERLAP_BIAS = x(e3, "overlapBias", 4), this.TILE_BIAS = x(e3, "tileBias", 16), this.forceX = x(e3, "forceX", false), this.isPaused = x(e3, "isPaused", false), this._total = 0, this.drawDebug = x(e3, "debug", false), this.debugGraphic, this.defaults = { debugShowBody: x(e3, "debugShowBody", true), debugShowStaticBody: x(e3, "debugShowStaticBody", true), debugShowVelocity: x(e3, "debugShowVelocity", true), bodyDebugColor: x(e3, "debugBodyColor", 16711935), staticBodyDebugColor: x(e3, "debugStaticBodyColor", 255), velocityDebugColor: x(e3, "debugVelocityColor", 65280) }, this.maxEntries = x(e3, "maxEntries", 16), this.useTree = x(e3, "useTree", true), this.tree = new E2(this.maxEntries), this.staticTree = new E2(this.maxEntries), this.treeMinMax = { minX: 0, minY: 0, maxX: 0, maxY: 0 }, this._tempMatrix = new L2(), this._tempMatrix2 = new L2(), this.tileFilterOptions = { isColliding: true, isNotEmpty: true, hasInterestingFace: true }, this.drawDebug && this.createDebugGraphic();
           }, enable: function(t3, e3) {
             void 0 === e3 && (e3 = h.DYNAMIC_BODY), Array.isArray(t3) || (t3 = [t3]);
             for (var i3 = 0; i3 < t3.length; i3++) {
@@ -14830,7 +14830,7 @@
               else this.enableBody(s2, e3);
             }
           }, enableBody: function(t3, e3) {
-            return void 0 === e3 && (e3 = h.DYNAMIC_BODY), t3.hasTransformComponent && (t3.body || (e3 === h.DYNAMIC_BODY ? t3.body = new n(this, t3) : e3 === h.STATIC_BODY && (t3.body = new P(this, t3))), this.add(t3.body)), t3;
+            return void 0 === e3 && (e3 = h.DYNAMIC_BODY), t3.hasTransformComponent && (t3.body || (e3 === h.DYNAMIC_BODY ? t3.body = new n(this, t3) : e3 === h.STATIC_BODY && (t3.body = new P2(this, t3))), this.add(t3.body)), t3;
           }, add: function(t3) {
             return t3.physicsType === h.DYNAMIC_BODY ? this.bodies.set(t3) : t3.physicsType === h.STATIC_BODY && (this.staticBodies.set(t3), this.staticTree.insert(t3)), t3.enable = true, t3;
           }, disable: function(t3) {
@@ -14941,19 +14941,19 @@
             var n2 = t3.isCircle, r2 = e3.isCircle, o2 = t3.center, a2 = e3.center, h2 = t3.immovable, c2 = e3.immovable, d2 = t3.velocity, f2 = e3.velocity, p2 = 0, v2 = true;
             if (n2 !== r2) {
               v2 = false;
-              var y2 = o2.x, x2 = o2.y, w2 = t3.halfWidth, b2 = e3.position.x, S3 = e3.position.y, E3 = e3.right, A4 = e3.bottom;
-              r2 && (y2 = a2.x, x2 = a2.y, w2 = e3.halfWidth, b2 = t3.position.x, S3 = t3.position.y, E3 = t3.right, A4 = t3.bottom), x2 < S3 ? y2 < b2 ? p2 = l(y2, x2, b2, S3) - w2 : y2 > E3 && (p2 = l(y2, x2, E3, S3) - w2) : x2 > A4 && (y2 < b2 ? p2 = l(y2, x2, b2, A4) - w2 : y2 > E3 && (p2 = l(y2, x2, E3, A4) - w2)), p2 *= -1;
+              var y2 = o2.x, x2 = o2.y, w2 = t3.halfWidth, b2 = e3.position.x, S3 = e3.position.y, E3 = e3.right, A5 = e3.bottom;
+              r2 && (y2 = a2.x, x2 = a2.y, w2 = e3.halfWidth, b2 = t3.position.x, S3 = t3.position.y, E3 = t3.right, A5 = t3.bottom), x2 < S3 ? y2 < b2 ? p2 = l(y2, x2, b2, S3) - w2 : y2 > E3 && (p2 = l(y2, x2, E3, S3) - w2) : x2 > A5 && (y2 < b2 ? p2 = l(y2, x2, b2, A5) - w2 : y2 > E3 && (p2 = l(y2, x2, E3, A5) - w2)), p2 *= -1;
             } else p2 = t3.halfWidth + e3.halfWidth - u(o2, a2);
             t3.overlapR = p2, e3.overlapR = p2;
-            var C5 = s(o2, a2), _2 = (p2 + T.EPSILON) * Math.cos(C5), M2 = (p2 + T.EPSILON) * Math.sin(C5), P2 = { overlap: p2, result: false, x: _2, y: M2 };
-            if (i3 && (!v2 || v2 && 0 !== p2)) return P2.result = true, P2;
-            if (!v2 && 0 === p2 || h2 && c2 || t3.customSeparateX || e3.customSeparateX) return P2.x = void 0, P2.y = void 0, P2;
+            var C5 = s(o2, a2), _2 = (p2 + T.EPSILON) * Math.cos(C5), M2 = (p2 + T.EPSILON) * Math.sin(C5), P3 = { overlap: p2, result: false, x: _2, y: M2 };
+            if (i3 && (!v2 || v2 && 0 !== p2)) return P3.result = true, P3;
+            if (!v2 && 0 === p2 || h2 && c2 || t3.customSeparateX || e3.customSeparateX) return P3.x = void 0, P3.y = void 0, P3;
             var R2 = !t3.pushable && !e3.pushable;
             if (v2) {
-              var L2 = o2.x - a2.x, O3 = o2.y - a2.y, F2 = Math.sqrt(Math.pow(L2, 2) + Math.pow(O3, 2)), D2 = (a2.x - o2.x) / F2 || 0, I = (a2.y - o2.y) / F2 || 0, k = 2 * (d2.x * D2 + d2.y * I - f2.x * D2 - f2.y * I) / (t3.mass + e3.mass);
-              !h2 && !c2 && t3.pushable && e3.pushable || (k *= 2), !h2 && t3.pushable && (d2.x = d2.x - k / t3.mass * D2, d2.y = d2.y - k / t3.mass * I, d2.multiply(t3.bounce)), !c2 && e3.pushable && (f2.x = f2.x + k / e3.mass * D2, f2.y = f2.y + k / e3.mass * I, f2.multiply(e3.bounce)), h2 || c2 || (_2 *= 0.5, M2 *= 0.5), (!h2 || t3.pushable || R2) && (t3.x -= _2, t3.y -= M2, t3.updateCenter()), (!c2 || e3.pushable || R2) && (e3.x += _2, e3.y += M2, e3.updateCenter()), P2.result = true;
-            } else h2 || !t3.pushable && !R2 || (t3.x -= _2, t3.y -= M2, t3.updateCenter()), c2 || !e3.pushable && !R2 || (e3.x += _2, e3.y += M2, e3.updateCenter()), P2.x = void 0, P2.y = void 0;
-            return P2;
+              var L3 = o2.x - a2.x, O3 = o2.y - a2.y, F3 = Math.sqrt(Math.pow(L3, 2) + Math.pow(O3, 2)), D2 = (a2.x - o2.x) / F3 || 0, I = (a2.y - o2.y) / F3 || 0, k = 2 * (d2.x * D2 + d2.y * I - f2.x * D2 - f2.y * I) / (t3.mass + e3.mass);
+              !h2 && !c2 && t3.pushable && e3.pushable || (k *= 2), !h2 && t3.pushable && (d2.x = d2.x - k / t3.mass * D2, d2.y = d2.y - k / t3.mass * I, d2.multiply(t3.bounce)), !c2 && e3.pushable && (f2.x = f2.x + k / e3.mass * D2, f2.y = f2.y + k / e3.mass * I, f2.multiply(e3.bounce)), h2 || c2 || (_2 *= 0.5, M2 *= 0.5), (!h2 || t3.pushable || R2) && (t3.x -= _2, t3.y -= M2, t3.updateCenter()), (!c2 || e3.pushable || R2) && (e3.x += _2, e3.y += M2, e3.updateCenter()), P3.result = true;
+            } else h2 || !t3.pushable && !R2 || (t3.x -= _2, t3.y -= M2, t3.updateCenter()), c2 || !e3.pushable && !R2 || (e3.x += _2, e3.y += M2, e3.updateCenter()), P3.x = void 0, P3.y = void 0;
+            return P3;
           }, intersects: function(t3, e3) {
             return t3 !== e3 && (t3.isCircle || e3.isCircle ? t3.isCircle ? e3.isCircle ? u(t3.center, e3.center) <= t3.halfWidth + e3.halfWidth : this.circleBodyIntersects(t3, e3) : this.circleBodyIntersects(e3, t3) : !(t3.right <= e3.left || t3.bottom <= e3.top || t3.left >= e3.right || t3.top >= e3.bottom));
           }, circleBodyIntersects: function(t3, e3) {
@@ -15025,7 +15025,7 @@
           }, collideSpriteVsTilesHandler: function(t3, e3, i3, s2, n2, r2, o2) {
             for (var a2, h2, l2 = t3.isBody ? t3 : t3.body, u2 = { left: 0, right: 0, top: 0, bottom: 0 }, c2 = false, f2 = 0; f2 < e3.length; f2++) {
               var p2 = (h2 = (a2 = e3[f2]).tilemapLayer).tileToWorldXY(a2.x, a2.y);
-              u2.left = p2.x, u2.top = p2.y, u2.right = u2.left + a2.width * h2.scaleX, u2.bottom = u2.top + a2.height * h2.scaleY, R(u2, l2) && (!s2 || s2.call(n2, t3, a2)) && b(a2, t3) && (r2 || A3(f2, l2, a2, u2, h2, this.TILE_BIAS, o2)) && (this._total++, c2 = true, i3 && i3.call(n2, t3, a2), r2 && l2.onOverlap ? this.emit(d.TILE_OVERLAP, t3, a2, l2) : l2.onCollide && this.emit(d.TILE_COLLIDE, t3, a2, l2));
+              u2.left = p2.x, u2.top = p2.y, u2.right = u2.left + a2.width * h2.scaleX, u2.bottom = u2.top + a2.height * h2.scaleY, R(u2, l2) && (!s2 || s2.call(n2, t3, a2)) && b(a2, t3) && (r2 || A4(f2, l2, a2, u2, h2, this.TILE_BIAS, o2)) && (this._total++, c2 = true, i3 && i3.call(n2, t3, a2), r2 && l2.onOverlap ? this.emit(d.TILE_OVERLAP, t3, a2, l2) : l2.onCollide && this.emit(d.TILE_COLLIDE, t3, a2, l2));
             }
             return c2;
           }, collideGroupVsGroup: function(t3, e3, i3, s2, n2, r2) {
@@ -15035,7 +15035,7 @@
           }, wrapArray: function(t3, e3) {
             for (var i3 = 0; i3 < t3.length; i3++) this.wrapObject(t3[i3], e3);
           }, wrapObject: function(t3, e3) {
-            void 0 === e3 && (e3 = 0), t3.x = F(t3.x, this.bounds.left - e3, this.bounds.right + e3), t3.y = F(t3.y, this.bounds.top - e3, this.bounds.bottom + e3);
+            void 0 === e3 && (e3 = 0), t3.x = F2(t3.x, this.bounds.left - e3, this.bounds.right + e3), t3.y = F2(t3.y, this.bounds.top - e3, this.bounds.bottom + e3);
           }, shutdown: function() {
             this.tree.clear(), this.staticTree.clear(), this.bodies.clear(), this.staticBodies.clear(), this.colliders.destroy(), this.removeAllListeners();
           }, destroy: function() {
@@ -15456,10 +15456,10 @@
           } });
           t2.exports = u;
         }, 42045: (t2, e2, i2) => {
-          var s = i2(60461), n = i2(66615), r = i2(66280), o = i2(22562), a = i2(68174), h = i2(15647), l = i2(83419), u = i2(52284), c = i2(53402), d = i2(69351), f = i2(74116), p = i2(48140), v = i2(81388), g = i2(20339), m = i2(28137), y = i2(95540), x = i2(35154), T = i2(46975), w = i2(4506), b = i2(99561), S2 = i2(37277), E2 = i2(73296), A3 = i2(66272), C4 = i2(44594), _ = i2(74058), M = i2(31725), P = i2(41598), R = i2(68243);
+          var s = i2(60461), n = i2(66615), r = i2(66280), o = i2(22562), a = i2(68174), h = i2(15647), l = i2(83419), u = i2(52284), c = i2(53402), d = i2(69351), f = i2(74116), p = i2(48140), v = i2(81388), g = i2(20339), m = i2(28137), y = i2(95540), x = i2(35154), T = i2(46975), w = i2(4506), b = i2(99561), S2 = i2(37277), E2 = i2(73296), A4 = i2(66272), C4 = i2(44594), _ = i2(74058), M = i2(31725), P2 = i2(41598), R = i2(68243);
           c.setDecomp(i2(55973));
-          var L = new l({ initialize: function(t3) {
-            this.scene = t3, this.systems = t3.sys, this.config = this.getConfig(), this.world, this.add, this.bodyBounds, this.body = o, this.composite = d, this.collision = u, this.detector = v, this.pair = w, this.pairs = b, this.query = E2, this.resolver = A3, this.constraint = p, this.bodies = r, this.composites = f, this.axes = n, this.bounds = h, this.svg = _, this.vector = M, this.vertices = P, this.verts = P, this._tempVec2 = M.create(), A3._restingThresh = x(this.config, "restingThresh", 4), A3._restingThreshTangent = x(this.config, "restingThreshTangent", 6), A3._positionDampen = x(this.config, "positionDampen", 0.9), A3._positionWarming = x(this.config, "positionWarming", 0.8), A3._frictionNormalMultiplier = x(this.config, "frictionNormalMultiplier", 5), t3.sys.events.once(C4.BOOT, this.boot, this), t3.sys.events.on(C4.START, this.start, this);
+          var L2 = new l({ initialize: function(t3) {
+            this.scene = t3, this.systems = t3.sys, this.config = this.getConfig(), this.world, this.add, this.bodyBounds, this.body = o, this.composite = d, this.collision = u, this.detector = v, this.pair = w, this.pairs = b, this.query = E2, this.resolver = A4, this.constraint = p, this.bodies = r, this.composites = f, this.axes = n, this.bounds = h, this.svg = _, this.vector = M, this.vertices = P2, this.verts = P2, this._tempVec2 = M.create(), A4._restingThresh = x(this.config, "restingThresh", 4), A4._restingThreshTangent = x(this.config, "restingThreshTangent", 6), A4._positionDampen = x(this.config, "positionDampen", 0.9), A4._positionWarming = x(this.config, "positionWarming", 0.8), A4._frictionNormalMultiplier = x(this.config, "frictionNormalMultiplier", 5), t3.sys.events.once(C4.BOOT, this.boot, this), t3.sys.events.on(C4.START, this.start, this);
           }, boot: function() {
             this.world = new R(this.scene, this.config), this.add = new m(this.world), this.bodyBounds = new a(), this.systems.events.once(C4.DESTROY, this.destroy, this);
           }, start: function() {
@@ -15624,7 +15624,7 @@
           }, destroy: function() {
             this.shutdown(), this.scene.sys.events.off(C4.START, this.start, this), this.scene = null, this.systems = null;
           } });
-          S2.register("MatterPhysics", L, "matterPhysics"), t2.exports = L;
+          S2.register("MatterPhysics", L2, "matterPhysics"), t2.exports = L2;
         }, 34803: (t2, e2, i2) => {
           var s = i2(9674), n = i2(83419), r = i2(31884), o = i2(95643), a = i2(95540), h = i2(72699), l = i2(68287), u = i2(26099), c = new n({ Extends: l, Mixins: [r.Bounce, r.Collision, r.Force, r.Friction, r.Gravity, r.Mass, r.Sensor, r.SetBody, r.Sleep, r.Static, r.Transform, r.Velocity, h], initialize: function(t3, e3, i3, n2, r2, h2) {
             o.call(this, t3.scene, "Sprite"), this._crop = this.resetCropObject(), this.anims = new s(this), this.setTexture(n2, r2), this.setSizeToFrame(), this.setOrigin(), this.world = t3, this._tempVec2 = new u(e3, i3);
@@ -16002,8 +16002,8 @@
               }
             }
             if (h2.showPositions && !t3.isStatic) {
-              var S2 = t3.position.x, E2 = t3.position.y, A3 = Math.ceil(h2.positionSize / 2);
-              e3.fillStyle(h2.positionColor, 1), e3.fillRect(S2 - A3, E2 - A3, h2.positionSize, h2.positionSize);
+              var S2 = t3.position.x, E2 = t3.position.y, A4 = Math.ceil(h2.positionSize / 2);
+              e3.fillStyle(h2.positionColor, 1), e3.fillRect(S2 - A4, E2 - A4, h2.positionSize, h2.positionSize);
             }
             return this;
           }, renderConvexHull: function(t3, e3, i3, s2) {
@@ -16664,10 +16664,10 @@
           }, s._overlapAxes = function(t3, e3, i3, s2) {
             var n2, r2, o2, a2, h2, l, u = e3.length, c = i3.length, d = e3[0].x, f = e3[0].y, p = i3[0].x, v = i3[0].y, g = s2.length, m = Number.MAX_VALUE, y = 0;
             for (h2 = 0; h2 < g; h2++) {
-              var x = s2[h2], T = x.x, w = x.y, b = d * T + f * w, S2 = p * T + v * w, E2 = b, A3 = S2;
+              var x = s2[h2], T = x.x, w = x.y, b = d * T + f * w, S2 = p * T + v * w, E2 = b, A4 = S2;
               for (l = 1; l < u; l += 1) (a2 = e3[l].x * T + e3[l].y * w) > E2 ? E2 = a2 : a2 < b && (b = a2);
-              for (l = 1; l < c; l += 1) (a2 = i3[l].x * T + i3[l].y * w) > A3 ? A3 = a2 : a2 < S2 && (S2 = a2);
-              if ((n2 = (r2 = E2 - S2) < (o2 = A3 - b) ? r2 : o2) < m && (m = n2, y = h2, n2 <= 0)) break;
+              for (l = 1; l < c; l += 1) (a2 = i3[l].x * T + i3[l].y * w) > A4 ? A4 = a2 : a2 < S2 && (S2 = a2);
+              if ((n2 = (r2 = E2 - S2) < (o2 = A4 - b) ? r2 : o2) < m && (m = n2, y = h2, n2 <= 0)) break;
             }
             t3.axis = s2[y], t3.overlap = m;
           }, s._findSupports = function(t3, e3, i3, s2) {
@@ -16700,8 +16700,8 @@
                 if (!(v < M.min.y || g > M.max.y) && (!m || !T.isStatic && !T.isSleeping) && h(d.collisionFilter, T.collisionFilter)) {
                   var w = T.parts.length;
                   if (x && 1 === w) (C4 = l(d, T, n2)) && (u[c++] = C4);
-                  else for (var b = w > 1 ? 1 : 0, S2 = y > 1 ? 1 : 0; S2 < y; S2++) for (var E2 = d.parts[S2], A3 = (f = E2.bounds, b); A3 < w; A3++) {
-                    var C4, _ = T.parts[A3], M = _.bounds;
+                  else for (var b = w > 1 ? 1 : 0, S2 = y > 1 ? 1 : 0; S2 < y; S2++) for (var E2 = d.parts[S2], A4 = (f = E2.bounds, b); A4 < w; A4++) {
+                    var C4, _ = T.parts[A4], M = _.bounds;
                     f.min.x > M.max.x || f.max.x < M.min.x || f.max.y < M.min.y || f.min.y > M.max.y || (C4 = l(E2, _, n2)) && (u[c++] = C4);
                   }
                 }
@@ -16831,9 +16831,9 @@
             for (o2 = 0; o2 < p; o2++) {
               var v = t3[o2];
               if (v.isActive && !v.isSensor) {
-                var g = v.collision, m = g.parentA, y = g.parentB, x = g.normal.x, T = g.normal.y, w = g.tangent.x, b = g.tangent.y, S2 = v.inverseMass, E2 = v.friction * v.frictionStatic * d, A3 = v.contacts, C4 = v.contactCount, _ = 1 / C4, M = m.position.x - m.positionPrev.x, P = m.position.y - m.positionPrev.y, R = m.angle - m.anglePrev, L = y.position.x - y.positionPrev.x, O2 = y.position.y - y.positionPrev.y, F = y.angle - y.anglePrev;
+                var g = v.collision, m = g.parentA, y = g.parentB, x = g.normal.x, T = g.normal.y, w = g.tangent.x, b = g.tangent.y, S2 = v.inverseMass, E2 = v.friction * v.frictionStatic * d, A4 = v.contacts, C4 = v.contactCount, _ = 1 / C4, M = m.position.x - m.positionPrev.x, P2 = m.position.y - m.positionPrev.y, R = m.angle - m.anglePrev, L2 = y.position.x - y.positionPrev.x, O2 = y.position.y - y.positionPrev.y, F2 = y.angle - y.anglePrev;
                 for (a = 0; a < C4; a++) {
-                  var D = A3[a], I = D.vertex, k = I.x - m.position.x, B = I.y - m.position.y, N = I.x - y.position.x, U = I.y - y.position.y, X2 = M - B * R - (L - U * F), Y = P + k * R - (O2 + N * F), z = x * X2 + T * Y, G = w * X2 + b * Y, V2 = v.separation + z, W2 = Math.min(V2, 1), H2 = (W2 = V2 < 0 ? 0 : W2) * E2;
+                  var D = A4[a], I = D.vertex, k = I.x - m.position.x, B = I.y - m.position.y, N = I.x - y.position.x, U = I.y - y.position.y, X2 = M - B * R - (L2 - U * F2), Y = P2 + k * R - (O2 + N * F2), z = x * X2 + T * Y, G = w * X2 + b * Y, V2 = v.separation + z, W2 = Math.min(V2, 1), H2 = (W2 = V2 < 0 ? 0 : W2) * E2;
                   G < -H2 || G > H2 ? (n2 = G > 0 ? G : -G, (i3 = v.friction * (G > 0 ? 1 : -1) * l) < -n2 ? i3 = -n2 : i3 > n2 && (i3 = n2)) : (i3 = G, n2 = f);
                   var j = k * T - B * x, q = N * T - U * x, K = _ / (S2 + m.inverseInertia * j * j + y.inverseInertia * q * q), Z2 = (1 + v.restitution) * z * K;
                   if (i3 *= K, z < u) D.normalImpulse = 0;
@@ -17333,9 +17333,9 @@
                 return [t4.x, t4.y];
               }));
               S2.makeCCW(E2), false !== u && S2.removeCollinearPoints(E2, u), false !== d && S2.removeDuplicatePoints && S2.removeDuplicatePoints(E2, d);
-              var A3 = S2.quickDecomp(E2);
-              for (y = 0; y < A3.length; y++) {
-                var C4 = A3[y].map((function(t4) {
+              var A4 = S2.quickDecomp(E2);
+              for (y = 0; y < A4.length; y++) {
+                var C4 = A4[y].map((function(t4) {
                   return { x: t4[0], y: t4[1] };
                 }));
                 c > 0 && n.area(C4) < c || v.push({ position: n.centre(C4), vertices: C4 });
@@ -17347,10 +17347,10 @@
               for (x = y + 1; x < v.length; x++) {
                 var M = v[x];
                 if (a.overlaps(_.bounds, M.bounds)) {
-                  var P = _.vertices, R = M.vertices;
+                  var P2 = _.vertices, R = M.vertices;
                   for (T = 0; T < _.vertices.length; T++) for (b = 0; b < M.vertices.length; b++) {
-                    var L = h.magnitudeSquared(h.sub(P[(T + 1) % P.length], R[b])), O2 = h.magnitudeSquared(h.sub(P[T], R[(b + 1) % R.length]));
-                    L < 5 && O2 < 5 && (P[T].isInternal = true, R[b].isInternal = true);
+                    var L2 = h.magnitudeSquared(h.sub(P2[(T + 1) % P2.length], R[b])), O2 = h.magnitudeSquared(h.sub(P2[T], R[(b + 1) % R.length]));
+                    L2 < 5 && O2 < 5 && (P2[T].isInternal = true, R[b].isInternal = true);
                   }
                 }
               }
@@ -17714,19 +17714,19 @@
             return e3.length > 0 ? w(t3, e3) : [t3];
           }, quickDecomp: function t3(e3, i3, s2, h2, l2, u2, v2) {
             u2 = u2 || 100, v2 = v2 || 0, l2 = l2 || 25, i3 = void 0 !== i3 ? i3 : [], s2 = s2 || [], h2 = h2 || [];
-            var g2 = [0, 0], m2 = [0, 0], x2 = [0, 0], T2 = 0, w2 = 0, S3 = 0, E3 = 0, A3 = 0, C4 = 0, _ = 0, M = [], P = [], R = e3, L = e3;
-            if (L.length < 3) return i3;
+            var g2 = [0, 0], m2 = [0, 0], x2 = [0, 0], T2 = 0, w2 = 0, S3 = 0, E3 = 0, A4 = 0, C4 = 0, _ = 0, M = [], P2 = [], R = e3, L2 = e3;
+            if (L2.length < 3) return i3;
             if (++v2 > u2) return console.warn("quickDecomp: max level (" + u2 + ") reached."), i3;
             for (var O2 = 0; O2 < e3.length; ++O2) if (p(R, O2)) {
               s2.push(R[O2]), T2 = w2 = Number.MAX_VALUE;
-              for (var F = 0; F < e3.length; ++F) n(d(R, O2 - 1), d(R, O2), d(R, F)) && a(d(R, O2 - 1), d(R, O2), d(R, F - 1)) && (x2 = b(d(R, O2 - 1), d(R, O2), d(R, F), d(R, F - 1)), o(d(R, O2 + 1), d(R, O2), x2) && (S3 = c(R[O2], x2)) < w2 && (w2 = S3, m2 = x2, C4 = F)), n(d(R, O2 + 1), d(R, O2), d(R, F + 1)) && a(d(R, O2 + 1), d(R, O2), d(R, F)) && (x2 = b(d(R, O2 + 1), d(R, O2), d(R, F), d(R, F + 1)), n(d(R, O2 - 1), d(R, O2), x2) && (S3 = c(R[O2], x2)) < T2 && (T2 = S3, g2 = x2, A3 = F));
-              if (C4 === (A3 + 1) % e3.length) x2[0] = (m2[0] + g2[0]) / 2, x2[1] = (m2[1] + g2[1]) / 2, h2.push(x2), O2 < A3 ? (f(M, R, O2, A3 + 1), M.push(x2), P.push(x2), 0 !== C4 && f(P, R, C4, R.length), f(P, R, 0, O2 + 1)) : (0 !== O2 && f(M, R, O2, R.length), f(M, R, 0, A3 + 1), M.push(x2), P.push(x2), f(P, R, C4, O2 + 1));
+              for (var F2 = 0; F2 < e3.length; ++F2) n(d(R, O2 - 1), d(R, O2), d(R, F2)) && a(d(R, O2 - 1), d(R, O2), d(R, F2 - 1)) && (x2 = b(d(R, O2 - 1), d(R, O2), d(R, F2), d(R, F2 - 1)), o(d(R, O2 + 1), d(R, O2), x2) && (S3 = c(R[O2], x2)) < w2 && (w2 = S3, m2 = x2, C4 = F2)), n(d(R, O2 + 1), d(R, O2), d(R, F2 + 1)) && a(d(R, O2 + 1), d(R, O2), d(R, F2)) && (x2 = b(d(R, O2 + 1), d(R, O2), d(R, F2), d(R, F2 + 1)), n(d(R, O2 - 1), d(R, O2), x2) && (S3 = c(R[O2], x2)) < T2 && (T2 = S3, g2 = x2, A4 = F2));
+              if (C4 === (A4 + 1) % e3.length) x2[0] = (m2[0] + g2[0]) / 2, x2[1] = (m2[1] + g2[1]) / 2, h2.push(x2), O2 < A4 ? (f(M, R, O2, A4 + 1), M.push(x2), P2.push(x2), 0 !== C4 && f(P2, R, C4, R.length), f(P2, R, 0, O2 + 1)) : (0 !== O2 && f(M, R, O2, R.length), f(M, R, 0, A4 + 1), M.push(x2), P2.push(x2), f(P2, R, C4, O2 + 1));
               else {
-                if (C4 > A3 && (A3 += e3.length), E3 = Number.MAX_VALUE, A3 < C4) return i3;
-                for (F = C4; F <= A3; ++F) r(d(R, O2 - 1), d(R, O2), d(R, F)) && a(d(R, O2 + 1), d(R, O2), d(R, F)) && (S3 = c(d(R, O2), d(R, F))) < E3 && y(R, O2, F) && (E3 = S3, _ = F % e3.length);
-                O2 < _ ? (f(M, R, O2, _ + 1), 0 !== _ && f(P, R, _, L.length), f(P, R, 0, O2 + 1)) : (0 !== O2 && f(M, R, O2, L.length), f(M, R, 0, _ + 1), f(P, R, _, O2 + 1));
+                if (C4 > A4 && (A4 += e3.length), E3 = Number.MAX_VALUE, A4 < C4) return i3;
+                for (F2 = C4; F2 <= A4; ++F2) r(d(R, O2 - 1), d(R, O2), d(R, F2)) && a(d(R, O2 + 1), d(R, O2), d(R, F2)) && (S3 = c(d(R, O2), d(R, F2))) < E3 && y(R, O2, F2) && (E3 = S3, _ = F2 % e3.length);
+                O2 < _ ? (f(M, R, O2, _ + 1), 0 !== _ && f(P2, R, _, L2.length), f(P2, R, 0, O2 + 1)) : (0 !== O2 && f(M, R, O2, L2.length), f(M, R, 0, _ + 1), f(P2, R, _, O2 + 1));
               }
-              return M.length < P.length ? (t3(M, i3, s2, h2, l2, u2, v2), t3(P, i3, s2, h2, l2, u2, v2)) : (t3(P, i3, s2, h2, l2, u2, v2), t3(M, i3, s2, h2, l2, u2, v2)), i3;
+              return M.length < P2.length ? (t3(M, i3, s2, h2, l2, u2, v2), t3(P2, i3, s2, h2, l2, u2, v2)) : (t3(P2, i3, s2, h2, l2, u2, v2), t3(M, i3, s2, h2, l2, u2, v2)), i3;
             }
             return i3.push(e3), i3;
           }, isSimple: function(t3) {
@@ -18053,8 +18053,8 @@
               t3.flipX && (f2 || (m += -e3.realWidth + 2 * v), T = -1), t3.flipY && (f2 || (y += -e3.realHeight + 2 * g), w = -1);
               var b = t3.x, S2 = t3.y;
               if (i3.roundPixels && (b = Math.floor(b), S2 = Math.floor(S2)), a2.applyITRS(b, S2, t3.rotation, t3.scaleX * T, t3.scaleY * w), o2.copyFrom(i3.matrix), s2 ? (o2.multiplyWithOffset(s2, -i3.scrollX * t3.scrollFactorX, -i3.scrollY * t3.scrollFactorY), a2.e = b, a2.f = S2) : (a2.e -= i3.scrollX * t3.scrollFactorX, a2.f -= i3.scrollY * t3.scrollFactorY), o2.multiply(a2), i3.renderRoundPixels && (o2.e = Math.floor(o2.e + 0.5), o2.f = Math.floor(o2.f + 0.5)), r2.save(), o2.setToContext(r2), r2.globalCompositeOperation = this.blendModes[t3.blendMode], r2.globalAlpha = n2, r2.imageSmoothingEnabled = !e3.source.scaleMode, t3.mask && t3.mask.preRenderCanvas(this, t3, i3), c2 > 0 && d2 > 0) {
-                var E2 = c2 / p2, A3 = d2 / p2;
-                i3.roundPixels && (m = Math.floor(m + 0.5), y = Math.floor(y + 0.5), E2 += 0.5, A3 += 0.5), r2.drawImage(e3.source.image, l2, u2, c2, d2, m, y, E2, A3);
+                var E2 = c2 / p2, A4 = d2 / p2;
+                i3.roundPixels && (m = Math.floor(m + 0.5), y = Math.floor(y + 0.5), E2 += 0.5, A4 += 0.5), r2.drawImage(e3.source.image, l2, u2, c2, d2, m, y, E2, A4);
               }
               t3.mask && t3.mask.postRenderCanvas(this, t3, i3), r2.restore();
             }
@@ -18129,17 +18129,17 @@
             } else {
               var m = Math.floor(r(e3, "width", f)), y = Math.floor(r(e3, "height", p)), x = m * y * 4, T = new Uint8Array(x);
               i3.readPixels(l, p - u - y, m, y, i3.RGBA, i3.UNSIGNED_BYTE, T);
-              for (var w = s.createWebGL(this, m, y), b = w.getContext("2d", { willReadFrequently: true }), S2 = b.getImageData(0, 0, m, y), E2 = S2.data, A3 = 0; A3 < y; A3++) for (var C4 = 0; C4 < m; C4++) {
-                var _ = 4 * ((y - A3 - 1) * m + C4), M = d ? x - 4 * (A3 * m + (m - C4)) : 4 * (A3 * m + C4);
+              for (var w = s.createWebGL(this, m, y), b = w.getContext("2d", { willReadFrequently: true }), S2 = b.getImageData(0, 0, m, y), E2 = S2.data, A4 = 0; A4 < y; A4++) for (var C4 = 0; C4 < m; C4++) {
+                var _ = 4 * ((y - A4 - 1) * m + C4), M = d ? x - 4 * (A4 * m + (m - C4)) : 4 * (A4 * m + C4);
                 E2[M + 0] = T[_ + 0], E2[M + 1] = T[_ + 1], E2[M + 2] = T[_ + 2], E2[M + 3] = T[_ + 3];
               }
               b.putImageData(S2, 0, 0);
-              var P = new Image();
-              P.onerror = function() {
+              var P2 = new Image();
+              P2.onerror = function() {
                 o.call(null), s.remove(w);
-              }, P.onload = function() {
-                o.call(null, P), s.remove(w);
-              }, P.src = w.toDataURL(a, h);
+              }, P2.onload = function() {
+                o.call(null, P2), s.remove(w);
+              }, P2.src = w.toDataURL(a, h);
             }
           };
         }, 89966: (t2, e2, i2) => {
@@ -18581,7 +18581,7 @@
           } });
           t2.exports = f;
         }, 74797: (t2, e2, i2) => {
-          var s = i2(95428), n = i2(72905), r = i2(19715), o = i2(83419), a = i2(8054), h = i2(50792), l = i2(92503), u = i2(50030), c = i2(37867), d = i2(29747), f = i2(7530), p = i2(32302), v = i2(97480), g = i2(69442), m = i2(70554), y = i2(88815), x = i2(26128), T = i2(1482), w = i2(82751), b = i2(84387), S2 = i2(93567), E2 = i2(57183), A3 = false, C4 = new o({ Extends: h, initialize: function(t3) {
+          var s = i2(95428), n = i2(72905), r = i2(19715), o = i2(83419), a = i2(8054), h = i2(50792), l = i2(92503), u = i2(50030), c = i2(37867), d = i2(29747), f = i2(7530), p = i2(32302), v = i2(97480), g = i2(69442), m = i2(70554), y = i2(88815), x = i2(26128), T = i2(1482), w = i2(82751), b = i2(84387), S2 = i2(93567), E2 = i2(57183), A4 = false, C4 = new o({ Extends: h, initialize: function(t3) {
             h.call(this);
             var e3 = t3.config, i3 = { alpha: e3.transparent, desynchronized: e3.desynchronized, depth: true, antialias: e3.antialiasGL, premultipliedAlpha: e3.premultipliedAlpha, stencil: true, failIfMajorPerformanceCaveat: e3.failIfMajorPerformanceCaveat, powerPreference: e3.powerPreference, preserveDrawingBuffer: e3.preserveDrawingBuffer, willReadFrequently: false };
             this.config = { clearBeforeRender: e3.clearBeforeRender, antialias: e3.antialias, backgroundColor: e3.backgroundColor, contextCreation: i3, roundPixels: e3.roundPixels, maxTextures: e3.maxTextures, maxTextureSize: e3.maxTextureSize, batchSize: e3.batchSize, maxLights: e3.maxLights, mipmapFilter: e3.mipmapFilter }, this.game = t3, this.type = a.WEBGL, this.pipelines = null, this.width = 0, this.height = 0, this.canvas = t3.canvas, this.blendModes = [], this.contextLost = false, this.snapshotState = { x: 0, y: 0, width: 1, height: 1, getPixel: false, callback: null, type: "image/png", encoder: 0.92, isFramebuffer: false, bufferWidth: 0, bufferHeight: 0 }, this.maxTextures = 0, this.textureIndexes, this.glBufferWrappers = [], this.glProgramWrappers = [], this.glTextureWrappers = [], this.glFramebufferWrappers = [], this.glAttribLocationWrappers = [], this.glUniformLocationWrappers = [], this.currentFramebuffer = null, this.fboStack = [], this.currentProgram = null, this.currentBlendMode = 1 / 0, this.currentScissorEnabled = false, this.currentScissor = null, this.scissorStack = [], this.contextLostHandler = d, this.contextRestoredHandler = d, this.previousContextLostHandler = d, this.previousContextRestoredHandler = d, this.gl = null, this.supportedExtensions = null, this.instancedArraysExtension = null, this.vaoExtension = null, this.extensions = {}, this.glFormats, this.compression, this.drawingBufferHeight = 0, this.blankTexture = null, this.normalTexture = null, this.whiteTexture = null, this.maskCount = 0, this.maskStack = [], this.currentMask = { mask: null, camera: null }, this.currentCameraMask = { mask: null, camera: null }, this.glFuncMap = null, this.currentType = "", this.newType = false, this.nextTypeMatch = false, this.finalType = false, this.mipmapFilter = null, this.defaultScissor = [0, 0, 0, 0], this.isBooted = false, this.renderTarget = null, this.projectionMatrix, this.projectionWidth = 0, this.projectionHeight = 0, this.maskSource = null, this.maskTarget = null, this.spector = null, this._debugCapture = false, this.init(this.config);
@@ -18628,14 +18628,14 @@
           }, captureFrame: function(t3, e3) {
             void 0 === t3 && (t3 = false), void 0 === e3 && (e3 = false);
           }, captureNextFrame: function() {
-            A3;
+            A4;
           }, getFps: function() {
-            A3;
+            A4;
           }, log: function() {
           }, startCapture: function(t3, e3, i3) {
             void 0 === t3 && (t3 = 0), void 0 === e3 && (e3 = false), void 0 === i3 && (i3 = false);
           }, stopCapture: function() {
-            A3;
+            A4;
           }, onCapture: function(t3) {
           }, onResize: function(t3, e3) {
             e3.width === this.width && e3.height === this.height || this.resize(e3.width, e3.height);
@@ -19129,8 +19129,8 @@
             return t3 ? (t3.displayTexture ? e3 = t3.displayTexture.dataSource[t3.displayFrame.sourceIndex] : t3.texture ? e3 = t3.texture.dataSource[t3.frame.sourceIndex] : t3.tileset && (e3 = Array.isArray(t3.tileset) ? t3.tileset[0].image.dataSource[0] : t3.tileset.image.dataSource[0]), e3 ? e3.glTexture : this.renderer.normalTexture) : this.renderer.normalTexture;
           }, batchSprite: function(t3, e3, i3) {
             this.lightsActive && o.prototype.batchSprite.call(this, t3, e3, i3);
-          }, batchTexture: function(t3, e3, i3, s2, n2, r2, a2, h2, l2, u2, c, d, f, p, v, g, m, y, x, T, w, b, S2, E2, A3, C4, _, M, P, R, L, O2) {
-            this.lightsActive && o.prototype.batchTexture.call(this, t3, e3, i3, s2, n2, r2, a2, h2, l2, u2, c, d, f, p, v, g, m, y, x, T, w, b, S2, E2, A3, C4, _, M, P, R, L, O2);
+          }, batchTexture: function(t3, e3, i3, s2, n2, r2, a2, h2, l2, u2, c, d, f, p, v, g, m, y, x, T, w, b, S2, E2, A4, C4, _, M, P2, R, L2, O2) {
+            this.lightsActive && o.prototype.batchTexture.call(this, t3, e3, i3, s2, n2, r2, a2, h2, l2, u2, c, d, f, p, v, g, m, y, x, T, w, b, S2, E2, A4, C4, _, M, P2, R, L2, O2);
           }, batchTextureFrame: function(t3, e3, i3, s2, n2, r2, a2) {
             this.lightsActive && o.prototype.batchTextureFrame.call(this, t3, e3, i3, s2, n2, r2, a2);
           } });
@@ -19161,24 +19161,24 @@
             }
             var S2 = 1, E2 = 1;
             t3.flipX && (m || (T += -o2.realWidth + 2 * y), S2 = -1), t3.flipY && (m || (w += -o2.realHeight + 2 * x), E2 = -1);
-            var A3 = t3.x, C4 = t3.y;
-            e3.roundPixels && (A3 = Math.floor(A3), C4 = Math.floor(C4)), n2.applyITRS(A3, C4, t3.rotation, t3.scaleX * S2, t3.scaleY * E2), s2.copyFrom(e3.matrix), i3 ? (s2.multiplyWithOffset(i3, -e3.scrollX * t3.scrollFactorX, -e3.scrollY * t3.scrollFactorY), n2.e = A3, n2.f = C4) : (n2.e -= e3.scrollX * t3.scrollFactorX, n2.f -= e3.scrollY * t3.scrollFactorY), s2.multiply(n2, r2);
-            var _ = r2.setQuad(T, w, T + v, w + g, e3.renderRoundPixels), M = l.getTintAppendFloatAlpha, P = e3.alpha, R = M(t3.tintTopLeft, P * t3._alphaTL), L = M(t3.tintTopRight, P * t3._alphaTR), O2 = M(t3.tintBottomLeft, P * t3._alphaBL), F = M(t3.tintBottomRight, P * t3._alphaBR);
+            var A4 = t3.x, C4 = t3.y;
+            e3.roundPixels && (A4 = Math.floor(A4), C4 = Math.floor(C4)), n2.applyITRS(A4, C4, t3.rotation, t3.scaleX * S2, t3.scaleY * E2), s2.copyFrom(e3.matrix), i3 ? (s2.multiplyWithOffset(i3, -e3.scrollX * t3.scrollFactorX, -e3.scrollY * t3.scrollFactorY), n2.e = A4, n2.f = C4) : (n2.e -= e3.scrollX * t3.scrollFactorX, n2.f -= e3.scrollY * t3.scrollFactorY), s2.multiply(n2, r2);
+            var _ = r2.setQuad(T, w, T + v, w + g, e3.renderRoundPixels), M = l.getTintAppendFloatAlpha, P2 = e3.alpha, R = M(t3.tintTopLeft, P2 * t3._alphaTL), L2 = M(t3.tintTopRight, P2 * t3._alphaTR), O2 = M(t3.tintBottomLeft, P2 * t3._alphaBL), F2 = M(t3.tintBottomRight, P2 * t3._alphaBR);
             this.shouldFlush(6) && this.flush();
             var D = this.setGameObject(t3, o2);
-            this.manager.preBatch(t3), this.batchQuad(t3, _[0], _[1], _[2], _[3], _[4], _[5], _[6], _[7], h2, u2, c2, d2, R, L, O2, F, t3.tintFill, a2, D), this.manager.postBatch(t3);
-          }, batchTexture: function(t3, e3, i3, s2, n2, r2, o2, a2, h2, l2, u2, c2, d2, f, p, v, g, m, y, x, T, w, b, S2, E2, A3, C4, _, M, P, R, L, O2) {
+            this.manager.preBatch(t3), this.batchQuad(t3, _[0], _[1], _[2], _[3], _[4], _[5], _[6], _[7], h2, u2, c2, d2, R, L2, O2, F2, t3.tintFill, a2, D), this.manager.postBatch(t3);
+          }, batchTexture: function(t3, e3, i3, s2, n2, r2, o2, a2, h2, l2, u2, c2, d2, f, p, v, g, m, y, x, T, w, b, S2, E2, A4, C4, _, M, P2, R, L2, O2) {
             void 0 === O2 && (O2 = false), this.manager.set(this, t3);
-            var F = this._tempMatrix1, D = this._tempMatrix2, I = this._tempMatrix3, k = m / i3 + C4, B = y / s2 + _, N = (m + x) / i3 + C4, U = (y + T) / s2 + _, X2 = o2, Y = a2, z = -v, G = -g;
+            var F2 = this._tempMatrix1, D = this._tempMatrix2, I = this._tempMatrix3, k = m / i3 + C4, B = y / s2 + _, N = (m + x) / i3 + C4, U = (y + T) / s2 + _, X2 = o2, Y = a2, z = -v, G = -g;
             if (t3.isCropped) {
               var V2 = t3._crop, W2 = V2.width, H2 = V2.height;
               X2 = W2, Y = H2, o2 = W2, a2 = H2;
               var j = m = V2.x, q = y = V2.y;
               c2 && (j = x - V2.x - W2), d2 && (q = T - V2.y - H2), k = j / i3 + C4, B = q / s2 + _, N = (j + W2) / i3 + C4, U = (q + H2) / s2 + _, z = -v + m, G = -g + y;
             }
-            c2 && (X2 *= -1, z += o2), (d2 ^= !R && e3.isRenderTexture ? 1 : 0) && (Y *= -1, G += a2), M.roundPixels && (n2 = Math.floor(n2), r2 = Math.floor(r2)), D.applyITRS(n2, r2, u2, h2, l2), F.copyFrom(M.matrix), P ? (F.multiplyWithOffset(P, -M.scrollX * f, -M.scrollY * p), D.e = n2, D.f = r2) : (D.e -= M.scrollX * f, D.f -= M.scrollY * p), F.multiply(D, I);
+            c2 && (X2 *= -1, z += o2), (d2 ^= !R && e3.isRenderTexture ? 1 : 0) && (Y *= -1, G += a2), M.roundPixels && (n2 = Math.floor(n2), r2 = Math.floor(r2)), D.applyITRS(n2, r2, u2, h2, l2), F2.copyFrom(M.matrix), P2 ? (F2.multiplyWithOffset(P2, -M.scrollX * f, -M.scrollY * p), D.e = n2, D.f = r2) : (D.e -= M.scrollX * f, D.f -= M.scrollY * p), F2.multiply(D, I);
             var K = I.setQuad(z, G, z + X2, G + Y, M.renderRoundPixels);
-            null == L && (L = this.setTexture2D(e3)), t3 && !O2 && this.manager.preBatch(t3), this.batchQuad(t3, K[0], K[1], K[2], K[3], K[4], K[5], K[6], K[7], k, B, N, U, w, b, S2, E2, A3, e3, L), t3 && !O2 && this.manager.postBatch(t3);
+            null == L2 && (L2 = this.setTexture2D(e3)), t3 && !O2 && this.manager.preBatch(t3), this.batchQuad(t3, K[0], K[1], K[2], K[3], K[4], K[5], K[6], K[7], k, B, N, U, w, b, S2, E2, A4, e3, L2), t3 && !O2 && this.manager.postBatch(t3);
           }, batchTextureFrame: function(t3, e3, i3, s2, n2, r2, o2) {
             this.manager.set(this);
             var a2 = this._tempMatrix1.copyFrom(r2), h2 = this._tempMatrix2;
@@ -19207,8 +19207,8 @@
             for (var r2, o2, a2 = t3.length, h2 = this.polygonCache, l2 = this.fillTint.TL, u2 = this.fillTint.TR, c2 = this.fillTint.BL, d2 = 0; d2 < a2; ++d2) o2 = t3[d2], h2.push(o2.x, o2.y);
             a2 = (r2 = n(h2)).length;
             for (var f = 0; f < a2; f += 3) {
-              var p = 2 * r2[f + 0], v = 2 * r2[f + 1], g = 2 * r2[f + 2], m = h2[p + 0], y = h2[p + 1], x = h2[v + 0], T = h2[v + 1], w = h2[g + 0], b = h2[g + 1], S2 = s2.getX(m, y), E2 = s2.getY(m, y), A3 = s2.getX(x, T), C4 = s2.getY(x, T), _ = s2.getX(w, b), M = s2.getY(w, b);
-              this.batchTri(null, S2, E2, A3, C4, _, M, 0, 0, 1, 1, l2, u2, c2, 2);
+              var p = 2 * r2[f + 0], v = 2 * r2[f + 1], g = 2 * r2[f + 2], m = h2[p + 0], y = h2[p + 1], x = h2[v + 0], T = h2[v + 1], w = h2[g + 0], b = h2[g + 1], S2 = s2.getX(m, y), E2 = s2.getY(m, y), A4 = s2.getX(x, T), C4 = s2.getY(x, T), _ = s2.getX(w, b), M = s2.getY(w, b);
+              this.batchTri(null, S2, E2, A4, C4, _, M, 0, 0, 1, 1, l2, u2, c2, 2);
             }
             h2.length = 0;
           }, batchStrokePath: function(t3, e3, i3, s2, n2) {
@@ -19223,10 +19223,10 @@
             u2 && u2.multiply(l2, c2);
             var d2 = i3 - t3, f = s2 - e3, p = Math.sqrt(d2 * d2 + f * f);
             if (0 !== p) {
-              var v = n2 * (s2 - e3) / p, g = n2 * (t3 - i3) / p, m = r2 * (s2 - e3) / p, y = r2 * (t3 - i3) / p, x = i3 - m, T = s2 - y, w = t3 - v, b = e3 - g, S2 = i3 + m, E2 = s2 + y, A3 = t3 + v, C4 = e3 + g, _ = c2.getX(x, T), M = c2.getY(x, T), P = c2.getX(w, b), R = c2.getY(w, b), L = c2.getX(S2, E2), O2 = c2.getY(S2, E2), F = c2.getX(A3, C4), D = c2.getY(A3, C4), I = this.strokeTint, k = I.TL, B = I.TR, N = I.BL, U = I.BR;
-              if (this.batchQuad(null, F, D, P, R, _, M, L, O2, 0, 0, 1, 1, k, B, N, U, 2), !(o2 <= 2)) {
+              var v = n2 * (s2 - e3) / p, g = n2 * (t3 - i3) / p, m = r2 * (s2 - e3) / p, y = r2 * (t3 - i3) / p, x = i3 - m, T = s2 - y, w = t3 - v, b = e3 - g, S2 = i3 + m, E2 = s2 + y, A4 = t3 + v, C4 = e3 + g, _ = c2.getX(x, T), M = c2.getY(x, T), P2 = c2.getX(w, b), R = c2.getY(w, b), L2 = c2.getX(S2, E2), O2 = c2.getY(S2, E2), F2 = c2.getX(A4, C4), D = c2.getY(A4, C4), I = this.strokeTint, k = I.TL, B = I.TR, N = I.BL, U = I.BR;
+              if (this.batchQuad(null, F2, D, P2, R, _, M, L2, O2, 0, 0, 1, 1, k, B, N, U, 2), !(o2 <= 2)) {
                 var X2 = this.prevQuad, Y = this.firstQuad;
-                a2 > 0 && X2[4] ? this.batchQuad(null, F, D, P, R, X2[0], X2[1], X2[2], X2[3], 0, 0, 1, 1, k, B, N, U, 2) : (Y[0] = F, Y[1] = D, Y[2] = P, Y[3] = R, Y[4] = 1), h2 && Y[4] ? this.batchQuad(null, _, M, L, O2, Y[0], Y[1], Y[2], Y[3], 0, 0, 1, 1, k, B, N, U, 2) : (X2[0] = _, X2[1] = M, X2[2] = L, X2[3] = O2, X2[4] = 1);
+                a2 > 0 && X2[4] ? this.batchQuad(null, F2, D, P2, R, X2[0], X2[1], X2[2], X2[3], 0, 0, 1, 1, k, B, N, U, 2) : (Y[0] = F2, Y[1] = D, Y[2] = P2, Y[3] = R, Y[4] = 1), h2 && Y[4] ? this.batchQuad(null, _, M, L2, O2, Y[0], Y[1], Y[2], Y[3], 0, 0, 1, 1, k, B, N, U, 2) : (X2[0] = _, X2[1] = M, X2[2] = L2, X2[3] = O2, X2[4] = 1);
               }
             }
           }, destroy: function() {
@@ -19306,12 +19306,12 @@
             var i3 = this.quadVertexViewF32;
             i3[1] = e3, i3[22] = e3, i3[14] = t3, i3[28] = t3, i3[35] = t3, i3[36] = e3;
           }, batchQuad: function(t3, e3, i3, s2, r2, o2, a2, h2, l2, u2, c2, d2, f2, p2, v2, g, m, y, x) {
-            var T = Math.min(e3, s2, o2, h2), w = Math.min(i3, r2, a2, l2), b = Math.max(e3, s2, o2, h2) - T, S2 = Math.max(i3, r2, a2, l2) - w, E2 = this.spriteBounds.setTo(T, w, b, S2), A3 = t3 ? t3.preFX.padding : 0, C4 = b + 2 * A3, _ = S2 + 2 * A3, M = Math.abs(Math.max(C4, _)), P = this.manager.getRenderTarget(M), R = this.targetBounds.setTo(0, 0, P.width, P.height);
+            var T = Math.min(e3, s2, o2, h2), w = Math.min(i3, r2, a2, l2), b = Math.max(e3, s2, o2, h2) - T, S2 = Math.max(i3, r2, a2, l2) - w, E2 = this.spriteBounds.setTo(T, w, b, S2), A4 = t3 ? t3.preFX.padding : 0, C4 = b + 2 * A4, _ = S2 + 2 * A4, M = Math.abs(Math.max(C4, _)), P2 = this.manager.getRenderTarget(M), R = this.targetBounds.setTo(0, 0, P2.width, P2.height);
             n(R, Math.round(E2.centerX), Math.round(E2.centerY)), this.tempSprite = t3;
-            var L = this.gl, O2 = this.renderer;
-            O2.clearStencilMask(), this.setShader(this.drawSpriteShader), this.set1i("uMainSampler", 0), this.set2f("uResolution", O2.width, O2.height), this.flipProjectionMatrix(true), t3 && (this.onDrawSprite(t3, P), t3.preFX.onFX(this));
-            var F = this.fsTarget;
-            return this.flush(), L.viewport(0, 0, O2.width, O2.height), L.bindFramebuffer(L.FRAMEBUFFER, F.framebuffer.webGLFramebuffer), L.framebufferTexture2D(L.FRAMEBUFFER, L.COLOR_ATTACHMENT0, L.TEXTURE_2D, F.texture.webGLTexture, 0), L.clearColor(0, 0, 0, 0), L.clear(L.COLOR_BUFFER_BIT), this.setTexture2D(x), this.batchVert(e3, i3, u2, c2, 0, y, p2), this.batchVert(s2, r2, u2, f2, 0, y, g), this.batchVert(o2, a2, d2, f2, 0, y, m), this.batchVert(e3, i3, u2, c2, 0, y, p2), this.batchVert(o2, a2, d2, f2, 0, y, m), this.batchVert(h2, l2, d2, c2, 0, y, v2), this.flush(), this.flipProjectionMatrix(false), L.activeTexture(L.TEXTURE0), L.bindTexture(L.TEXTURE_2D, P.texture.webGLTexture), L.copyTexSubImage2D(L.TEXTURE_2D, 0, 0, 0, R.x, R.y, R.width, R.height), L.bindFramebuffer(L.FRAMEBUFFER, null), L.bindTexture(L.TEXTURE_2D, null), this.onBatch(t3), this.currentShader = this.copyShader, this.onDraw(P, this.manager.getSwapRenderTarget(), this.manager.getAltSwapRenderTarget()), true;
+            var L2 = this.gl, O2 = this.renderer;
+            O2.clearStencilMask(), this.setShader(this.drawSpriteShader), this.set1i("uMainSampler", 0), this.set2f("uResolution", O2.width, O2.height), this.flipProjectionMatrix(true), t3 && (this.onDrawSprite(t3, P2), t3.preFX.onFX(this));
+            var F2 = this.fsTarget;
+            return this.flush(), L2.viewport(0, 0, O2.width, O2.height), L2.bindFramebuffer(L2.FRAMEBUFFER, F2.framebuffer.webGLFramebuffer), L2.framebufferTexture2D(L2.FRAMEBUFFER, L2.COLOR_ATTACHMENT0, L2.TEXTURE_2D, F2.texture.webGLTexture, 0), L2.clearColor(0, 0, 0, 0), L2.clear(L2.COLOR_BUFFER_BIT), this.setTexture2D(x), this.batchVert(e3, i3, u2, c2, 0, y, p2), this.batchVert(s2, r2, u2, f2, 0, y, g), this.batchVert(o2, a2, d2, f2, 0, y, m), this.batchVert(e3, i3, u2, c2, 0, y, p2), this.batchVert(o2, a2, d2, f2, 0, y, m), this.batchVert(h2, l2, d2, c2, 0, y, v2), this.flush(), this.flipProjectionMatrix(false), L2.activeTexture(L2.TEXTURE0), L2.bindTexture(L2.TEXTURE_2D, P2.texture.webGLTexture), L2.copyTexSubImage2D(L2.TEXTURE_2D, 0, 0, 0, R.x, R.y, R.width, R.height), L2.bindFramebuffer(L2.FRAMEBUFFER, null), L2.bindTexture(L2.TEXTURE_2D, null), this.onBatch(t3), this.currentShader = this.copyShader, this.onDraw(P2, this.manager.getSwapRenderTarget(), this.manager.getAltSwapRenderTarget()), true;
           }, onDrawSprite: function() {
           }, onCopySprite: function() {
           }, copySprite: function(t3, e3, i3, n2, r2, o2, a2) {
@@ -21774,8 +21774,8 @@
             if (y.trim) {
               var x = y.spriteSourceSize, T = e3 + (s2 = n(s2, 0, x.x + u - e3)), w = i3 + (r2 = n(r2, 0, x.y + c - i3));
               if (!(x.r < e3 || x.b < i3 || x.x > T || x.y > w)) {
-                var b = Math.max(x.x, e3), S2 = Math.max(x.y, i3), E2 = Math.min(x.r, T) - b, A3 = Math.min(x.b, w) - S2;
-                g = E2, m = A3, p = o2 ? h + (u - (b - x.x) - E2) : h + (b - x.x), v = a ? l + (c - (S2 - x.y) - A3) : l + (S2 - x.y), e3 = b, i3 = S2, s2 = E2, r2 = A3;
+                var b = Math.max(x.x, e3), S2 = Math.max(x.y, i3), E2 = Math.min(x.r, T) - b, A4 = Math.min(x.b, w) - S2;
+                g = E2, m = A4, p = o2 ? h + (u - (b - x.x) - E2) : h + (b - x.x), v = a ? l + (c - (S2 - x.y) - A4) : l + (S2 - x.y), e3 = b, i3 = S2, s2 = E2, r2 = A4;
               } else p = 0, v = 0, g = 0, m = 0;
             } else o2 && (p = h + (u - e3 - s2)), a && (v = l + (c - i3 - r2));
             var C4 = this.source.width, _ = this.source.height;
@@ -22285,20 +22285,20 @@
             if (!n) throw new Error("TextureManager.SpriteSheetFromAtlas: Invalid frameWidth given.");
             var o = t3.source[0];
             t3.add("__BASE", 0, 0, 0, o.width, o.height);
-            var a, h = s(i3, "startFrame", 0), l = s(i3, "endFrame", -1), u = s(i3, "margin", 0), c = s(i3, "spacing", 0), d = e3.cutX, f = e3.cutY, p = e3.cutWidth, v = e3.cutHeight, g = e3.realWidth, m = e3.realHeight, y = Math.floor((g - u + c) / (n + c)), x = Math.floor((m - u + c) / (r + c)), T = y * x, w = e3.x, b = n - w, S2 = n - (g - p - w), E2 = e3.y, A3 = r - E2, C4 = r - (m - v - E2);
+            var a, h = s(i3, "startFrame", 0), l = s(i3, "endFrame", -1), u = s(i3, "margin", 0), c = s(i3, "spacing", 0), d = e3.cutX, f = e3.cutY, p = e3.cutWidth, v = e3.cutHeight, g = e3.realWidth, m = e3.realHeight, y = Math.floor((g - u + c) / (n + c)), x = Math.floor((m - u + c) / (r + c)), T = y * x, w = e3.x, b = n - w, S2 = n - (g - p - w), E2 = e3.y, A4 = r - E2, C4 = r - (m - v - E2);
             (h > T || h < -T) && (h = 0), h < 0 && (h = T + h), -1 !== l && (T = h + (l + 1));
-            for (var _ = u, M = u, P = 0, R = 0; R < x; R++) {
-              for (var L = 0 === R, O2 = R === x - 1, F = 0; F < y; F++) {
-                var D = 0 === F, I = F === y - 1;
-                if (a = t3.add(P, 0, d + _, f + M, n, r), D || L || I || O2) {
-                  var k = D ? w : 0, B = L ? E2 : 0, N = 0, U = 0;
-                  D && (N += n - b), I && (N += n - S2), L && (U += r - A3), O2 && (U += r - C4);
+            for (var _ = u, M = u, P2 = 0, R = 0; R < x; R++) {
+              for (var L2 = 0 === R, O2 = R === x - 1, F2 = 0; F2 < y; F2++) {
+                var D = 0 === F2, I = F2 === y - 1;
+                if (a = t3.add(P2, 0, d + _, f + M, n, r), D || L2 || I || O2) {
+                  var k = D ? w : 0, B = L2 ? E2 : 0, N = 0, U = 0;
+                  D && (N += n - b), I && (N += n - S2), L2 && (U += r - A4), O2 && (U += r - C4);
                   var X2 = n - N, Y = r - U;
                   a.cutWidth = X2, a.cutHeight = Y, a.setTrim(n, r, k, B, X2, Y);
                 }
-                _ += c, _ += D ? b : I ? S2 : n, P++;
+                _ += c, _ += D ? b : I ? S2 : n, P2++;
               }
-              _ = u, M += c, M += L ? A3 : O2 ? C4 : r;
+              _ = u, M += c, M += L2 ? A4 : O2 ? C4 : r;
             }
             return t3;
           };
@@ -22541,19 +22541,19 @@
               var p2, v2 = e3[d2], g2 = a(v2, "id", null), m2 = a(v2, "gid", null), y2 = a(v2, "name", null), x = a(v2, "type", null);
               o2.enabled = !a(v2, "ignoreTileset", null);
               for (var T = [], w = 0; w < h2.length; w++) p2 = h2[w], (null === g2 && null === m2 && null === y2 && null === x || null !== g2 && p2.id === g2 || null !== m2 && p2.gid === m2 || null !== y2 && p2.name === y2 || null !== x && o2.getTypeIncludingTile(p2) === x) && T.push(p2);
-              for (var b = a(v2, "classType", f), S2 = a(v2, "scene", this.scene), E2 = a(v2, "container", null), A3 = a(v2, "key", null), C4 = a(v2, "frame", null), _ = 0; _ < T.length; _++) {
+              for (var b = a(v2, "classType", f), S2 = a(v2, "scene", this.scene), E2 = a(v2, "container", null), A4 = a(v2, "key", null), C4 = a(v2, "frame", null), _ = 0; _ < T.length; _++) {
                 p2 = T[_];
                 var M = new b(S2);
-                if (M.setName(p2.name), M.setPosition(p2.x, p2.y), o2.setTextureAndFrame(M, A3, C4, p2), p2.width && (M.displayWidth = p2.width), p2.height && (M.displayHeight = p2.height), this.orientation === u.ISOMETRIC) {
-                  var P = this.tileWidth / this.tileHeight, R = { x: M.x - M.y, y: (M.x + M.y) / P };
+                if (M.setName(p2.name), M.setPosition(p2.x, p2.y), o2.setTextureAndFrame(M, A4, C4, p2), p2.width && (M.displayWidth = p2.width), p2.height && (M.displayHeight = p2.height), this.orientation === u.ISOMETRIC) {
+                  var P2 = this.tileWidth / this.tileHeight, R = { x: M.x - M.y, y: (M.x + M.y) / P2 };
                   M.x = R.x, M.y = R.y;
                 }
-                var L = { x: M.originX * p2.width, y: (M.originY - (p2.gid ? 1 : 0)) * p2.height };
+                var L2 = { x: M.originX * p2.width, y: (M.originY - (p2.gid ? 1 : 0)) * p2.height };
                 if (p2.rotation) {
                   var O2 = r(p2.rotation);
-                  c(L, O2), M.rotation = O2;
+                  c(L2, O2), M.rotation = O2;
                 }
-                M.x += L.x, M.y += L.y, void 0 === p2.flippedHorizontal && void 0 === p2.flippedVertical || M.setFlip(p2.flippedHorizontal, p2.flippedVertical), p2.visible || (M.visible = false), o2.setPropertiesFromTiledObject(M, p2), E2 ? E2.add(M) : S2.add.existing(M), s2.push(M);
+                M.x += L2.x, M.y += L2.y, void 0 === p2.flippedHorizontal && void 0 === p2.flippedVertical || M.setFlip(p2.flippedHorizontal, p2.flippedVertical), p2.visible || (M.visible = false), o2.setPropertiesFromTiledObject(M, p2), E2 ? E2.add(M) : S2.add.existing(M), s2.push(M);
               }
             }
             return s2;
@@ -22906,8 +22906,8 @@
                 if (y) {
                   var x = y.getTileTextureCoordinates(m.index), T = y.tileWidth, w = y.tileHeight;
                   if (x && 0 !== T && 0 !== w) {
-                    var b = 0.5 * T, S2 = 0.5 * w, E2 = y.glTexture, A3 = h.setTexture2D(E2, e3), C4 = T, _ = w, M = x.x, P = x.y, R = y.tileOffset.x, L = y.tileOffset.y, O2 = l(m.tint, o * m.alpha);
-                    h.batchTexture(e3, E2, E2.width, E2.height, d + m.pixelX * p + (b * p - R), f + m.pixelY * v + (S2 * v - L), T, w, p, v, m.rotation, m.flipX, m.flipY, u, c, b, S2, M, P, C4, _, O2, O2, O2, O2, m.tintFill, 0, 0, i3, null, true, A3, true);
+                    var b = 0.5 * T, S2 = 0.5 * w, E2 = y.glTexture, A4 = h.setTexture2D(E2, e3), C4 = T, _ = w, M = x.x, P2 = x.y, R = y.tileOffset.x, L2 = y.tileOffset.y, O2 = l(m.tint, o * m.alpha);
+                    h.batchTexture(e3, E2, E2.width, E2.height, d + m.pixelX * p + (b * p - R), f + m.pixelY * v + (S2 * v - L2), T, w, p, v, m.rotation, m.flipX, m.flipY, u, c, b, S2, M, P2, C4, _, O2, O2, O2, O2, m.tintFill, 0, 0, i3, null, true, A4, true);
                   }
                 }
               }
@@ -23131,8 +23131,8 @@
             a2.tilemapLayer.worldToTileXY(t3.right, t3.bottom, false, d, i3);
             var g = Math.ceil(d.x), m = Math.ceil(d.y), y = Math.max(g - p, 1), x = Math.max(m - v, 1), T = n(p, v, y, x, e3, a2), w = a2.tileWidth, b = a2.tileHeight;
             a2.tilemapLayer && (w *= a2.tilemapLayer.scaleX, b *= a2.tilemapLayer.scaleY);
-            for (var S2 = [], E2 = new s.Rectangle(0, 0, w, b), A3 = 0; A3 < T.length; A3++) {
-              var C4 = T[A3];
+            for (var S2 = [], E2 = new s.Rectangle(0, 0, w, b), A4 = 0; A4 < T.length; A4++) {
+              var C4 = T[A4];
               a2.tilemapLayer.tileToWorldXY(C4.x, C4.y, u, i3), E2.x = u.x, E2.y = u.y, f(t3, E2) && S2.push(C4);
             }
             return S2;
@@ -23228,8 +23228,8 @@
             l && (r || (r = l.scene.cameras.main), t3 -= l.x + r.scrollX * (1 - l.scrollFactorX), e3 -= l.y + r.scrollY * (1 - l.scrollFactorY), a *= l.scaleX, h *= l.scaleY);
             var u, c, d, f, p, v = 0.5773502691896257, g = -0.3333333333333333, m = 0.6666666666666666, y = a / 2, x = h / 2;
             "y" === o.staggerAxis ? (d = v * (u = (t3 - y) / (v * a)) + g * (c = (e3 - x) / x), f = 0 * u + m * c) : (d = g * (u = (t3 - y) / y) + v * (c = (e3 - x) / (v * h)), f = m * u + 0 * c), p = -d - f;
-            var T, w = Math.round(d), b = Math.round(f), S2 = Math.round(p), E2 = Math.abs(w - d), A3 = Math.abs(b - f), C4 = Math.abs(S2 - p);
-            E2 > A3 && E2 > C4 ? w = -b - S2 : A3 > C4 && (b = -w - S2);
+            var T, w = Math.round(d), b = Math.round(f), S2 = Math.round(p), E2 = Math.abs(w - d), A4 = Math.abs(b - f), C4 = Math.abs(S2 - p);
+            E2 > A4 && E2 > C4 ? w = -b - S2 : A4 > C4 && (b = -w - S2);
             var _ = b;
             return T = "odd" === o.staggerIndex ? _ % 2 == 0 ? b / 2 + w : b / 2 + w - 0.5 : _ % 2 == 0 ? b / 2 + w : b / 2 + w + 0.5, n.set(T, _);
           };
@@ -23773,15 +23773,15 @@
                 }
                 var g, m, y, x, T, w, b = [], S2 = 0;
                 if (i3) {
-                  var E2 = a(p, "startx", 0) + p.x, A3 = a(p, "starty", 0) + p.y;
-                  (g = new h({ name: f.name + p.name, id: p.id, x: f.x + a(p, "offsetx", 0) + E2 * t3.tilewidth, y: f.y + a(p, "offsety", 0) + A3 * t3.tileheight, width: p.width, height: p.height, tileWidth: t3.tilewidth, tileHeight: t3.tileheight, alpha: f.opacity * p.opacity, visible: f.visible && p.visible, properties: a(p, "properties", []), orientation: o(t3.orientation) })).orientation === n.HEXAGONAL && (g.hexSideLength = t3.hexsidelength, g.staggerAxis = t3.staggeraxis, g.staggerIndex = t3.staggerindex, "y" === g.staggerAxis ? (T = (g.tileHeight - g.hexSideLength) / 2, g.widthInPixels = g.tileWidth * (g.width + 0.5), g.heightInPixels = g.height * (g.hexSideLength + T) + T) : (w = (g.tileWidth - g.hexSideLength) / 2, g.widthInPixels = g.width * (g.hexSideLength + w) + w, g.heightInPixels = g.tileHeight * (g.height + 0.5)));
+                  var E2 = a(p, "startx", 0) + p.x, A4 = a(p, "starty", 0) + p.y;
+                  (g = new h({ name: f.name + p.name, id: p.id, x: f.x + a(p, "offsetx", 0) + E2 * t3.tilewidth, y: f.y + a(p, "offsety", 0) + A4 * t3.tileheight, width: p.width, height: p.height, tileWidth: t3.tilewidth, tileHeight: t3.tileheight, alpha: f.opacity * p.opacity, visible: f.visible && p.visible, properties: a(p, "properties", []), orientation: o(t3.orientation) })).orientation === n.HEXAGONAL && (g.hexSideLength = t3.hexsidelength, g.staggerAxis = t3.staggeraxis, g.staggerIndex = t3.staggerindex, "y" === g.staggerAxis ? (T = (g.tileHeight - g.hexSideLength) / 2, g.widthInPixels = g.tileWidth * (g.width + 0.5), g.heightInPixels = g.height * (g.hexSideLength + T) + T) : (w = (g.tileWidth - g.hexSideLength) / 2, g.widthInPixels = g.width * (g.hexSideLength + w) + w, g.heightInPixels = g.tileHeight * (g.height + 0.5)));
                   for (var C4 = 0; C4 < p.height; C4++) {
                     b[C4] = [null];
                     for (var _ = 0; _ < p.width; _++) b[C4][_] = null;
                   }
-                  for (C4 = 0, N = p.chunks.length; C4 < N; C4++) for (var M = p.chunks[C4], P = M.x - E2, R = M.y - A3, L = 0, O2 = 0, F = M.data.length; O2 < F; O2++) {
-                    var D = S2 + P, I = L + R;
-                    (m = l(M.data[O2])).gid > 0 ? ((y = new u(g, m.gid, D, I, t3.tilewidth, t3.tileheight)).rotation = m.rotation, y.flipX = m.flipped, b[I][D] = y) : (x = e3 ? null : new u(g, -1, D, I, t3.tilewidth, t3.tileheight), b[I][D] = x), ++S2 === M.width && (L++, S2 = 0);
+                  for (C4 = 0, N = p.chunks.length; C4 < N; C4++) for (var M = p.chunks[C4], P2 = M.x - E2, R = M.y - A4, L2 = 0, O2 = 0, F2 = M.data.length; O2 < F2; O2++) {
+                    var D = S2 + P2, I = L2 + R;
+                    (m = l(M.data[O2])).gid > 0 ? ((y = new u(g, m.gid, D, I, t3.tilewidth, t3.tileheight)).rotation = m.rotation, y.flipX = m.flipped, b[I][D] = y) : (x = e3 ? null : new u(g, -1, D, I, t3.tilewidth, t3.tileheight), b[I][D] = x), ++S2 === M.width && (L2++, S2 = 0);
                   }
                 } else {
                   (g = new h({ name: f.name + p.name, id: p.id, x: f.x + a(p, "offsetx", 0) + p.x, y: f.y + a(p, "offsety", 0) + p.y, width: p.width, height: p.height, tileWidth: t3.tilewidth, tileHeight: t3.tileheight, alpha: f.opacity * p.opacity, visible: f.visible && p.visible, properties: a(p, "properties", []), orientation: o(t3.orientation) })).orientation === n.HEXAGONAL && (g.hexSideLength = t3.hexsidelength, g.staggerAxis = t3.staggeraxis, g.staggerIndex = t3.staggerindex, "y" === g.staggerAxis ? (T = (g.tileHeight - g.hexSideLength) / 2, g.widthInPixels = g.tileWidth * (g.width + 0.5), g.heightInPixels = g.height * (g.hexSideLength + T) + T) : (w = (g.tileWidth - g.hexSideLength) / 2, g.widthInPixels = g.width * (g.hexSideLength + w) + w, g.heightInPixels = g.tileHeight * (g.height + 0.5)));
@@ -23839,8 +23839,8 @@
               } else {
                 var T = new n(u.name, u.firstgid, u.tilewidth, u.tileheight, u.margin, u.spacing, u.properties), w = 0;
                 for (p = 0; p < u.tiles.length; p++) {
-                  var b = (v = u.tiles[p]).image, S2 = parseInt(v.id, 10), E2 = u.firstgid + S2, A3 = v.imagewidth, C4 = v.imageheight;
-                  T.addImage(E2, b, A3, C4), w = Math.max(S2, w);
+                  var b = (v = u.tiles[p]).image, S2 = parseInt(v.id, 10), E2 = u.firstgid + S2, A4 = v.imagewidth, C4 = v.imageheight;
+                  T.addImage(E2, b, A4, C4), w = Math.max(S2, w);
                 }
                 T.maxId = w, a.push(T);
               }
@@ -24286,9 +24286,9 @@
             else if ("object" === f) if (o(l = e3) || a(l) || r(l)) r(e3) && (d = e3.getActive), a(e3) && (u = e3.getEnd), o(e3) && (c = e3.getStart);
             else if (e3.hasOwnProperty("value")) i3 = h(t3, e3.value);
             else {
-              var S2 = e3.hasOwnProperty("to"), E2 = e3.hasOwnProperty("from"), A3 = e3.hasOwnProperty("start");
-              if (S2 && (E2 || A3)) {
-                if (i3 = h(t3, e3.to), A3) {
+              var S2 = e3.hasOwnProperty("to"), E2 = e3.hasOwnProperty("from"), A4 = e3.hasOwnProperty("start");
+              if (S2 && (E2 || A4)) {
+                if (i3 = h(t3, e3.to), A4) {
                   var C4 = h(t3, e3.start);
                   i3.getActive = C4.getEnd;
                 }
@@ -24309,10 +24309,10 @@
             var p = h(e3, "from", 0), v = h(e3, "to", 1), g = [{ value: p }], m = h(e3, "delay", i3.delay), y = h(e3, "easeParams", i3.easeParams), x = h(e3, "ease", i3.ease), T = c("value", v), w = new f(t3, g), b = w.add(0, "value", T.getEnd, T.getStart, T.getActive, a(h(e3, "ease", x), h(e3, "easeParams", y)), l(e3, "delay", m), h(e3, "duration", i3.duration), o(e3, "yoyo", i3.yoyo), h(e3, "hold", i3.hold), h(e3, "repeat", i3.repeat), h(e3, "repeatDelay", i3.repeatDelay), false, false);
             b.start = p, b.current = p, w.completeDelay = r(e3, "completeDelay", 0), w.loop = Math.round(r(e3, "loop", 0)), w.loopDelay = Math.round(r(e3, "loopDelay", 0)), w.paused = o(e3, "paused", false), w.persist = o(e3, "persist", false), w.isNumberTween = true, w.callbackScope = u(e3, "callbackScope", w);
             for (var S2 = s.TYPES, E2 = 0; E2 < S2.length; E2++) {
-              var A3 = S2[E2], C4 = u(e3, A3, false);
+              var A4 = S2[E2], C4 = u(e3, A4, false);
               if (C4) {
-                var _ = u(e3, A3 + "Params", []);
-                w.setCallback(A3, C4, _);
+                var _ = u(e3, A4 + "Params", []);
+                w.setCallback(A4, C4, _);
               }
             }
             return w;
@@ -24326,26 +24326,26 @@
             if (p && (o += v), h) {
               var y = h[0], x = h[1], T = 0, w = 0, b = 0, S2 = 0, E2 = [];
               d ? (T = y - 1, w = x - 1) : f ? (T = l % y, w = Math.floor(l / y)) : c && (T = (y - 1) / 2, w = (x - 1) / 2);
-              for (var A3 = r.MIN_SAFE_INTEGER, C4 = 0; C4 < x; C4++) {
+              for (var A4 = r.MIN_SAFE_INTEGER, C4 = 0; C4 < x; C4++) {
                 E2[C4] = [];
                 for (var _ = 0; _ < y; _++) {
                   b = T - _, S2 = w - C4;
                   var M = Math.sqrt(b * b + S2 * S2);
-                  M > A3 && (A3 = M), E2[C4][_] = M;
+                  M > A4 && (A4 = M), E2[C4][_] = M;
                 }
               }
             }
-            var P = a ? s(a) : null;
+            var P2 = a ? s(a) : null;
             return i3 = h ? function(t4, e4, i4, s2) {
               var n2, r2 = 0, a2 = s2 % y, h2 = Math.floor(s2 / y);
               if (a2 >= 0 && a2 < y && h2 >= 0 && h2 < x && (r2 = E2[h2][a2]), p) {
                 var l2 = g - v;
-                n2 = P ? r2 / A3 * l2 * P(r2 / A3) : r2 / A3 * l2;
-              } else n2 = P ? r2 * v * P(r2 / A3) : r2 * v;
+                n2 = P2 ? r2 / A4 * l2 * P2(r2 / A4) : r2 / A4 * l2;
+              } else n2 = P2 ? r2 * v * P2(r2 / A4) : r2 * v;
               return n2 + o;
             } : function(t4, e4, i4, s2, n2) {
               var r2, a2, h2;
-              (n2--, u ? r2 = s2 : c ? r2 = Math.abs(n2 / 2 - s2) : d ? r2 = n2 - s2 : f && (r2 = Math.abs(l - s2)), p) ? (h2 = c ? (g - v) / n2 * (2 * r2) : (g - v) / n2 * r2, a2 = P ? h2 * P(r2 / n2) : h2) : a2 = P ? n2 * m * P(r2 / n2) : r2 * v;
+              (n2--, u ? r2 = s2 : c ? r2 = Math.abs(n2 / 2 - s2) : d ? r2 = n2 - s2 : f && (r2 = Math.abs(l - s2)), p) ? (h2 = c ? (g - v) / n2 * (2 * r2) : (g - v) / n2 * r2, a2 = P2 ? h2 * P2(r2 / n2) : h2) : a2 = P2 ? n2 * m * P2(r2 / n2) : r2 * v;
               return a2 + o;
             }, i3;
           };
@@ -24356,24 +24356,24 @@
             i3 = void 0 === i3 ? n : v(n, i3);
             var m = d(e3);
             !m && i3.targets && (m = i3.targets);
-            for (var y = c(e3), x = h(e3, "delay", i3.delay), T = h(e3, "duration", i3.duration), w = h(e3, "easeParams", i3.easeParams), b = h(e3, "ease", i3.ease), S2 = h(e3, "hold", i3.hold), E2 = h(e3, "repeat", i3.repeat), A3 = h(e3, "repeatDelay", i3.repeatDelay), C4 = o(e3, "yoyo", i3.yoyo), _ = o(e3, "flipX", i3.flipX), M = o(e3, "flipY", i3.flipY), P = h(e3, "interpolation", i3.interpolation), R = function(t4, e4, i4, s2) {
+            for (var y = c(e3), x = h(e3, "delay", i3.delay), T = h(e3, "duration", i3.duration), w = h(e3, "easeParams", i3.easeParams), b = h(e3, "ease", i3.ease), S2 = h(e3, "hold", i3.hold), E2 = h(e3, "repeat", i3.repeat), A4 = h(e3, "repeatDelay", i3.repeatDelay), C4 = o(e3, "yoyo", i3.yoyo), _ = o(e3, "flipX", i3.flipX), M = o(e3, "flipY", i3.flipY), P2 = h(e3, "interpolation", i3.interpolation), R = function(t4, e4, i4, s2) {
               if ("texture" === i4) {
                 var n2 = s2, r2 = void 0;
-                Array.isArray(s2) ? (n2 = s2[0], r2 = s2[1]) : s2.hasOwnProperty("value") ? (n2 = s2.value, Array.isArray(s2.value) ? (n2 = s2.value[0], r2 = s2.value[1]) : "string" == typeof s2.value && (n2 = s2.value)) : "string" == typeof s2 && (n2 = s2), t4.addFrame(e4, n2, r2, u(s2, "delay", x), h(s2, "duration", T), h(s2, "hold", S2), h(s2, "repeat", E2), h(s2, "repeatDelay", A3), o(s2, "flipX", _), o(s2, "flipY", M));
+                Array.isArray(s2) ? (n2 = s2[0], r2 = s2[1]) : s2.hasOwnProperty("value") ? (n2 = s2.value, Array.isArray(s2.value) ? (n2 = s2.value[0], r2 = s2.value[1]) : "string" == typeof s2.value && (n2 = s2.value)) : "string" == typeof s2 && (n2 = s2), t4.addFrame(e4, n2, r2, u(s2, "delay", x), h(s2, "duration", T), h(s2, "hold", S2), h(s2, "repeat", E2), h(s2, "repeatDelay", A4), o(s2, "flipX", _), o(s2, "flipY", M));
               } else {
-                var c2 = p(i4, s2), d2 = l(h(s2, "interpolation", P));
-                t4.add(e4, i4, c2.getEnd, c2.getStart, c2.getActive, a(h(s2, "ease", b), h(s2, "easeParams", w)), u(s2, "delay", x), h(s2, "duration", T), o(s2, "yoyo", C4), h(s2, "hold", S2), h(s2, "repeat", E2), h(s2, "repeatDelay", A3), o(s2, "flipX", _), o(s2, "flipY", M), d2, d2 ? s2 : null);
+                var c2 = p(i4, s2), d2 = l(h(s2, "interpolation", P2));
+                t4.add(e4, i4, c2.getEnd, c2.getStart, c2.getActive, a(h(s2, "ease", b), h(s2, "easeParams", w)), u(s2, "delay", x), h(s2, "duration", T), o(s2, "yoyo", C4), h(s2, "hold", S2), h(s2, "repeat", E2), h(s2, "repeatDelay", A4), o(s2, "flipX", _), o(s2, "flipY", M), d2, d2 ? s2 : null);
               }
-            }, L = new g(t3, m), O2 = 0; O2 < y.length; O2++) for (var F = y[O2].key, D = y[O2].value, I = 0; I < m.length; I++) "scale" !== F || m[I].hasOwnProperty("scale") ? R(L, I, F, D) : (R(L, I, "scaleX", D), R(L, I, "scaleY", D));
-            L.completeDelay = r(e3, "completeDelay", 0), L.loop = Math.round(r(e3, "loop", 0)), L.loopDelay = Math.round(r(e3, "loopDelay", 0)), L.paused = o(e3, "paused", false), L.persist = o(e3, "persist", false), L.callbackScope = h(e3, "callbackScope", L);
+            }, L2 = new g(t3, m), O2 = 0; O2 < y.length; O2++) for (var F2 = y[O2].key, D = y[O2].value, I = 0; I < m.length; I++) "scale" !== F2 || m[I].hasOwnProperty("scale") ? R(L2, I, F2, D) : (R(L2, I, "scaleX", D), R(L2, I, "scaleY", D));
+            L2.completeDelay = r(e3, "completeDelay", 0), L2.loop = Math.round(r(e3, "loop", 0)), L2.loopDelay = Math.round(r(e3, "loopDelay", 0)), L2.paused = o(e3, "paused", false), L2.persist = o(e3, "persist", false), L2.callbackScope = h(e3, "callbackScope", L2);
             for (var k = s.TYPES, B = 0; B < k.length; B++) {
               var N = k[B], U = f(e3, N, false);
               if (U) {
                 var X2 = f(e3, N + "Params", []);
-                L.setCallback(N, U, X2);
+                L2.setCallback(N, U, X2);
               }
             }
-            return L;
+            return L2;
           };
         }, 26012: (t2, e2, i2) => {
           var s = i2(70402), n = i2(23568), r = i2(57355), o = i2(62329), a = i2(35154), h = i2(8357), l = i2(43960);
@@ -25501,6 +25501,7 @@
     elephants: 4,
     ships: 4,
     settlers: 4,
+    leaders: 1,
     barbarianInfantry: 20,
     barbarianCavalry: 4,
     barbarianElephants: 4,
@@ -25524,7 +25525,7 @@
     elephant: { food: 2 },
     ship: { wood: 2 }
   };
-  var ARMY_TYPES = ["infantry", "cavalry", "elephant"];
+  var ARMY_TYPES = ["infantry", "cavalry", "elephant", "leader"];
   var RECRUIT_TYPES = ["infantry", "cavalry", "elephant", "settler", "ship"];
   var CLASH_BONUS = { infantry: 1, cavalry: 2 };
   var BUILDING_COST = { food: 1, wood: 1, ore: 1 };
@@ -25978,6 +25979,21 @@
       for (const y of [16.2, 19.4, 22.6, 25.8]) p.line(14.2, y, 17.8, y);
       p.fill(OUT).circle(11.6, 9.4, 1.3).circle(20.4, 9.4, 1.3);
     },
+    u_leader(p) {
+      const shoulders = [[2.8, 31.2], ...curve([2.8, 31.2], [3.6, 22], [16, 21.6], 8), ...curve([16, 21.6], [28.4, 22], [29.2, 31.2], 8)];
+      p.fill(LIGHT).stroke(1.7, OUT).poly(shoulders, "fs");
+      p.fill(SHADE).poly([[16, 26.4], [11.4, 22.2], [20.6, 22.2]]);
+      p.fill(WHITE).stroke(1.7, OUT).rect(13.4, 17.6, 5.2, 5.6, "fs", 1.2);
+      const face = [...curve([9.4, 8.6], [9.2, 21.6], [16, 22], 8), ...curve([16, 22], [22.8, 21.6], [22.6, 8.6], 8)];
+      p.fill(WHITE).stroke(1.8, OUT).poly(face, "fs");
+      p.fill(OUT).circle(13, 14.8, 1.2).circle(19, 14.8, 1.2);
+      p.stroke(1.3, INK).path(curve([13.2, 18.4], [16, 20.4], [18.8, 18.4], 6));
+      const crown = [[8.2, 10.8], [7.6, 2.6], [12, 6.4], [16, 1], [20, 6.4], [24.4, 2.6], [23.8, 10.8]];
+      p.fill(LIGHT).stroke(1.7, OUT).poly(crown, "fs");
+      p.fill(SHADE).rect(8.4, 8, 15.2, 2.8, "f");
+      p.stroke(1.7, OUT).line(8.2, 10.8, 23.8, 10.8);
+      p.fill(WHITE).stroke(1.2, OUT).circle(7.8, 2.8, 1.5, "fs").circle(16, 1.6, 1.5, "fs").circle(24.2, 2.8, 1.5, "fs");
+    },
     u_settler(p) {
       const wheel = (x, y, r) => {
         p.fill(WHITE).stroke(1.8, OUT).circle(x, y, r, "fs");
@@ -26207,6 +26223,7 @@
     u_infantry: [32, 32],
     u_cavalry: [32, 32],
     u_elephant: [32, 32],
+    u_leader: [32, 32],
     u_settler: [32, 32],
     u_ship: [32, 32],
     u_pirate: [32, 32],
@@ -27330,10 +27347,10 @@
     return DIRS.map(([dq, dr]) => key(q + dq, r + dr));
   }
   function distance(a, b) {
-    const A3 = typeof a === "string" ? parse(a) : a;
+    const A4 = typeof a === "string" ? parse(a) : a;
     const B = typeof b === "string" ? parse(b) : b;
-    const dq = A3.q - B.q;
-    const dr = A3.r - B.r;
+    const dq = A4.q - B.q;
+    const dr = A4.r - B.r;
     return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
   }
 
@@ -27418,6 +27435,7 @@
   var cargoAt = (s, k) => s.units.filter((u) => u.hex === k && u.type !== "ship");
   var shipCap = (s, p) => hasCivAdv(s, p, "longships") ? SHIP_CAPACITY + 1 : SHIP_CAPACITY;
   var owns = (s, p, adv) => s.players[p].advances.includes(adv);
+  var civOf = (s, p) => isNpc(p) ? null : s.players[p].civ ?? null;
   var hasCivAdv = (s, p, id) => !isNpc(p) && !!s.players[p].civAdv?.includes(id);
   var MAN_GOD = { nationalism: "dogma", totalitarianism: "devotion", absolute_power: "conversion", forced_labor: "fanaticism" };
   function hasAdv(s, p, adv) {
@@ -27435,10 +27453,31 @@
   var buildingsLeft = (s, p, type) => PIECE_LIMITS.buildings - s.cities.filter((c) => c.buildings[type] === p).length - (type === "obelisk" && !isNpc(p) ? s.players[p].runes || 0 : 0);
   var captivesOf = (s, owner, type) => s.players.reduce((n, pl) => n + (pl.captives || []).filter((c) => c.owner === owner && (!type || c.type === type)).length, 0);
   function unitsLeft(s, p, type) {
-    const limits = isPirate(p) ? { ship: PIECE_LIMITS.pirateShips } : p === BARBARIAN ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants } : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers };
+    const limits = isPirate(p) ? { ship: PIECE_LIMITS.pirateShips } : p === BARBARIAN ? { infantry: PIECE_LIMITS.barbarianInfantry, cavalry: PIECE_LIMITS.barbarianCavalry, elephant: PIECE_LIMITS.barbarianElephants } : { infantry: PIECE_LIMITS.infantry, cavalry: PIECE_LIMITS.cavalry, elephant: PIECE_LIMITS.elephants, ship: PIECE_LIMITS.ships, settler: PIECE_LIMITS.settlers, leader: PIECE_LIMITS.leaders };
     return limits[type] - s.units.filter((u) => u.owner === p && u.type === type).length - captivesOf(s, p, type);
   }
   var hexDistance = distance;
+  var leaderIdOf = (s, p) => isNpc(p) ? null : s.players[p].leader ?? null;
+  var leaderUnit = (s, p) => leaderIdOf(s, p) ? s.units.find((u) => u.owner === p && u.type === "leader") || null : null;
+  var hasLeader = (s, p, id) => leaderIdOf(s, p) === id && !!leaderUnit(s, p);
+  var leaderOf = (s, p, id) => leaderIdOf(s, p) === id ? leaderUnit(s, p) : null;
+  var leaderAt = (s, p, id, hex) => {
+    const u = leaderOf(s, p, id);
+    return !!u && u.hex === hex;
+  };
+  var leaderWithin = (s, p, id, hex, range) => {
+    const u = leaderOf(s, p, id);
+    return !!u && distance(u.hex, hex) <= range;
+  };
+  var leaderCity = (s, p, id) => {
+    const u = leaderOf(s, p, id);
+    const c = u ? cityAt(s, u.hex) : null;
+    return c && c.owner === p ? c : null;
+  };
+  var stackLimit = (s, p, hex, arriving = []) => {
+    const x = leaderOf(s, p, "xerxes");
+    return STACK_LIMIT + (x && (x.hex === hex || arriving.some((u) => u.id === x.id)) ? 1 : 0);
+  };
 
   // src/engine/rng.js
   function seedFromString(str) {
@@ -27491,6 +27530,10 @@
       p.civAdv ?? (p.civAdv = []);
       p.captives ?? (p.captives = []);
       p.runes ?? (p.runes = 0);
+      p.leader ?? (p.leader = null);
+      p.leaderLost ?? (p.leaderLost = []);
+      p.leaderCaptured ?? (p.leaderCaptured = []);
+      p.ericTokens ?? (p.ericTokens = []);
     }
     return s;
   }
@@ -27537,6 +27580,14 @@
       // Aztec Captives: { owner, type } of the Army units held (at most 4)
       runes: 0,
       // Runestones: Obelisk pieces kept as completed 1 VP Objectives
+      leader: null,
+      // id of the Leader in play (a Leader unit stands on the map while this is set)
+      leaderLost: [],
+      // ids of this player's Leaders that are gone for the game (dead, replaced or taken by an enemy)
+      leaderCaptured: [],
+      // { id, from }: enemy Leader cards this player holds for killing them (2 VP each)
+      ericTokens: [],
+      // Eric the Red: ids of the Regions holding one of this player's Culture tokens (1 VP each)
       stats: { battlesWon: 0, battlesLost: 0, citiesCaptured: 0, influenced: 0 }
     };
   }
@@ -27657,6 +27708,344 @@
     return JSON.parse(JSON.stringify(s));
   }
 
+  // src/engine/data/leaders.js
+  var L = (id, name, civ, a, b) => ({
+    id,
+    name,
+    civ,
+    abilities: [
+      { id: `${id}_a`, kind: a[0], text: a[1] },
+      { id: `${id}_b`, kind: b[0], text: b[1] }
+    ]
+  });
+  var P = (text) => ["passive", text];
+  var A3 = (text) => ["action", text];
+  var F = (text) => ["free", text];
+  var LEADERS = Object.fromEntries([
+    L(
+      "acamapichtli",
+      "Acamapichtli",
+      "aztecs",
+      P("When Increasing City Size in his city, Captives may be spent 1:1 as any resource."),
+      P("May use Tribute Empire in cities he is in, by paying 1 Captive rather than 2 Mood tokens.")
+    ),
+    L(
+      "ahuitzotl",
+      "Ahuitzotl",
+      "aztecs",
+      P("His Army may cancel a Hit after a combat roll on Regions with no Aztec cities (once per battle)."),
+      F("May sacrifice 2 Captives to Increase City Size in his city or build a Wonder in his city at no action cost (once per turn).")
+    ),
+    L(
+      "marqzen",
+      "Marqzen",
+      "aztecs",
+      P("After an Event (not the Event icon) reduces the Mood or the units in his city, he may reverse the Mood drop and take back any or all units."),
+      A3("May move an adjacent enemy player Land unit 1 space to a revealed Land space not adjacent to Marqzen (once per turn; it may not result in a battle).")
+    ),
+    L(
+      "hammurabi",
+      "Hammurabi",
+      "babylonia",
+      P("Increase Happiness: may improve his city directly to Happy by spending 1 Culture token."),
+      P("It costs no Food or Wood when building a Fortress to increase city size in his city.")
+    ),
+    L(
+      "nabopolassar",
+      "Nabopolassar",
+      "babylonia",
+      P("His Army gets +2 CV against players with an equal or greater number of cities."),
+      P("After any of your cities is captured, place a free Infantry with Nabopolassar.")
+    ),
+    L(
+      "nebuchadnezzar",
+      "Nebuchadnezzar II",
+      "babylonia",
+      P("May build the Great Gardens in his city even if unrevealed (take it from the deck). The cost is reduced by 1 Culture token and any 2 resources."),
+      P("His Army gets +2 CV when attacking cities with Temples.")
+    ),
+    L(
+      "hanno",
+      "Hanno",
+      "carthage",
+      F("May move with a group of Ships if they have not moved that turn and are not moved again that turn (once per turn)."),
+      P("His Ship gets +2 CV in naval battles.")
+    ),
+    L(
+      "dido",
+      "Queen Dido",
+      "carthage",
+      P("When with a founding unit, the unit can found a city at no activation cost."),
+      P("Her city gets +2 CV if attacked. After surviving a combat round, you may eliminate her to force the attack to cease. No VP are awarded for Dido this way.")
+    ),
+    L(
+      "hannibal",
+      "Hannibal",
+      "carthage",
+      P("He may reroll one combat die in the first combat round, and reroll it twice if his army has fewer units. The results of any rerolls must be kept."),
+      P("When Elephants are with him, his entire group may ignore the Mountain penalty when moving.")
+    ),
+    L(
+      "boudica",
+      "Queen Boudica",
+      "celts",
+      P("Her Army gets +2 CV against an army with more Warfare Advances."),
+      P("When she is with a Settler that founds a city, pay 1 Food to keep the Settler.")
+    ),
+    L(
+      "viriatus",
+      "Viriatus",
+      "celts",
+      P("After each combat round he survives against a player army: may pay 2 Mood tokens to force an enemy Army unit from the battle to move to an adjacent Land space with no cities, units or Leaders."),
+      P("May play Combat cards on behalf of Barbarians defending or attacking from settlements within 2 spaces of Viriatus.")
+    ),
+    L(
+      "vercingetorix",
+      "Vercingetorix",
+      "celts",
+      P("His Army gets +1 CV for each of your Settlers within 2 spaces."),
+      P("When building units in his city, you may deploy each of them directly on any revealed, adjacent Land space without enemy units, enemy cities or enemy Leaders.")
+    ),
+    L(
+      "qin",
+      "Qin Shi Huang",
+      "china",
+      P("May build the Great Wall in his city even if unrevealed (take it from the deck). The cost is reduced by 1 Culture token and any 2 resources."),
+      P("Pay 2 Culture tokens to cancel a hit from a combat roll (max 1 per battle).")
+    ),
+    L(
+      "wu_zetian",
+      "Empress Wu Zetian",
+      "china",
+      A3("Activate her city to buy an Agriculture Advance for 1 Culture token or 1 Mood token."),
+      P("Her Army gets +2 CV each round in which it has the most units.")
+    ),
+    L(
+      "sun_tzu",
+      "Sun Tzu",
+      "china",
+      A3("Activate a city he is in to buy a Warfare Advance for 1 Culture token or 1 Mood token instead of any Food."),
+      P("Gets 1 Culture token and 1 Mood token upon winning a battle against an army in one combat round (including Barbarians).")
+    ),
+    L(
+      "ramses",
+      "Ramses II",
+      "egypt",
+      P("Get 1 Culture token or 2 Ideas when building an Obelisk."),
+      P("His Army gets +2 CV against coastal cities and his Ships get +2 CV against Pirates.")
+    ),
+    L(
+      "cleopatra",
+      "Cleopatra",
+      "egypt",
+      P("The city she is in has +1 Cultural Influence Range."),
+      F("May pay and place 1 Culture token in her city (once per turn). To attack any city with tokens in it, the attacking player must first pay an equal amount of Culture tokens to remove them.")
+    ),
+    L(
+      "imhotep",
+      "Imhotep",
+      "egypt",
+      P("Get 1 Idea after his city is activated for any purpose other than Collect."),
+      P("It costs no Food or Wood when building an Observatory to increase city size in his city.")
+    ),
+    L(
+      "leonidas",
+      "Leonidas",
+      "greece",
+      P("Get a Culture token after using the Draft Advance in his city."),
+      P("In Land battles, gets +2 CV for each Army unit his army is outnumbered by.")
+    ),
+    L(
+      "pericles",
+      "Pericles",
+      "greece",
+      A3("Activate the city he is in to buy an Education Advance for 1 Culture token or 1 Mood token instead of any Food."),
+      P("His Ship gets +2 CV in naval battles.")
+    ),
+    L(
+      "alexander",
+      "Alexander the Great",
+      "greece",
+      P("He may play As an Action cards at no action cost by activating his city and paying 1 Culture token."),
+      P("His Army gets +1 CV for every Region that you have a city on (except your starting Region).")
+    ),
+    L(
+      "attila",
+      "Attila",
+      "huns",
+      P("Size 1 cities he is in act as one size larger when collecting or building units, unless they are Angry."),
+      P("In the first combat round, one Cavalry unit in his army also gains the Elephant ability to cancel hits.")
+    ),
+    L(
+      "rugila",
+      "Rugila",
+      "huns",
+      P("After he captures a city, get 2 Gold if there are any opponent cities (including Barbarians) within 2 spaces."),
+      P("Barbarian cities become Happy when he attacks and captures them.")
+    ),
+    L(
+      "bleda",
+      "Bleda",
+      "huns",
+      P("His city acts as Happy on its first activation, regardless of Mood."),
+      P("Opponent Fortresses cannot cancel hits against his army.")
+    ),
+    L(
+      "akbar",
+      "Akbar the Great",
+      "india",
+      P("Pay 2 Ore prior to a combat roll to have each of Akbar's Elephants add +1 CV every round until they are eliminated."),
+      P("Get 1 Gold whenever you move Akbar into one of your cities.")
+    ),
+    L(
+      "ashoka",
+      "Ashoka the Great",
+      "india",
+      P("His city may reroll Cultural Influence attempts if it has a Temple or if it tries to influence a Temple (once per turn)."),
+      P("Gets 1 Culture token when capturing a city, or 2 tokens if it has a Temple.")
+    ),
+    L(
+      "maharaja",
+      "Maharaja Sri Gupta",
+      "india",
+      F("Advance into a new category at no action cost by activating his city and paying 1 Culture token in addition to the resource cost."),
+      P("His Army adds 2 CV in any round in which he does not play a Combat card.")
+    ),
+    L(
+      "suiko",
+      "Empress Suiko",
+      "japan",
+      A3("Revert an influenced piece in her city (except Obelisks). It does not count as a Cultural Influence attempt. A Free Action if you have State Religion."),
+      P("+2 CV if defending.")
+    ),
+    L(
+      "go_toba",
+      "Emperor Go-Toba",
+      "japan",
+      P("Before rolling your combat dice: pay 1 Ore to give Go-Toba's army +2 CV for the rest of the battle."),
+      P("After using an Academy or Observatory to increase city size in his city, you may advance at no action cost.")
+    ),
+    L(
+      "jimmu",
+      "Emperor Jimmu",
+      "japan",
+      P("Your cities with Fortresses get +2 CV every round if they are within 2 spaces of Jimmu."),
+      P("After Jimmu has fought a battle, you may pay 1 Culture token to reclaim an Action card he spent during the battle.")
+    ),
+    L(
+      "wak",
+      "Wak Chanil Ajaw",
+      "maya",
+      P("Her Army gets +2 CV when it is within 2 spaces of any Maya city."),
+      P("After capturing a city: may remove 1 non-settlement city piece in your color and then increase city size in the city at no action cost and no resource cost.")
+    ),
+    L(
+      "siyaj_kak",
+      "Siyaj Kak",
+      "maya",
+      P("His Army gets a CV bonus equal to the size of the city he attacks (first combat round only)."),
+      P("After his city increases city size, you may make a Cultural Influence attempt from the city at no action cost.")
+    ),
+    L(
+      "pakal",
+      "K'inich Janaab' Pakal",
+      "maya",
+      P("When moving with Settlers only, he (and the group) may move 2 spaces per Move action (may be used together with Roads to ignore terrain)."),
+      P("A Culture token may be spent as any 2 resources when increasing city size in his city.")
+    ),
+    L(
+      "xerxes",
+      "Xerxes",
+      "persia",
+      P("His Army has a stacking limit of 5 (it may not play Combat cards until he has 4 or fewer Army units)."),
+      P("Wonders built in his city cost 2 fewer resources, Culture tokens, or a mix of both.")
+    ),
+    L(
+      "darius",
+      "Darius",
+      "persia",
+      P("Get 1 Mood token if his city succeeds a Cultural Influence attempt."),
+      F("May use 2 Culture tokens to increase city size in his city at no action cost (once per turn).")
+    ),
+    L(
+      "cyrus",
+      "Cyrus the Great",
+      "persia",
+      A3("Activate his city to get 1 Culture or Mood token for each Region with at least one of your cities (up to the size of his current city)."),
+      P("His Combat cards may count as +2 CV instead of their normal effect. Decide after cards are revealed but before any dice are rolled.")
+    ),
+    L(
+      "ithobaal",
+      "Ithobaal",
+      "phoenicia",
+      P("After he captures a city under his Cultural Influence, the city becomes Happy (after Spoils of War and Refugees)."),
+      P("His Army gets +2 CV when it is within 2 spaces of one of your cities with a Temple.")
+    ),
+    L(
+      "hiram",
+      "King Hiram",
+      "phoenicia",
+      P("When he is with a Ship or a Settler, it can establish a trade route that does not count towards the 4 trade routes limit."),
+      A3("Activate a city he is in to buy a Construction Advance for 1 Culture token or 1 Mood token instead of any Food.")
+    ),
+    L(
+      "pygmalion",
+      "Pygmalion",
+      "phoenicia",
+      P("One trade route traced from a Settler or a Ship he is with grants +1 Gold or +1 Culture token."),
+      P("If his city is attacked, cancel a received hit by paying 1 Culture token (once per battle). Reclaim the token if the battle is won.")
+    ),
+    L(
+      "caesar",
+      "Gaius Julius Caesar",
+      "rome",
+      F("Activate his city to perform an Increase Happiness (civic improvement) on it."),
+      P("After capturing a city, may pay 1 Gold to immediately build units (Recruit) at no action cost. Units built this way cannot be moved as part of the same Move action as the attack.")
+    ),
+    L(
+      "augustus",
+      "Emperor Augustus",
+      "rome",
+      A3("Activate his city to draw an Action or Objective card, then discard one of the same type (once per turn)."),
+      P("His Army gets +2 CV on Regions without your cities.")
+    ),
+    L(
+      "sulla",
+      "Sulla",
+      "rome",
+      P("His city cannot be the target of foreign Cultural Influence, and any Barbarian attack on cities within 2 spaces may be cancelled (even foreign cities)."),
+      P("Adds +2 CV against Barbarians.")
+    ),
+    L(
+      "ragnar",
+      "Ragnar Lodbrok",
+      "vikings",
+      P("Gets +2 Gold when capturing a non-Angry city."),
+      P("His Army gets +2 CV when attacking from a Ship.")
+    ),
+    L(
+      "eric",
+      "Eric the Red",
+      "vikings",
+      A3("While on a Ship, pay 1 Culture token and place it on his Region (max one per Region). Each counts as a 1 VP objective."),
+      F("Eric and any Land units on board Ships in the same space as him may move to an adjacent Land space.")
+    ),
+    L(
+      "cnut",
+      "Cnut the Great",
+      "vikings",
+      P("Scoring: his city awards 0.5 VP for every space it is away from the space of your starting city."),
+      A3("Activate a Happy city he is in to use Taxation (if you have it) at no Mood cost.")
+    )
+  ].map((l) => [l.id, l]));
+  var LEADER_ORDER = Object.keys(LEADERS);
+  var LEADERS_OF = {};
+  var _a;
+  for (const l of Object.values(LEADERS)) (LEADERS_OF[_a = l.civ] || (LEADERS_OF[_a] = [])).push(l.id);
+  var LEADER_RECRUIT_COST = { culture: 1, mood: 1 };
+  var LEADER_CAPTURE_VP = 2;
+  var ERIC_TOKEN_VP = 1;
+
   // src/engine/prompts.js
   function* choose(g, player, { kind = "choice", title, text = "", options, default: def, ...extra }) {
     if (!options.length) return null;
@@ -27726,7 +28115,9 @@
     const have = { ...pl.res };
     let moodHave = pl.mood;
     let cultureHave = pl.culture;
-    const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0 };
+    let captivesHave = opts.captives || 0;
+    let spare2 = 0;
+    const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0, captives: 0 };
     for (const r of ["ideas", "food", "wood", "ore"]) {
       let need = cost[r] || 0;
       if (!need) continue;
@@ -27758,6 +28149,22 @@
         moodHave -= use;
         spend.mood += use;
         need -= use;
+      }
+      if (need > 0 && captivesHave > 0) {
+        const use = Math.min(captivesHave, need);
+        captivesHave -= use;
+        spend.captives += use;
+        need -= use;
+      }
+      if (need > 0 && opts.cultureAs2) {
+        const rest = Math.min(spare2, need);
+        spare2 -= rest;
+        need -= rest;
+        const tokens = Math.min(cultureHave, Math.ceil(need / 2));
+        cultureHave -= tokens;
+        spend.culture += tokens;
+        spare2 += Math.max(0, 2 * tokens - need);
+        need = Math.max(0, need - 2 * tokens);
       }
       if (need > 0) return null;
     }
@@ -27809,6 +28216,14 @@
       if (k === "mood" || k === "culture") pl[k] -= n;
       else pl.res[k] -= n;
     }
+    for (let i = 0; i < (plan.captives || 0); i++) spendCaptive(g, p);
+  }
+  function spendCaptive(g, p) {
+    const list = g.s.players[p].captives;
+    const at = list.findIndex((c) => c.owner === BARBARIAN);
+    const [gone] = list.splice(at < 0 ? 0 : at, 1);
+    g.emit({ type: "sacrifice", player: p, unit: gone.type, from: gone.owner });
+    return gone;
   }
   function pay(g, p, cost, opts) {
     const plan = planPayment(g.s, p, cost, opts);
@@ -27834,16 +28249,38 @@
     g.s.units.push(u);
     return u;
   }
-  function removeUnits(g, ids) {
+  function removeUnits(g, ids, { by = null } = {}) {
     const set = new Set(ids);
+    const leaders2 = g.s.units.filter((u) => set.has(u.id) && u.type === "leader");
     g.s.units = g.s.units.filter((u) => !set.has(u.id));
     if (g.s.turn) for (const id of set) delete g.s.turn.unitFlags[id];
+    for (const u of leaders2) leaderGone(g, u.owner, by);
+  }
+  function leaderGone(g, owner, by = null) {
+    const s = g.s;
+    const pl = s.players[owner];
+    const id = pl && pl.leader;
+    if (!id) return null;
+    pl.leader = null;
+    pl.leaderLost.push(id);
+    const taken = by !== null && by !== void 0 && !isNpc(by) && by !== owner;
+    if (taken) s.players[by].leaderCaptured.push({ id, from: owner });
+    if (id === "cleopatra") {
+      for (const c of s.cities) if (c.owner === owner) delete c.beloved;
+    }
+    g.emit({ type: "leader_lost", player: owner, leader: id, by: taken ? by : null });
+    g.log(`${g.name(owner)} loses ${LEADERS[id].name}${taken ? `, who is taken by ${g.name(by)}` : ""}.`);
+    if (hasCivAdv(s, owner, "embalming")) {
+      gainRes(g, owner, { culture: 1 });
+      g.log(`${g.name(owner)} gains 1 culture (Embalming).`);
+    }
+    return id;
   }
   function unitFlags(g, id) {
-    var _a;
+    var _a2;
     const t = g.s.turn;
     if (!t) return {};
-    return (_a = t.unitFlags)[id] || (_a[id] = {});
+    return (_a2 = t.unitFlags)[id] || (_a2[id] = {});
   }
   function ensureDeck(g, deck) {
     const d = g.s.decks;
@@ -27952,11 +28389,13 @@
     const got = gainRes(g, p, { ideas: 1 });
     if (got.ideas) g.log(`${g.name(p)} gains 1 idea (Formal Training).`);
   }
-  function sizePay(s, p, building = null) {
+  function sizePay(s, p, building = null, city = null) {
     const opts = {};
     if (hasCivAdv(s, p, "architecture")) opts.moodFor = true;
     else if (hasCivAdv(s, p, "slave_economy")) opts.moodFor = "resources";
     if (building === "temple" && hasCivAdv(s, p, "ziggurats")) opts.ideasFor = true;
+    if (city && leaderAt(s, p, "acamapichtli", city.hex)) opts.captives = s.players[p].captives.length;
+    if (city && leaderAt(s, p, "pakal", city.hex)) opts.cultureAs2 = true;
     return opts;
   }
   function* stelaBonus(g, p) {
@@ -28034,13 +28473,6 @@
     });
     gainRes(g, p, pick === "culture" ? { culture: 1 } : { ideas: 1 });
     g.log(`${g.name(p)} gains ${pick === "culture" ? "1 culture" : "1 idea"} (Star Catalogs).`);
-  }
-  function spendCaptive(g, p) {
-    const list = g.s.players[p].captives;
-    const at = list.findIndex((c) => c.owner === BARBARIAN);
-    const [gone] = list.splice(at < 0 ? 0 : at, 1);
-    g.emit({ type: "sacrifice", player: p, unit: gone.type, from: gone.owner });
-    return gone;
   }
   function* sacrificeForEvent(g, p, cardId) {
     const s = g.s;
@@ -28291,7 +28723,8 @@
   function* eventMoodLoss(g, p, city, { to = null } = {}) {
     const s = g.s;
     if (city.mood === "angry") return false;
-    if (hasAdv(s, p, "myths") && canPay(s, p, { mood: 1 })) {
+    const marqzen = leaderCity(s, city.owner, "marqzen") === city;
+    if (!marqzen && hasAdv(s, p, "myths") && canPay(s, p, { mood: 1 })) {
       const protect = yield* confirm(g, p, {
         kind: "myths",
         title: "Myths",
@@ -28306,10 +28739,47 @@
         return false;
       }
     }
+    const was = city.mood;
     if (to === "angry") city.mood = "angry";
     else moodDown(city, 1);
     g.emit({ type: "mood", city: city.id });
+    if (marqzen) {
+      const undo = yield* confirm(g, city.owner, {
+        kind: "marqzen",
+        title: "Marqzen",
+        text: `The Event lowers the Mood of the city at ${city.hex}. Reverse it?`,
+        yes: "Reverse the Mood drop",
+        no: "Accept it",
+        default: true
+      });
+      if (undo) {
+        city.mood = was;
+        g.emit({ type: "mood", city: city.id });
+        g.log(`${g.name(city.owner)} reverses the Mood drop of the city at ${city.hex} (Marqzen).`);
+        return false;
+      }
+    }
     return true;
+  }
+  function* eventUnitLoss(g, p, ids) {
+    const s = g.s;
+    const city = leaderCity(s, p, "marqzen");
+    const here = city ? ids.filter((id) => {
+      const u = unitById(s, id);
+      return !!u && u.owner === p && u.hex === city.hex;
+    }) : [];
+    if (!here.length) return ids;
+    const keep = yield* chooseMany(g, p, {
+      kind: "marqzen_units",
+      title: "Marqzen",
+      text: `The Event takes units from the city at ${city.hex}. Take back any of them?`,
+      options: here.map((id) => ({ id, label: `Take back the ${unitById(s, id).type}` })),
+      min: 0,
+      max: here.length,
+      default: here
+    });
+    if (keep.length) g.log(`${g.name(p)} takes back ${keep.length === 1 ? "a unit" : `${keep.length} units`} (Marqzen).`);
+    return ids.filter((id) => !keep.includes(id));
   }
   function* pickCity(g, p, cities, { title, text, prefer = "smallest" }) {
     if (!cities.length) return null;
@@ -28478,10 +28948,10 @@
 
   // src/engine/civCombat.js
   function noteLoss(s, res, owner, ids) {
-    var _a;
+    var _a2;
     for (const id of ids) {
       const u = unitById(s, id);
-      if (u && u.type !== "ship" && u.type !== "settler") ((_a = res.lost)[owner] || (_a[owner] = [])).push(u.type);
+      if (u && u.type !== "ship" && u.type !== "settler" && u.type !== "leader") ((_a2 = res.lost)[owner] || (_a2[owner] = [])).push(u.type);
     }
   }
   function tribalWarfare(s, p, foe, hex) {
@@ -28490,11 +28960,11 @@
   }
   function battleSpoils(g, res) {
     const s = g.s;
-    const { attacker: A3, defender: D, winner } = res;
+    const { attacker: A4, defender: D, winner } = res;
     const land = res.domain === "land";
     const win = winner !== null && !isNpc(winner) ? winner : null;
     if (land && win !== null && hasCivAdv(s, win, "captives")) {
-      const foe = win === A3 ? D : A3;
+      const foe = win === A4 ? D : A4;
       let taken = 0;
       for (const type of res.lost[foe] || []) {
         if (!addCaptive(g, win, foe, type)) break;
@@ -28502,7 +28972,7 @@
       }
       if (taken) g.log(`${g.name(win)} keeps ${taken} defeated ${taken === 1 ? "unit" : "units"} as Captives.`);
     }
-    for (const [p, lost] of [[A3, res.atkLost], [D, res.defLost]]) {
+    for (const [p, lost] of [[A4, res.atkLost], [D, res.defLost]]) {
       if (isNpc(p)) continue;
       const pl = s.players[p];
       if (hasCivAdv(s, p, "embalming") && pl.culture <= 4) {
@@ -28521,15 +28991,408 @@
     }
   }
 
+  // src/engine/leaders.js
+  function leadersAvailable(s, p) {
+    const civ = civOf(s, p);
+    if (!s.civs || !civ) return [];
+    const pl = s.players[p];
+    return (LEADERS_OF[civ] || []).filter((id) => id !== pl.leader && !pl.leaderLost.includes(id));
+  }
+  function placeLeader(g, p, id, hex) {
+    const old = leaderUnit(g.s, p);
+    if (old) removeUnits(g, [old.id]);
+    const unit = addUnitTo(g, p, "leader", hex);
+    g.s.players[p].leader = id;
+    g.emit({ type: "leader", player: p, leader: id, hex });
+    g.log(`${g.name(p)} recruits ${LEADERS[id].name}.`);
+    return unit;
+  }
+  var regionOf = (s, hex) => s.map.hexes[hex].region;
+  var regionsWithCities = (s, p) => new Set(citiesOf(s, p).map((c) => regionOf(s, c.hex)));
+  var startRegion = (s, p) => s.map.regions.find((r) => r.home === p)?.id ?? null;
+
+  // src/engine/leaderCombat.js
+  var newState = (s, ctx) => ({
+    lead: { A: leaderIn(s, ctx, "A"), D: leaderIn(s, ctx, "D") },
+    goToba: { A: false, D: false },
+    akbar: { A: [], D: [] },
+    qin: { A: false, D: false },
+    pygmalion: { A: false, D: false },
+    ahuitzotl: { A: false, D: false },
+    spent: { A: [], D: [] }
+  });
+  var ownerOf = (ctx, side) => side === "A" ? ctx.attacker : ctx.defender;
+  var foeOf = (ctx, side) => side === "A" ? ctx.defender : ctx.attacker;
+  var warfare = (s, p) => s.players[p].advances.filter((id) => ADVANCES[id].group === "warfare").length;
+  function leaderIn(s, ctx, side) {
+    const owner = ownerOf(ctx, side);
+    const u = leaderUnit(s, owner);
+    if (!u) return null;
+    const inside = ctx.domain === "land" ? side === "A" ? ctx.units.includes(u.id) : u.hex === ctx.hex : side === "A" ? (ctx.carried || []).includes(u.id) : u.hex === ctx.hex;
+    return inside ? s.players[owner].leader : null;
+  }
+  var noCards = (s, ctx, side, ids) => ctx.domain === "land" && leaderIn(s, ctx, side) === "xerxes" && ids.length > 4;
+  function cardHelper(s, ctx, side) {
+    if (ctx.domain !== "land" || ownerOf(ctx, side) !== BARBARIAN) return null;
+    const foe = foeOf(ctx, side);
+    const spot2 = side === "D" ? ctx.hex : ctx.from;
+    const city = spot2 ? cityAt(s, spot2) : null;
+    if (!city || city.owner !== BARBARIAN) return null;
+    const seat = s.players.find((pl) => pl.idx !== foe && leaderWithin(s, pl.idx, "viriatus", spot2, 2));
+    return seat ? seat.idx : null;
+  }
+  function roundBonus(s, ctx, st, side, round, ids, foeIds, { played = false, defCity = null } = {}) {
+    const owner = ownerOf(ctx, side);
+    const foe = foeOf(ctx, side);
+    const land = ctx.domain === "land";
+    const attacking = side === "A";
+    const hex = ctx.hex;
+    const parts = [];
+    const add = (label, cv) => {
+      if (cv > 0) parts.push({ label, cv });
+    };
+    const id = leaderIn(s, ctx, side);
+    const me = id ? leaderUnit(s, owner) : null;
+    const name = id ? LEADERS[id].name : "";
+    const player = !isNpc(foe);
+    const near = (range, pred) => s.cities.some((c) => pred(c) && hexDistance(c.hex, hex) <= range);
+    if (id && !land) {
+      if (id === "hanno" || id === "pericles") add(name, 2);
+      if (id === "ramses" && foe === PIRATE) add(name, 2);
+    }
+    if (id && land) {
+      const own = regionsWithCities(s, owner);
+      switch (id) {
+        case "nabopolassar":
+          if (player && citiesOf(s, foe).length >= citiesOf(s, owner).length) add(name, 2);
+          break;
+        case "nebuchadnezzar":
+          if (attacking && defCity && hasBuilding(defCity, "temple")) add(name, 2);
+          break;
+        case "dido":
+          if (!attacking && defCity) add(name, 2);
+          break;
+        case "boudica":
+          if (player && warfare(s, foe) > warfare(s, owner)) add(name, 2);
+          break;
+        case "vercingetorix":
+          add(name, unitsOf(s, owner, "settler").filter((u) => hexDistance(u.hex, me.hex) <= 2).length);
+          break;
+        case "wu_zetian":
+          if (ids.length > foeIds.length) add(name, 2);
+          break;
+        case "ramses":
+          if (attacking && defCity && seaNbrs(s, hex).length) add(name, 2);
+          break;
+        case "leonidas":
+          add(name, 2 * Math.max(0, foeIds.length - ids.length));
+          break;
+        case "alexander":
+          add(name, own.size - (own.has(startRegion(s, owner)) ? 1 : 0));
+          break;
+        case "maharaja":
+          if (!played) add(name, 2);
+          break;
+        case "suiko":
+          if (!attacking) add(name, 2);
+          break;
+        case "wak":
+          if (near(2, (c) => c.owner === owner)) add(name, 2);
+          break;
+        case "siyaj_kak":
+          if (attacking && round === 1 && defCity) add(name, citySize(defCity));
+          break;
+        case "ithobaal":
+          if (near(2, (c) => c.owner === owner && hasBuilding(c, "temple"))) add(name, 2);
+          break;
+        case "augustus":
+          if (!own.has(regionOf(s, hex))) add(name, 2);
+          break;
+        case "sulla":
+          if (foe === BARBARIAN) add(name, 2);
+          break;
+        case "ragnar":
+          if (attacking && ctx.landed) add(name, 2);
+          break;
+        default:
+      }
+    }
+    if (land) {
+      if (st.goToba[side]) add(LEADERS.go_toba.name, 2);
+      add(LEADERS.akbar.name, ids.filter((x) => st.akbar[side].includes(x)).length);
+    }
+    if (land && !attacking && defCity && hasBuilding(defCity, "fortress") && leaderWithin(s, owner, "jimmu", hex, 2)) {
+      add(LEADERS.jimmu.name, 2);
+    }
+    return parts;
+  }
+  function* beforeRoll(g, ctx, st, side, ids) {
+    const s = g.s;
+    if (ctx.domain !== "land") return;
+    const owner = ownerOf(ctx, side);
+    const id = leaderIn(s, ctx, side);
+    if (id === "go_toba" && !st.goToba[side] && canPay(s, owner, { ore: 1 })) {
+      const yes = yield* confirm(g, owner, {
+        kind: "go_toba",
+        title: "Emperor Go-Toba",
+        text: "Pay 1 Ore for +2 CV in every round of this battle from now on?",
+        yes: "Pay 1 Ore (+2 CV)",
+        no: "No",
+        default: true
+      });
+      if (yes) {
+        applyPayment(g, owner, planPayment(s, owner, { ore: 1 }));
+        st.goToba[side] = true;
+        g.log(`${g.name(owner)} pays 1 Ore: Go-Toba's army adds +2 CV for the rest of the battle.`);
+      }
+    }
+    if (id === "akbar" && !st.akbar[side].length) {
+      const elephants = ids.filter((x) => unitById(s, x)?.type === "elephant");
+      if (elephants.length && canPay(s, owner, { ore: 2 })) {
+        const yes = yield* confirm(g, owner, {
+          kind: "akbar",
+          title: "Akbar the Great",
+          text: `Pay 2 Ore: each of your ${elephants.length === 1 ? "Elephant adds" : `${elephants.length} Elephants add`} +1 CV every round until eliminated?`,
+          yes: "Pay 2 Ore",
+          no: "No",
+          default: true
+        });
+        if (yes) {
+          applyPayment(g, owner, planPayment(s, owner, { ore: 2 }));
+          st.akbar[side] = elephants;
+          g.log(`${g.name(owner)} pays 2 Ore: Akbar's Elephants add +1 CV each.`);
+        }
+      }
+    }
+  }
+  function* cyrusCard(g, owner, card, foeCard) {
+    const weak = ["incentive", "flanking", "defection"];
+    return yield* confirm(g, owner, {
+      kind: "cyrus",
+      title: "Cyrus the Great",
+      text: `${foeCard ? `The enemy plays ${ACTION_CARDS[foeCard].name}. ` : ""}Count ${ACTION_CARDS[card].name} as +2 CV instead of its normal effect?`,
+      yes: "+2 CV",
+      no: "Normal effect",
+      default: weak.includes(ACTION_CARDS[card].combat)
+    });
+  }
+  function* hannibalPick(g, owner, dice, again) {
+    const cand = dice.map((d, i) => ({ d, i })).filter(({ i }) => again === null || i === again);
+    if (!cand.length) return -1;
+    const low = cand.filter(({ d }) => !d.ignored).reduce((a, b) => !a || b.d.v < a.d.v ? b : a, null);
+    const options = [
+      { id: "none", label: "Keep the roll" },
+      ...cand.map(({ d, i }) => ({ id: String(i), label: again === null ? `Reroll the ${d.v}` : `Reroll the ${d.v} again`, die: i }))
+    ];
+    const ans = yield* choose(g, owner, {
+      kind: "hannibal",
+      title: "Hannibal",
+      text: again === null ? "Reroll one of your dice? The new result must be kept." : "His army is outnumbered: reroll that die once more? The new result must be kept.",
+      options,
+      default: low && low.d.v <= 3 ? String(low.i) : "none",
+      dice: dice.map((d) => ({ v: d.v, icon: d.icon }))
+    });
+    const n = Number(ans);
+    return ans !== "none" && cand.some((c) => c.i === n) ? n : -1;
+  }
+  function* cancelHits(g, ctx, st, side, hits, defCity) {
+    const s = g.s;
+    const none = { cut: 0, notes: [] };
+    const id = leaderIn(s, ctx, side);
+    if (!id || ctx.domain !== "land" || hits <= 0) return none;
+    const owner = ownerOf(ctx, side);
+    let cut = 0;
+    const notes = [];
+    if (id === "ahuitzotl" && !st.ahuitzotl[side] && !regionsWithCities(s, owner).has(regionOf(s, ctx.hex))) {
+      st.ahuitzotl[side] = true;
+      cut += 1;
+      notes.push(`${LEADERS.ahuitzotl.name}'s army cancels a hit.`);
+    }
+    if (id === "pygmalion" && side === "D" && defCity && !st.pygmalion[side] && hits - cut > 0 && canPay(s, owner, { culture: 1 }, { noArena: true })) {
+      const yes = yield* confirm(g, owner, {
+        kind: "pygmalion",
+        title: "Pygmalion",
+        text: "Pay 1 Culture to cancel a hit on your city? You get the token back if you win the battle.",
+        yes: "Pay 1 Culture",
+        no: "No",
+        default: s.players[owner].culture >= 2
+      });
+      if (yes) {
+        applyPayment(g, owner, planPayment(s, owner, { culture: 1 }, { noArena: true }));
+        st.pygmalion[side] = true;
+        cut += 1;
+        notes.push(`${g.name(owner)} pays 1 Culture: Pygmalion cancels a hit.`);
+      }
+    }
+    if (id === "qin" && !st.qin[side] && hits - cut > 0 && canPay(s, owner, { culture: 2 }, { noArena: true })) {
+      const yes = yield* confirm(g, owner, {
+        kind: "qin",
+        title: "Qin Shi Huang",
+        text: "Pay 2 Culture to cancel a hit (once per battle)?",
+        yes: "Pay 2 Culture",
+        no: "No",
+        default: s.players[owner].culture >= 4
+      });
+      if (yes) {
+        applyPayment(g, owner, planPayment(s, owner, { culture: 2 }, { noArena: true }));
+        st.qin[side] = true;
+        cut += 1;
+        notes.push(`${g.name(owner)} pays 2 Culture: Qin Shi Huang cancels a hit.`);
+      }
+    }
+    for (const line of notes) g.log(line);
+    return { cut, notes };
+  }
+  function* viriatusPush(g, ctx, side) {
+    const s = g.s;
+    if (ctx.domain !== "land" || leaderIn(s, ctx, side) !== "viriatus") return;
+    const owner = ownerOf(ctx, side);
+    const foe = foeOf(ctx, side);
+    if (isNpc(foe) || !canPay(s, owner, { mood: 2 })) return;
+    const free = nbrs(s, ctx.hex).filter((k) => isLand(s, k) && !cityAt(s, k) && !unitsAt(s, k).length);
+    if (!free.length) return;
+    const foes = side === "A" ? armyAt(s, ctx.hex, foe) : ctx.units.map((id) => unitById(s, id)).filter(Boolean);
+    const own = side === "A" ? ctx.units.filter((id) => unitById(s, id)).length : armyAt(s, ctx.hex, owner).length;
+    if (!foes.length) return;
+    const rank = { elephant: 3, cavalry: 2, infantry: 1, leader: 0 };
+    const targets = foes.slice().sort((a, b) => (rank[b.type] ?? 0) - (rank[a.type] ?? 0));
+    const pick = yield* choose(g, owner, {
+      kind: "viriatus",
+      title: "Viriatus",
+      text: "Pay 2 Mood to force an enemy Army unit to leave the battle and move to an empty land space next to it?",
+      options: [
+        { id: "none", label: "No" },
+        ...targets.map((u) => ({ id: u.id, label: `Force ${u.type === "leader" ? "the Leader" : `${/^[aeiou]/.test(u.type) ? "an" : "a"} ${u.type}`} away (2 Mood)`, unit: u.id }))
+      ],
+      default: foes.length > own && s.players[owner].mood >= 3 ? targets[0].id : "none"
+    });
+    const unit = targets.find((u) => u.id === pick);
+    if (!unit) return;
+    const to = yield* choose(g, owner, {
+      kind: "pick_hex",
+      title: "Viriatus",
+      text: "Choose the empty land space the unit retreats to.",
+      options: free.map((k) => ({ id: k, label: k, hex: k })),
+      default: free[0]
+    });
+    const dest = free.includes(to) ? to : free[0];
+    applyPayment(g, owner, planPayment(s, owner, { mood: 2 }));
+    const from = unit.hex;
+    unit.hex = dest;
+    if (side === "D") ctx.units.splice(ctx.units.indexOf(unit.id), 1);
+    g.emit({ type: "move", player: foe, units: [unit.id], from, to: dest });
+    g.log(`${g.name(owner)} pays 2 Mood: Viriatus drives ${g.name(foe)}'s ${unit.type} out of the battle.`);
+  }
+  function* didoStops(g, ctx, defCity) {
+    const s = g.s;
+    if (!defCity || ctx.domain !== "land" || leaderIn(s, ctx, "D") !== "dido") return false;
+    const owner = ctx.defender;
+    const queen = leaderUnit(s, owner);
+    const others = armyAt(s, ctx.hex, owner).length - 1;
+    const yes = yield* confirm(g, owner, {
+      kind: "dido",
+      title: "Queen Dido",
+      text: "Eliminate Dido to make the attack cease? Nobody scores any VP for her.",
+      yes: "Eliminate Dido",
+      no: "Fight on",
+      default: others <= 0
+    });
+    if (!yes) return false;
+    removeUnits(g, [queen.id]);
+    g.log(`${g.name(owner)} sacrifices Queen Dido: the attack on the city ceases.`);
+    return true;
+  }
+  function* afterBattle(g, ctx, res, st) {
+    const s = g.s;
+    if (ctx.domain !== "land") return;
+    for (const side of ["A", "D"]) {
+      const owner = ownerOf(ctx, side);
+      if (isNpc(owner)) continue;
+      const won = res.winner === owner;
+      if (st.pygmalion[side] && won) {
+        gainRes(g, owner, { culture: 1 });
+        g.log(`${g.name(owner)} gets the Culture back: Pygmalion's city was held.`);
+      }
+      const opposed = side === "A" ? res.defStart > 0 : res.atkStart > 0;
+      if (won && opposed && !res.auto && res.rounds === 1 && leaderIn(s, ctx, side) === "sun_tzu") {
+        gainRes(g, owner, { culture: 1, mood: 1 });
+        g.log(`${g.name(owner)} gains 1 Culture and 1 Mood: Sun Tzu wins in a single round.`);
+      }
+      if (st.lead[side] === "jimmu" && st.spent[side].length && canPay(s, owner, { culture: 1 }, { noArena: true })) {
+        const pile = s.decks.actionDiscard;
+        const cards = [...new Set(st.spent[side])].filter((c) => pile.includes(c));
+        if (!cards.length) continue;
+        const pick = yield* choose(g, owner, {
+          kind: "jimmu",
+          title: "Emperor Jimmu",
+          text: "Pay 1 Culture to take back an Action card spent in the battle?",
+          options: [{ id: "none", label: "No" }, ...cards.map((c) => ({ id: c, label: `${ACTION_CARDS[c].name} (1 Culture)`, card: c }))],
+          default: s.players[owner].culture >= 2 ? cards[0] : "none"
+        });
+        if (!cards.includes(pick)) continue;
+        applyPayment(g, owner, planPayment(s, owner, { culture: 1 }, { noArena: true }));
+        pile.splice(pile.lastIndexOf(pick), 1);
+        s.players[owner].hand.action.push(pick);
+        g.log(`${g.name(owner)} pays 1 Culture and takes ${ACTION_CARDS[pick].name} back (Jimmu).`);
+      }
+    }
+  }
+  var captureSnapshot = (s, city, by) => ({
+    angry: city.mood === "angry",
+    temple: hasBuilding(city, "temple"),
+    barbarian: city.owner === BARBARIAN,
+    influenced: !isNpc(by) && Object.values(city.buildings).includes(by)
+  });
+  function nabopolassarRaises(g, old) {
+    const s = g.s;
+    const u = !isNpc(old) ? leaderUnit(s, old) : null;
+    if (!u || s.players[old].leader !== "nabopolassar") return;
+    if (unitsLeft(s, old, "infantry") <= 0 || armyAt(s, u.hex, old).length >= stackLimit(s, old, u.hex)) return;
+    addUnitTo(g, old, "infantry", u.hex);
+    g.log(`${g.name(old)} places a free Infantry with Nabopolassar.`);
+  }
+  function captureRewards(g, city, by, snap, destroyed) {
+    const s = g.s;
+    if (isNpc(by)) return;
+    const at = (id) => leaderAt(s, by, id, city.hex);
+    if (at("ashoka")) {
+      gainRes(g, by, { culture: snap.temple ? 2 : 1 });
+      g.log(`${g.name(by)} gains ${snap.temple ? 2 : 1} Culture: Ashoka takes a city${snap.temple ? " with a Temple" : ""}.`);
+    }
+    if (at("rugila")) {
+      if (s.cities.some((c) => c.owner !== by && hexDistance(c.hex, city.hex) <= 2)) {
+        gainRes(g, by, { gold: 2 });
+        g.log(`${g.name(by)} gains 2 Gold: Rugila has more enemy cities to plunder near the captured one.`);
+      }
+      if (snap.barbarian && !destroyed) {
+        city.mood = "happy";
+        g.log("The Barbarian city becomes Happy under Rugila.");
+      }
+    }
+    if (at("ragnar") && !snap.angry) {
+      gainRes(g, by, { gold: 2 });
+      g.log(`${g.name(by)} gains 2 Gold: Ragnar captures a city that was not Angry.`);
+    }
+    if (at("ithobaal") && snap.influenced && !destroyed) {
+      city.mood = "happy";
+      g.log("The captured city, once under his influence, becomes Happy (Ithobaal).");
+    }
+  }
+
   // src/engine/combat.js
   var MAX_ROUNDS = 40;
-  var ARMY_NAMES = { infantry: ["Infantry", "Infantry"], cavalry: ["Cavalry", "Cavalry"], elephant: ["Elephant", "Elephants"] };
-  var CASUALTY_ORDER = ["infantry", "cavalry", "elephant"];
-  var LEAVE_ORDER = { settler: 0, infantry: 1, cavalry: 2, elephant: 3 };
-  var LEFT_BEHIND = { settler: "a Settler", infantry: "an Infantry", cavalry: "a Cavalry", elephant: "an Elephant" };
+  var ARMY_NAMES = {
+    infantry: ["Infantry", "Infantry"],
+    cavalry: ["Cavalry", "Cavalry"],
+    elephant: ["Elephant", "Elephants"],
+    leader: ["Leader", "Leaders"]
+  };
+  var CASUALTY_ORDER = ["infantry", "cavalry", "elephant", "leader"];
+  var LEAVE_ORDER = { settler: 0, infantry: 1, cavalry: 2, elephant: 3, leader: 4 };
+  var LEFT_BEHIND = { settler: "a Settler", infantry: "an Infantry", cavalry: "a Cavalry", elephant: "an Elephant", leader: "the Leader" };
   var effectOfCard = (cardId) => ACTION_CARDS[cardId].combat;
   function combatCardOptions(g, p, ctx, role, info) {
-    if (isNpc(p) || !hasAdv(g.s, p, "tactics") || info.units <= 0) return [];
+    if (isNpc(p) || !hasAdv(g.s, p, "tactics") || info.units <= 0 || info.noCards) return [];
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     for (const id of g.s.players[p].hand.action) {
@@ -28564,13 +29427,40 @@
     const clash = (type) => Math.min(dice.filter((d) => d.icon === type).length, army[type] || 0) * CLASH_BONUS[type];
     return { sum, bonus: clash("infantry"), cavalry: clash("cavalry"), elephants: spent.length };
   }
+  function settleLeaders(s, dice, army) {
+    let spare2 = (army.leader || 0) - dice.filter((d) => d.leader).length;
+    for (const d of dice) {
+      if (spare2 <= 0) return;
+      if (d.icon !== "leader" || d.leader) continue;
+      let again;
+      do
+        again = rollDie(s);
+      while (again[1] === "leader");
+      [d.v, d.icon] = again;
+      d.leader = true;
+      spare2 -= 1;
+    }
+  }
+  var scoreRoll = (s, dice, army) => {
+    settleLeaders(s, dice, army);
+    return scoreDice(dice, army);
+  };
   function rollSide(s, count, army) {
     const dice = [];
     for (let i = 0; i < count; i++) {
       const [v, icon2] = rollDie(s);
       dice.push({ v, icon: icon2 });
     }
-    return { dice, ...scoreDice(dice, army) };
+    return { dice, ...scoreRoll(s, dice, army) };
+  }
+  function rerollAt(s, roll3, at, army) {
+    const leader = !!roll3.dice[at].leader;
+    let again;
+    do
+      again = rollDie(s);
+    while (leader && again[1] === "leader");
+    roll3.dice[at] = leader ? { v: again[0], icon: again[1], leader: true } : { v: again[0], icon: again[1] };
+    Object.assign(roll3, scoreRoll(s, roll3.dice, army));
   }
   function rerollHighest(s, roll3, army) {
     if (!roll3.dice.length) return null;
@@ -28581,13 +29471,11 @@
       if (d.v > best2.v || d.v === best2.v && counts(d) > counts(best2)) at = i;
     });
     const from = roll3.dice[at].v;
-    const [v, icon2] = rollDie(s);
-    roll3.dice[at] = { v, icon: icon2 };
-    Object.assign(roll3, scoreDice(roll3.dice, army));
-    return { from, to: v };
+    rerollAt(s, roll3, at, army);
+    return { from, to: roll3.dice[at].v };
   }
   function armyIn(s, ids) {
-    const n = { infantry: 0, cavalry: 0, elephant: 0 };
+    const n = { infantry: 0, cavalry: 0, elephant: 0, leader: 0 };
     for (const id of ids) {
       const u = unitById(s, id);
       if (u && u.type in n) n[u.type] += 1;
@@ -28636,11 +29524,11 @@
     return groups.flatMap((x, i) => x.ids.slice(0, pick[i]));
   }
   function tally(res, owner, kind, n = 1) {
-    var _a;
-    const k = (_a = res.kills)[owner] || (_a[owner] = { army: 0, settlers: 0, ships: 0 });
+    var _a2;
+    const k = (_a2 = res.kills)[owner] || (_a2[owner] = { army: 0, settlers: 0, ships: 0 });
     k[kind] += n;
   }
-  function trimCargo(g, hex) {
+  function trimCargo(g, hex, killers = {}) {
     const s = g.s;
     if (!hex || s.map.hexes[hex].terrain !== "sea") return [];
     const lost = [];
@@ -28651,13 +29539,13 @@
       if (cargo.length <= cap2) continue;
       cargo.sort((a, b) => (LEAVE_ORDER[a.type] ?? 1) - (LEAVE_ORDER[b.type] ?? 1));
       const drop = cargo.slice(0, cargo.length - cap2).map((u) => u.id);
-      removeUnits(g, drop);
+      removeUnits(g, drop, { by: killers[owner] ?? null });
       lost.push(...drop);
       g.log(`${g.name(owner)} loses ${plural2(drop.length, "unit")} that no longer fit on a Ship.`);
     }
     return lost;
   }
-  function* trimCargoChoice(g, hex) {
+  function* trimCargoChoice(g, hex, killers = {}) {
     const s = g.s;
     if (!hex || s.map.hexes[hex].terrain !== "sea") return;
     for (const { idx: owner } of s.players) {
@@ -28674,11 +29562,11 @@
           default: options[0].id
         });
         const u = cargo().find((x) => x.type === type) || cargo()[0];
-        removeUnits(g, [u.id]);
+        removeUnits(g, [u.id], { by: killers[owner] ?? null });
         g.log(`${g.name(owner)} leaves ${LEFT_BEHIND[u.type]} behind: it no longer fits on a Ship.`);
       }
     }
-    trimCargo(g, hex);
+    trimCargo(g, hex, killers);
   }
   function* settlerCompensation(g, old, lostCity) {
     const s = g.s;
@@ -28700,6 +29588,7 @@
     const s = g.s;
     const old = city.owner;
     const size = citySize(city);
+    const snap = captureSnapshot(s, city, by);
     const gold = old === BARBARIAN ? 1 : city.mood === "angry" ? 1 : size + (city.mood === "happy" ? 1 : 0);
     let removedPieces = 0;
     let destroyed = false;
@@ -28730,10 +29619,13 @@
       city.owner = by;
       city.mood = "angry";
       delete city.druid;
+      delete city.beloved;
       if (hasCivAdv(s, by, "provinces")) yield* provinces(g, by, city);
     }
     yield* settlerCompensation(g, old, city);
     if (!destroyed && by !== BARBARIAN) yield* stelaBonus(g, by);
+    nabopolassarRaises(g, old);
+    captureRewards(g, city, by, snap, destroyed);
     return { gold: gold + removedPieces, destroyed };
   }
   function* provinces(g, p, city) {
@@ -28758,7 +29650,7 @@
     const s = g.s;
     if (loser === BARBARIAN || !city || !hasBuilding(city, "temple") || !hasAdv(s, loser, "fanaticism")) return;
     if (unitsLeft(s, loser, "infantry") <= 0) return;
-    const mine = citiesOf(s, loser).filter((c2) => armyAt(s, c2.hex, loser).length < STACK_LIMIT);
+    const mine = citiesOf(s, loser).filter((c2) => armyAt(s, c2.hex, loser).length < stackLimit(s, loser, c2.hex));
     if (!mine.length) return;
     const pick = yield* choose(g, loser, {
       kind: "pick_city",
@@ -28773,7 +29665,7 @@
   }
   function* battle(g, ctx) {
     const s = g.s;
-    const A3 = ctx.attacker;
+    const A4 = ctx.attacker;
     const D = ctx.defender;
     const hex = ctx.hex;
     const land = ctx.domain === "land";
@@ -28787,7 +29679,7 @@
     const defSettlers = () => land ? unitsAt(s, hex).filter((u) => u.owner === D && u.type === "settler").map((u) => u.id) : [];
     const res = {
       domain: ctx.domain,
-      attacker: A3,
+      attacker: A4,
       defender: D,
       hex,
       from: ctx.from || null,
@@ -28811,12 +29703,14 @@
       defection: {},
       lost: {}
     };
-    g.emit({ type: "battle_start", domain: ctx.domain, hex, from: ctx.from, attacker: A3, defender: D, atk: [...atkLive()], def: defLive() });
-    g.log(`Battle at ${hex}: ${g.name(A3)} attacks ${g.name(D)}.`);
+    const st = newState(s, ctx);
+    res.lead = st.lead;
+    g.emit({ type: "battle_start", domain: ctx.domain, hex, from: ctx.from, attacker: A4, defender: D, atk: [...atkLive()], def: defLive(), lead: st.lead });
+    g.log(`Battle at ${hex}: ${g.name(A4)} attacks ${g.name(D)}.`);
     let winner = null;
     const fighting = res.defStart > 0 || fortress;
-    if (A3 === BARBARIAN && defCity && playerOwnsWonder(s, D, "great_wall")) {
-      noteLoss(s, res, A3, atkLive());
+    if (A4 === BARBARIAN && defCity && playerOwnsWonder(s, D, "great_wall")) {
+      noteLoss(s, res, A4, atkLive());
       removeUnits(g, atkLive());
       res.auto = true;
       res.winner = winner = D;
@@ -28827,14 +29721,14 @@
       const dead = defSettlers();
       if (dead.length) {
         removeUnits(g, dead);
-        tally(res, A3, "settlers", dead.length);
+        tally(res, A4, "settlers", dead.length);
       }
-      winner = A3;
+      winner = A4;
     } else {
-      winner = yield* fightRounds(g, ctx, res, { city, defCity, fortress, land });
+      winner = yield* fightRounds(g, ctx, res, { city, defCity, fortress, land, st });
     }
     res.winner = winner;
-    if (winner === A3) {
+    if (winner === A4) {
       for (const id of [...atkLive(), ...ctx.settlers, ...ctx.carried]) {
         const u = unitById(s, id);
         if (u) u.hex = hex;
@@ -28843,27 +29737,27 @@
         const left = defSettlers();
         if (left.length) {
           removeUnits(g, left);
-          tally(res, A3, "settlers", left.length);
+          tally(res, A4, "settlers", left.length);
         }
       }
       if (defCity && s.cities.includes(defCity) && defCity.owner === D) {
-        yield* captureCity(g, defCity, A3, res);
+        yield* captureCity(g, defCity, A4, res);
         res.captured = true;
       }
     }
-    const opp = (p) => p === A3 ? D : A3;
+    const opp = (p) => p === A4 ? D : A4;
     if (land && winner !== null && winner !== BARBARIAN && res.defection[winner] && (res.infKilled[opp(winner)] || 0) > 0) {
-      if (unitsLeft(s, winner, "infantry") > 0 && armyAt(s, hex, winner).length < STACK_LIMIT) {
+      if (unitsLeft(s, winner, "infantry") > 0 && armyAt(s, hex, winner).length < stackLimit(s, winner, hex)) {
         addUnitTo(g, winner, "infantry", hex);
         g.log(`${g.name(winner)} wins over an enemy Infantry (Ideological Defection).`);
       }
     }
-    const beatenUnits = winner === A3 ? res.defStart : res.atkStart;
+    const beatenUnits = winner === A4 ? res.defStart : res.atkStart;
     if (winner !== null && winner !== BARBARIAN && opp(winner) === BARBARIAN && beatenUnits > 0) {
       gainRes(g, winner, { gold: 1 });
       g.log(`${g.name(winner)} gains 1 Gold for defeating Barbarians.`);
     }
-    if (D === PIRATE && !isNpc(A3)) yield* pirateBounty(g, A3, res.kills[A3]?.ships || 0);
+    if (D === PIRATE && !isNpc(A4)) yield* pirateBounty(g, A4, res.kills[A4]?.ships || 0);
     if (winner !== null) {
       if (!isNpc(winner)) s.players[winner].stats.battlesWon += 1;
       const loser = opp(winner);
@@ -28874,35 +29768,37 @@
       if (unitById(s, id)) unitFlags(g, id).fought = true;
     }
     if (!land) {
-      yield* trimCargoChoice(g, hex);
-      yield* trimCargoChoice(g, ctx.from);
+      const killers = { [A4]: D, [D]: A4 };
+      yield* trimCargoChoice(g, hex, killers);
+      yield* trimCargoChoice(g, ctx.from, killers);
     }
+    yield* afterBattle(g, ctx, res, st);
     battleSpoils(g, res);
     g.emit({ type: "battle_end", hex, winner, retreated: res.retreated, captured: res.captured });
     yield* onBattleEnd(g, res);
     return res;
   }
-  function* fightRounds(g, ctx, res, { city, defCity, fortress, land }) {
+  function* fightRounds(g, ctx, res, { city, defCity, fortress, land, st }) {
     const s = g.s;
-    const A3 = ctx.attacker;
+    const A4 = ctx.attacker;
     const D = ctx.defender;
     const hex = ctx.hex;
     const atkLive = () => ctx.units.filter((id) => unitById(s, id));
     const defLive = () => (land ? armyAt(s, hex, D) : navyAt(s, hex, D)).map((u) => u.id);
     const defSettlers = () => unitsAt(s, hex).filter((u) => u.owner === D && u.type === "settler").map((u) => u.id);
-    const sideOf = (p) => p === A3 ? "A" : "D";
-    const owners = { A: A3, D };
+    const sideOf = (p) => p === A4 ? "A" : "D";
+    const owners = { A: A4, D };
     const eclipse = land && s.flags.eclipse;
     if (eclipse) s.flags.eclipse = false;
     const siege = { die: false, hit: false };
-    if (land && fortress && A3 !== BARBARIAN && hasAdv(s, A3, "siegecraft")) {
+    if (land && fortress && A4 !== BARBARIAN && hasAdv(s, A4, "siegecraft")) {
       const opts = [{ id: "none", label: "Do not use Siegecraft" }];
-      const wood = canPay(s, A3, { wood: 2 });
-      const ore = canPay(s, A3, { ore: 2 });
+      const wood = canPay(s, A4, { wood: 2 });
+      const ore = canPay(s, A4, { ore: 2 });
       if (wood) opts.push({ id: "die", label: "Pay 2 Wood: the Fortress adds no extra die" });
       if (ore) opts.push({ id: "hit", label: "Pay 2 Ore: the Fortress cancels no hit" });
-      if (canPay(s, A3, { wood: 2, ore: 2 })) opts.push({ id: "both", label: "Pay 2 Wood and 2 Ore: cancel both Fortress abilities" });
-      const ans = yield* choose(g, A3, {
+      if (canPay(s, A4, { wood: 2, ore: 2 })) opts.push({ id: "both", label: "Pay 2 Wood and 2 Ore: cancel both Fortress abilities" });
+      const ans = yield* choose(g, A4, {
         kind: "siege",
         title: "Siegecraft",
         text: "The city has a Fortress. Choose how to use Siegecraft.",
@@ -28910,11 +29806,11 @@
         default: "none"
       });
       if (ans === "die" || ans === "both") {
-        applyPayment(g, A3, planPayment(s, A3, { wood: 2 }));
+        applyPayment(g, A4, planPayment(s, A4, { wood: 2 }));
         siege.die = true;
       }
       if (ans === "hit" || ans === "both") {
-        applyPayment(g, A3, planPayment(s, A3, { ore: 2 }));
+        applyPayment(g, A4, planPayment(s, A4, { ore: 2 }));
         siege.hit = true;
       }
     }
@@ -28923,7 +29819,7 @@
       for (const side of ["A", "D"]) {
         const p = owners[side];
         if (p === BARBARIAN || !hasAdv(s, p, "steel_weapons")) continue;
-        const foe = side === "A" ? D : A3;
+        const foe = side === "A" ? D : A4;
         const foeHas = foe !== BARBARIAN && hasAdv(s, foe, "steel_weapons");
         const bonus = foeHas ? 1 : 2;
         const free = !foeHas && hasAdv(s, p, "metallurgy");
@@ -28944,8 +29840,8 @@
     }
     const arenaUsed = { A: false, D: false };
     const tribal = {
-      A: land ? tribalWarfare(s, A3, D, hex) : 0,
-      D: land ? tribalWarfare(s, D, A3, hex) : 0
+      A: land ? tribalWarfare(s, A4, D, hex) : 0,
+      D: land ? tribalWarfare(s, D, A4, hex) : 0
     };
     let winner = null;
     let round = 0;
@@ -28957,11 +29853,13 @@
       const aIds = atkLive();
       const dIds = defLive();
       const fortActive = fortress && round === 1;
+      const lead = { A: leaderIn(s, ctx, "A"), D: leaderIn(s, ctx, "D") };
+      const cardPlayer = (side) => cardHelper(s, ctx, side) ?? owners[side];
       const cardInfo = (side) => {
         const p = owners[side];
         const ids = side === "A" ? aIds : dIds;
         const foeIds = side === "A" ? dIds : aIds;
-        const foeOwner = side === "A" ? D : A3;
+        const foeOwner = side === "A" ? D : A4;
         const armyHex = side === "A" ? ctx.from || hex : hex;
         return {
           units: ids.length,
@@ -28977,7 +29875,8 @@
           flank: side === "A" && land && !!ctx.from && !ctx.landed && !ctx.inPlace && isLand(s, ctx.from),
           ownFortress: side === "D" && fortress,
           foeInfantry: land && (infantryIn(s, foeIds) > 0 || (res.infKilled[foeOwner] || 0) > 0),
-          canDisengage: land && !ctx.inPlace && !!ctx.from
+          canDisengage: land && !ctx.inPlace && !!ctx.from,
+          noCards: noCards(s, ctx, side, ids)
         };
       };
       const cardRole = (side) => side === "A" ? "attacker" : "defender";
@@ -28987,7 +29886,7 @@
           const p = owners[side];
           const foeSide = side === "A" ? "D" : "A";
           if (!hasCivAdv(s, p, "fireworks") || !canPay(s, p, { ore: 1 })) continue;
-          if (!combatCardOptions(g, owners[foeSide], ctx, cardRole(foeSide), cardInfo(foeSide)).length) continue;
+          if (!combatCardOptions(g, cardPlayer(foeSide), ctx, cardRole(foeSide), cardInfo(foeSide)).length) continue;
           const use = yield* confirm(g, p, {
             kind: "fireworks",
             title: "Fireworks",
@@ -29027,8 +29926,9 @@
         }
       }
       const played = { A: null, D: null };
+      const holder = { A: null, D: null };
       for (const side of ["A", "D"]) {
-        const p = owners[side];
+        const p = cardPlayer(side);
         if (stopped[side]) continue;
         const info = cardInfo(side);
         const opts = combatCardOptions(g, p, ctx, cardRole(side), info);
@@ -29036,7 +29936,7 @@
         const ans = yield* choose(g, p, {
           kind: "combat_card",
           title: `Combat round ${round}: play an Action card?`,
-          text: "Cards only affect this round.",
+          text: p === owners[side] ? "Cards only affect this round." : "Viriatus lets you play a Combat card for the Barbarians. Cards only affect this round.",
           options: [{ id: "none", label: "Play no card" }, ...opts],
           default: "none",
           info: { ...info, hex, domain: ctx.domain }
@@ -29047,15 +29947,23 @@
           if (i >= 0) {
             hand.splice(i, 1);
             played[side] = ans;
+            holder[side] = p;
           }
         }
       }
-      const feint = ["A", "D"].find((side) => played[side] && effectOfCard(played[side]) === "feigned_retreat");
+      const cyrus = { A: false, D: false };
+      for (const side of ["A", "D"]) {
+        if (played[side] && lead[side] === "cyrus") {
+          cyrus[side] = yield* cyrusCard(g, owners[side], played[side], played[side === "A" ? "D" : "A"]);
+        }
+      }
+      const feint = ["A", "D"].find((side) => played[side] && !cyrus[side] && effectOfCard(played[side]) === "feigned_retreat");
       if (feint) {
         for (const side of ["A", "D"]) {
           if (!played[side]) continue;
-          g.log(`${g.name(owners[side])} plays ${ACTION_CARDS[played[side]].name}.`);
-          discardCard(g, owners[side], "action", played[side]);
+          g.log(`${g.name(holder[side])} plays ${ACTION_CARDS[played[side]].name}.`);
+          discardCard(g, holder[side], "action", played[side]);
+          st.spent[side].push(played[side]);
         }
         g.emit({
           type: "battle_round",
@@ -29063,7 +29971,7 @@
           round,
           domain: ctx.domain,
           disengage: true,
-          a: { owner: A3, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, elephants: 0, mod: 0, card: played.A, lost: 0 },
+          a: { owner: A4, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, elephants: 0, mod: 0, card: played.A, lost: 0 },
           d: { owner: D, dice: [], cv: 0, hits: 0, bonus: 0, cavalry: 0, elephants: 0, mod: 0, card: played.D, lost: 0, fortress: false },
           cancelA: 0,
           cancelD: 0,
@@ -29083,8 +29991,10 @@
         if (!card) continue;
         const foe = side === "A" ? "D" : "A";
         const eff = effectOfCard(card);
-        g.log(`${g.name(owners[side])} plays ${ACTION_CARDS[card].name}.`);
-        if (eff === "wedge" || eff === "high_ground" || eff === "naval_ram" || eff === "routing") mods[side].cv += 3;
+        const payer = holder[side];
+        g.log(`${g.name(payer)} plays ${ACTION_CARDS[card].name}${cyrus[side] ? " as +2 CV (Cyrus)" : ""}.`);
+        if (cyrus[side]) mods[side].cv += 2;
+        else if (eff === "wedge" || eff === "high_ground" || eff === "naval_ram" || eff === "routing") mods[side].cv += 3;
         else if (eff === "rally") mods[side].cv += 2;
         else if (eff === "stand_firm" || eff === "desperate") mods[side].cancel += 1;
         else if (eff === "ambush") mods[foe].cv -= 3;
@@ -29092,9 +30002,9 @@
         else if (eff === "siege_engines") noFortress = true;
         else if (eff === "phalanx") mods[side].cv += Math.min(4, infantryIn(s, side === "A" ? aIds : dIds));
         else if (eff === "incentive") {
-          const plan = planPayment(s, owners[side], { gold: 1 });
+          const plan = planPayment(s, payer, { gold: 1 });
           if (plan) {
-            applyPayment(g, owners[side], plan);
+            applyPayment(g, payer, plan);
             mods[side].cv += 1;
           }
         } else if (eff === "flanking") mods[side].cv += 1;
@@ -29105,11 +30015,17 @@
         else if (eff === "boarding") mods[side].board = true;
         else if (eff === "defection") res.defection[owners[side]] = true;
       }
+      for (const side of ["A", "D"]) yield* beforeRoll(g, ctx, st, side, side === "A" ? aIds : dIds);
       const fortDie = fortActive && !siege.die && !noFortress ? 1 : 0;
       const nA = aIds.length + mods.A.die;
       const nD = dIds.length + fortDie + mods.D.die;
       const armies = { A: land ? armyIn(s, aIds) : {}, D: land ? armyIn(s, dIds) : {} };
-      const rolls = { A: rollSide(s, nA, armies.A), D: rollSide(s, nD, armies.D) };
+      const realElephants = { A: armies.A.elephant || 0, D: armies.D.elephant || 0 };
+      if (land && round === 1) {
+        for (const side of ["A", "D"]) if (lead[side] === "attila" && armies[side].cavalry) armies[side].elephant += 1;
+      }
+      const clashing = (side) => mods[side].noClash && armies[side].leader ? { ...armies[side], leader: 0 } : armies[side];
+      const rolls = { A: rollSide(s, nA, clashing("A")), D: rollSide(s, nD, clashing("D")) };
       const notes = [];
       if (land && round === 1) {
         for (const side of ["A", "D"]) {
@@ -29129,16 +30045,31 @@
           });
           if (!use) continue;
           if (!free) applyPayment(g, p, planPayment(s, p, { culture: 1 }, { noArena: true }));
-          const [v, icon2] = rollDie(s);
-          r.dice[r.dice.indexOf(low)] = { v, icon: icon2 };
-          Object.assign(r, scoreDice(r.dice, armies[side]));
-          notes.push(`Horsemanship: ${g.name(p)} rerolls a ${low.v} and gets a ${v}.`);
+          const at = r.dice.indexOf(low);
+          rerollAt(s, r, at, clashing(side));
+          notes.push(`Horsemanship: ${g.name(p)} rerolls a ${low.v} and gets a ${r.dice[at].v}.`);
+        }
+      }
+      if (land && round === 1) {
+        for (const side of ["A", "D"]) {
+          if (lead[side] !== "hannibal") continue;
+          const p = owners[side];
+          const r = rolls[side];
+          const fewer = (side === "A" ? aIds : dIds).length < (side === "A" ? dIds : aIds).length;
+          let at = null;
+          for (let n = 0; n < (fewer ? 2 : 1); n++) {
+            at = yield* hannibalPick(g, p, r.dice, at);
+            if (at < 0) break;
+            const from = r.dice[at].v;
+            rerollAt(s, r, at, clashing(side));
+            notes.push(`Hannibal: ${g.name(p)} rerolls a ${from} and gets a ${r.dice[at].v}.`);
+          }
         }
       }
       for (const side of ["A", "D"]) {
         const r = rolls[side];
         if (mods[side].confuse) {
-          const again = rerollHighest(s, r, armies[side]);
+          const again = rerollHighest(s, r, clashing(side));
           if (again) notes.push(`Confusion: ${g.name(owners[side])} rerolls a ${again.from} and gets a ${again.to}.`);
         }
         if (mods[side].noClash) {
@@ -29157,7 +30088,7 @@
         for (const side of ["A", "D"]) {
           const foe = side === "A" ? "D" : "A";
           if (!hasCivAdv(s, owners[side], "persian_elephants")) continue;
-          const n = Math.min(armies[side].elephant || 0, rolls[foe].cavalry / CLASH_BONUS.cavalry);
+          const n = Math.min(realElephants[side], rolls[foe].cavalry / CLASH_BONUS.cavalry);
           if (n <= 0) continue;
           rolls[foe].cavalry -= n * CLASH_BONUS.cavalry;
           notes.push(`Persian Elephants: ${g.name(owners[side])} cancels the bonus of ${n} enemy Cavalry.`);
@@ -29166,12 +30097,20 @@
       for (const line of notes) g.log(line);
       const rollA = rolls.A;
       const rollD = rolls.D;
+      const bonusParts = {
+        A: roundBonus(s, ctx, st, "A", round, aIds, dIds, { played: !!played.A, defCity }),
+        D: roundBonus(s, ctx, st, "D", round, dIds, aIds, { played: !!played.D, defCity })
+      };
+      const ldrCv = { A: bonusParts.A.reduce((n, x) => n + x.cv, 0), D: bonusParts.D.reduce((n, x) => n + x.cv, 0) };
+      for (const side of ["A", "D"]) {
+        if (bonusParts[side].length) g.log(`Leader bonus for ${g.name(owners[side])}: ${bonusParts[side].map((x) => `+${x.cv} ${x.label}`).join(", ")}.`);
+      }
       const cv = {
-        A: rollA.sum + rollA.bonus + rollA.cavalry + mods.A.cv + steel.A + tribal.A + immortal.A,
-        D: rollD.sum + rollD.bonus + rollD.cavalry + mods.D.cv + steel.D + tribal.D + immortal.D
+        A: rollA.sum + rollA.bonus + rollA.cavalry + mods.A.cv + steel.A + tribal.A + immortal.A + ldrCv.A,
+        D: rollD.sum + rollD.bonus + rollD.cavalry + mods.D.cv + steel.D + tribal.D + immortal.D + ldrCv.D
       };
       if (land && round === 1 && city && hasBuilding(city, "temple")) {
-        if (A3 !== BARBARIAN && hasAdv(s, A3, "fanaticism")) cv.A += 2;
+        if (A4 !== BARBARIAN && hasAdv(s, A4, "fanaticism")) cv.A += 2;
         if (D !== BARBARIAN && hasAdv(s, D, "fanaticism")) cv.D += 2;
       }
       if (land && round === 1 && defCity && defCity.mood === "happy" && playerOwnsWonder(s, D, "great_wall")) cv.A -= 2;
@@ -29200,13 +30139,13 @@
       }
       const raw2 = { A: Math.floor(cv.A / 5), D: Math.floor(cv.D / 5) };
       let cancelD = mods.D.cancel + rollD.elephants;
-      if (fortActive && !siege.hit && !noFortress) cancelD += 1;
+      if (fortActive && !siege.hit && !noFortress && lead.A !== "bleda") cancelD += 1;
       if (!land && round === 1 && hasAdv(s, D, "warships")) cancelD += 1;
       let cancelA = mods.A.cancel + rollA.elephants;
-      if (round === 1 && hasAdv(s, A3, "warships") && (!land || ctx.landed)) cancelA += 1;
+      if (round === 1 && hasAdv(s, A4, "warships") && (!land || ctx.landed)) cancelA += 1;
       if (!land && round === 1) {
-        if (hasCivAdv(s, A3, "biremes") && !hasAdv(s, D, "warships")) raw2.A += 1;
-        if (hasCivAdv(s, D, "biremes") && !hasAdv(s, A3, "warships")) raw2.D += 1;
+        if (hasCivAdv(s, A4, "biremes") && !hasAdv(s, D, "warships")) raw2.A += 1;
+        if (hasCivAdv(s, D, "biremes") && !hasAdv(s, A4, "warships")) raw2.D += 1;
       }
       if (land) {
         for (const side of ["A", "D"]) {
@@ -29231,28 +30170,35 @@
           g.log(line);
         }
       }
+      for (const side of ["A", "D"]) {
+        const landing = side === "A" ? Math.max(0, raw2.D - cancelA) : Math.max(0, raw2.A - cancelD);
+        const { cut, notes: cutNotes } = yield* cancelHits(g, ctx, st, side, landing, defCity);
+        if (side === "A") cancelA += cut;
+        else cancelD += cut;
+        notes.push(...cutNotes);
+      }
       const boardA = mods.A.board && cv.A >= cv.D ? 1 : 0;
       const boardD = mods.D.board && cv.D >= cv.A ? 1 : 0;
       const hitsOnD = Math.max(0, raw2.A - cancelD) + boardA;
       const hitsOnA = Math.max(0, raw2.D - cancelA) + boardD;
-      const killA = yield* pickCasualties(g, A3, aIds, hitsOnA);
+      const killA = yield* pickCasualties(g, A4, aIds, hitsOnA);
       const killD = yield* pickCasualties(g, D, dIds, hitsOnD);
-      for (const [owner, ids] of [[A3, killA], [D, killD]]) {
+      for (const [owner, ids] of [[A4, killA], [D, killD]]) {
         const n = ids.filter((id) => unitById(s, id)?.type === "infantry").length;
         if (n) res.infKilled[owner] = (res.infKilled[owner] || 0) + n;
       }
-      noteLoss(s, res, A3, killA);
+      noteLoss(s, res, A4, killA);
       noteLoss(s, res, D, killD);
-      removeUnits(g, killA);
-      removeUnits(g, killD);
+      removeUnits(g, killA, { by: D });
+      removeUnits(g, killD, { by: A4 });
       res.atkLost += killA.length;
       res.defLost += killD.length;
       if (land) {
         tally(res, D, "army", killA.length);
-        tally(res, A3, "army", killD.length);
+        tally(res, A4, "army", killD.length);
       } else {
         tally(res, D, "ships", killA.length);
-        tally(res, A3, "ships", killD.length);
+        tally(res, A4, "ships", killD.length);
       }
       if (land && atkLive().length === 0 && ctx.settlers.length) {
         const dead = ctx.settlers.filter((id) => unitById(s, id));
@@ -29265,30 +30211,35 @@
         const dead = defSettlers();
         if (dead.length) {
           removeUnits(g, dead);
-          tally(res, A3, "settlers", dead.length);
+          tally(res, A4, "settlers", dead.length);
         }
       }
       for (const side of ["A", "D"]) {
-        if (played[side]) discardCard(g, owners[side], "action", played[side]);
+        if (!played[side]) continue;
+        discardCard(g, holder[side], "action", played[side]);
+        st.spent[side].push(played[side]);
       }
       g.emit({
         type: "battle_round",
         hex,
         round,
         domain: ctx.domain,
-        a: { owner: A3, dice: rollA.dice, cv: cv.A, hits: raw2.A, bonus: rollA.bonus, cavalry: rollA.cavalry, elephants: rollA.elephants, mod: mods.A.cv + steel.A + tribal.A + immortal.A, card: played.A, lost: killA.length },
-        d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw2.D, bonus: rollD.bonus, cavalry: rollD.cavalry, elephants: rollD.elephants, mod: mods.D.cv + steel.D + tribal.D + immortal.D, card: played.D, lost: killD.length, fortress: fortDie > 0 },
+        a: { owner: A4, dice: rollA.dice, cv: cv.A, hits: raw2.A, bonus: rollA.bonus, cavalry: rollA.cavalry, elephants: rollA.elephants, mod: mods.A.cv + steel.A + tribal.A + immortal.A + ldrCv.A, card: played.A, lost: killA.length, lead: lead.A, leaderCv: bonusParts.A },
+        d: { owner: D, dice: rollD.dice, cv: cv.D, hits: raw2.D, bonus: rollD.bonus, cavalry: rollD.cavalry, elephants: rollD.elephants, mod: mods.D.cv + steel.D + tribal.D + immortal.D + ldrCv.D, card: played.D, lost: killD.length, fortress: fortDie > 0, lead: lead.D, leaderCv: bonusParts.D },
         cancelA,
         cancelD,
         notes,
         extraA: boardA,
         extraD: boardD
       });
-      g.log(`Round ${round}: ${g.name(A3)} CV ${cv.A} vs ${g.name(D)} CV ${cv.D}; losses ${killA.length} / ${killD.length}.`);
+      g.log(`Round ${round}: ${g.name(A4)} CV ${cv.A} vs ${g.name(D)} CV ${cv.D}; losses ${killA.length} / ${killD.length}.`);
+      if (land && atkLive().length > 0 && defLive().length > 0) {
+        for (const side of ["A", "D"]) yield* viriatusPush(g, ctx, side);
+      }
       const aAlive = atkLive().length > 0;
       const dAlive = defLive().length > 0;
       if (startDef === 0) {
-        winner = aAlive ? A3 : D;
+        winner = aAlive ? A4 : D;
         break;
       }
       if (!aAlive && !dAlive) {
@@ -29300,17 +30251,21 @@
         break;
       }
       if (!dAlive) {
-        winner = A3;
+        winner = A4;
         break;
       }
       if (eclipse) {
         res.retreated = true;
         break;
       }
-      const canRetreat = !isNpc(A3) && !ctx.inPlace && !!ctx.from;
+      if (yield* didoStops(g, ctx, defCity)) {
+        res.retreated = true;
+        break;
+      }
+      const canRetreat = !isNpc(A4) && !ctx.inPlace && !!ctx.from;
       let retreat = false;
       if (canRetreat) {
-        retreat = yield* confirm(g, A3, {
+        retreat = yield* confirm(g, A4, {
           kind: "retreat",
           title: "Retreat?",
           text: "Both sides still have units. Retreat to where you came from?",
@@ -29382,7 +30337,7 @@
     return nbrs(s, hex).filter((n) => {
       if (!isLand(s, n) || unitsAt(s, n).some((u) => u.owner !== owner)) return false;
       const city = cityAt(s, n);
-      return !(city && city.owner !== owner) && armyAt(s, n, owner).length + armySize <= STACK_LIMIT;
+      return !(city && city.owner !== owner) && armyAt(s, n, owner).length + armySize <= stackLimit(s, owner, n, group.filter(isArmy));
     });
   }
   function spawnCandidates(s, p, displace = false) {
@@ -29619,6 +30574,28 @@
     });
     return open.includes(dest) ? dest : open[0];
   }
+  function* sullaCancel(g, to) {
+    const s = g.s;
+    const city = cityAt(s, to);
+    if (!city || city.owner === BARBARIAN) return false;
+    for (const pl of s.players) {
+      const sulla = leaderOf(s, pl.idx, "sulla");
+      if (!sulla || hexDistance(sulla.hex, to) > 2) continue;
+      const mine = city.owner === pl.idx;
+      const cancel = yield* confirm(g, pl.idx, {
+        kind: "sulla_cancel",
+        title: "Sulla",
+        text: `Barbarians attack ${mine ? "your" : `${g.name(city.owner)}'s`} city at ${to}, within 2 spaces of Sulla. Call the attack off?`,
+        yes: "Call off the attack",
+        no: "Let them attack",
+        default: mine,
+        hex: to
+      });
+      if (cancel) g.log(`${g.name(pl.idx)} calls off the Barbarian attack at ${to} (Sulla).`);
+      return cancel;
+    }
+    return false;
+  }
   function* tribalAlliesCancel(g, defender, group, to) {
     const s = g.s;
     if (defender === BARBARIAN || !hasCivAdv(s, defender, "tribal_allies")) return false;
@@ -29650,7 +30627,7 @@
     const city = cityAt(s, to);
     const enemyCity = city && city.owner !== BARBARIAN ? city : null;
     const defender = occupants.length ? occupants[0].owner : enemyCity ? enemyCity.owner : null;
-    if (defender !== null && (yield* tribalAlliesCancel(g, defender, group, to))) return from;
+    if (defender !== null && ((yield* sullaCancel(g, to)) || (yield* tribalAlliesCancel(g, defender, group, to)))) return from;
     g.emit({ type: "barbarians", kind: "move", from, hex: to });
     if (defender !== null) {
       yield* battle(g, {
@@ -29705,7 +30682,7 @@
       if (!strike) return;
       for (const u of strike.group) fought.add(u.id);
       const defender = strike.defenders[0].owner;
-      if (yield* tribalAlliesCancel(g, defender, strike.group, strike.to)) continue;
+      if ((yield* sullaCancel(g, strike.to)) || (yield* tribalAlliesCancel(g, defender, strike.group, strike.to))) continue;
       g.emit({ type: "barbarians", kind: "move", from: strike.from, hex: strike.to });
       g.log(`Barbarian warlords strike ${g.name(defender)} at ${strike.to}.`);
       yield* battle(g, {
@@ -29820,9 +30797,16 @@
     }
     return pts;
   }
+  function leaderPoints(s, p) {
+    const pl = s.players[p];
+    let pts = (pl.leaderCaptured || []).length * LEADER_CAPTURE_VP + (pl.ericTokens || []).length * ERIC_TOKEN_VP;
+    const cnut = leaderCity(s, p, "cnut");
+    if (cnut && pl.homeHex !== null) pts += hexDistance(cnut.hex, pl.homeHex) / 2;
+    return pts;
+  }
   function civPoints(s, p) {
     const pl = s.players[p];
-    return (pl.captives || []).length / 2 + s.cities.filter((c) => c.druid === p).length + (pl.runes || 0);
+    return (pl.captives || []).length / 2 + s.cities.filter((c) => c.druid === p).length + (pl.runes || 0) + leaderPoints(s, p);
   }
   function scoreOf(s, p) {
     const pl = s.players[p];
@@ -29967,7 +30951,7 @@
       return city && city.owner !== q || unitsAt(s, k).some((u) => u.owner !== q && u.type !== "ship");
     };
     const mine = /* @__PURE__ */ new Set([...armyOf(s, q).map((u) => u.hex), ...citiesOf(s, q).map((c) => c.hex)]);
-    return [...mine].filter((k) => isLand(s, k) && armyAt(s, k, q).length < STACK_LIMIT && nbrs(s, k).some(hostile2)).sort();
+    return [...mine].filter((k) => isLand(s, k) && armyAt(s, k, q).length < stackLimit(s, q, k) && nbrs(s, k).some(hostile2)).sort();
   }
   function sailingRange(s, q, from) {
     const open = (k) => terrainOf(s, k) === "sea" && !unitsAt(s, k).some((u) => u.owner !== q);
@@ -30224,7 +31208,7 @@
       const s = g.s;
       for (const q of laggards(seatsFrom2(s, p), (x) => armyOf(s, x).length)) {
         if (unitsLeft(s, q, "infantry") <= 0) continue;
-        const roomy = citiesOf(s, q).filter((c) => armyAt(s, c.hex, q).length < STACK_LIMIT).sort(bySize);
+        const roomy = citiesOf(s, q).filter((c) => armyAt(s, c.hex, q).length < stackLimit(s, q, c.hex)).sort(bySize);
         const city = roomy.find((c) => c.hex === s.players[q].homeHex) || roomy[0];
         if (!city) continue;
         addUnitTo(g, q, "infantry", city.hex);
@@ -30353,7 +31337,7 @@
       const s = g.s;
       for (const q of seatsFrom2(s, p)) {
         const spots2 = conflictHexes(s, q);
-        const room = Math.max(0, ...spots2.map((k) => STACK_LIMIT - armyAt(s, k, q).length));
+        const room = Math.max(0, ...spots2.map((k) => stackLimit(s, q, k) - armyAt(s, k, q).length));
         const most = Math.min(2, Math.floor(s.players[q].res.gold / 2), unitsLeft(s, q, "infantry"), room);
         if (most <= 0) continue;
         const hired = Number(yield* choose(g, q, {
@@ -30367,7 +31351,7 @@
           default: "0"
         }));
         if (!hired) continue;
-        const fits = spots2.filter((k) => STACK_LIMIT - armyAt(s, k, q).length >= hired);
+        const fits = spots2.filter((k) => stackLimit(s, q, k) - armyAt(s, k, q).length >= hired);
         const hex = yield* choose(g, q, {
           kind: "pick_hex",
           title: "Mercenary Influx",
@@ -30600,9 +31584,10 @@
       }
       const inf = unitsOf(s, p, "infantry");
       const set = unitsOf(s, p, "settler");
-      const dead = [];
+      let dead = [];
       if (inf.length) dead.push(victim(s, inf).id);
       if (set.length) dead.push(victim(s, set).id);
+      dead = yield* eventUnitLoss(g, p, dead);
       if (dead.length) {
         removeUnits(g, dead);
         g.log(`${g.name(p)} loses ${plural2(dead.length, "unit")} to the Epidemic.`);
@@ -30661,9 +31646,10 @@
       for (const c of citiesOf(s, p)) {
         if (c.mood !== "angry") continue;
         const army = unitsAt(s, c.hex).filter((u) => u.owner === p && isArmy(u));
-        if (army.length) {
-          removeUnits(g, army.map((u) => u.id));
-          g.log(`Civil war: ${plural2(army.length, "Army unit")} desert${army.length === 1 ? "s" : ""} the angry city at ${c.hex}.`);
+        const gone = yield* eventUnitLoss(g, p, army.map((u) => u.id));
+        if (gone.length) {
+          removeUnits(g, gone);
+          g.log(`Civil war: ${plural2(gone.length, "Army unit")} desert${gone.length === 1 ? "s" : ""} the angry city at ${c.hex}.`);
         }
       }
     },
@@ -30902,12 +31888,74 @@
     pay(g, p, cost, { ideasAsFood: true, ideasFirst: true });
     yield* gainAdvance(g, p, id);
   }
+  var LEADER_PAY = { ideasAsFood: true, ideasFirst: true };
+  function leaderAdvanceCost(s, p, id, { token = null, extra = null, full = false } = {}) {
+    const base2 = advanceCost(s, p, id, { full });
+    const cost = { ...base2.cost };
+    let via = base2.via;
+    if (token && cost.food) {
+      delete cost.food;
+      cost[token] = (cost[token] || 0) + 1;
+      via = null;
+    }
+    for (const [k, v] of Object.entries(extra || {})) cost[k] = (cost[k] || 0) + v;
+    return { cost, via };
+  }
+  function leaderAdvanceAllowed(s, p, id, { group = null, newCategory = false } = {}) {
+    const adv = ADVANCES[id];
+    if (advanceBlocked(s, p, id)) return false;
+    if (group && adv.group !== group) return false;
+    if (newCategory && (adv.index !== 0 || s.players[p].advances.some((x) => ADVANCES[x].group === adv.group))) return false;
+    return true;
+  }
+  function leaderTokens(s, p, id, opts = {}) {
+    const tokens = opts.swap ? ["culture", "mood"] : [null];
+    return tokens.filter((token) => {
+      const { cost } = leaderAdvanceCost(s, p, id, { ...opts, token });
+      return !!planPayment(s, p, cost, LEADER_PAY);
+    });
+  }
+  function leaderAdvanceOptions(s, p, opts = {}) {
+    return Object.keys(ADVANCES).filter((id) => leaderAdvanceAllowed(s, p, id, opts) && leaderTokens(s, p, id, opts).length);
+  }
+  function* leaderAdvance(g, p, id, opts = {}) {
+    const s = g.s;
+    const t = s.turn;
+    if (!ADVANCES[id]) fail("Unknown Advance.");
+    const why = advanceBlocked(s, p, id);
+    if (why) fail(why);
+    if (!leaderAdvanceAllowed(s, p, id, opts)) fail(opts.newCategory ? "Choose the first Advance of a category you have no Advance in." : "That Advance is not in the right category.");
+    let token = null;
+    if (opts.swap) {
+      const ok = leaderTokens(s, p, id, opts);
+      if (!ok.length) fail("You cannot afford that Advance.");
+      token = ok.includes(opts.token) ? opts.token : ok.length === 1 ? ok[0] : yield* choose(g, p, {
+        kind: "leader_token",
+        title: ADVANCES[id].name,
+        text: "Pay with a Culture token or a Mood token?",
+        options: [{ id: "culture", label: "Culture token" }, { id: "mood", label: "Mood token" }],
+        default: s.players[p].culture >= s.players[p].mood ? "culture" : "mood"
+      });
+    }
+    const { cost, via } = leaderAdvanceCost(s, p, id, { ...opts, token });
+    const plan = planPayment(s, p, cost, LEADER_PAY);
+    if (!plan) fail("You cannot afford that Advance.");
+    applyPayment(g, p, plan);
+    if (via === "priesthood") t.used.priesthood = true;
+    if (via === "ballcourts") t.used.ballcourtsAdvance = true;
+    yield* gainAdvance(g, p, id);
+  }
 
   // src/engine/city.js
-  var effMood = (s, c) => s.turn && s.turn.forcedLabor && c.mood === "angry" ? "neutral" : c.mood;
+  var effMood = (s, c) => {
+    if (s.turn && s.turn.player === c.owner && !s.turn.activated[c.id] && leaderAt(s, c.owner, "bleda", c.hex)) return "happy";
+    return s.turn && s.turn.forcedLabor && c.mood === "angry" ? "neutral" : c.mood;
+  };
   function cityCapacity(s, c) {
     const m = effMood(s, c);
-    return m === "angry" ? 1 : citySize(c) + (m === "happy" ? 1 : 0);
+    if (m === "angry") return 1;
+    const attila = citySize(c) === 1 && leaderAt(s, c.owner, "attila", c.hex) ? 1 : 0;
+    return citySize(c) + attila + (m === "happy" ? 1 : 0);
   }
   function ownCity(g, id, p) {
     const c = cityById(g.s, id);
@@ -30964,7 +32012,7 @@
     g.log(`${g.name(city.owner)} activates the city at ${stand.hex} in its place (City States).`);
     return stand;
   }
-  function* finishActivation(g, city) {
+  function* finishActivation(g, city, purpose = null) {
     const t = g.s.turn;
     delete city.corrupt;
     const acted = (t.activated[city.id] || 0) === 1 && hasCivAdv(g.s, city.owner, "city_states") ? yield* cityStatesStandIn(g, city) : city;
@@ -30979,6 +32027,10 @@
     }
     t.activated[acted.id] = n + 1;
     yield* lighthouseShip(g, acted);
+    if (purpose !== "collect" && leaderAt(g.s, city.owner, "imhotep", city.hex)) {
+      const got = gainRes(g, city.owner, { ideas: 1 });
+      if (got.ideas) g.log(`${g.name(city.owner)} gains 1 idea (Imhotep).`);
+    }
   }
   function foundBlocked(s, p, hex, { ship = false } = {}) {
     const terr = terrainOf(s, hex);
@@ -30999,8 +32051,14 @@
     const hex = u.hex;
     const why = foundBlocked(s, p, hex);
     if (why) fail(why);
-    g.spendAction();
-    removeUnits(g, [u.id]);
+    const keep = !!a.keep;
+    if (keep && !leaderAt(s, p, "boudica", hex)) fail("Only Queen Boudica lets a Settler stay after founding a city.");
+    if (keep && !canPay(s, p, { food: 1 })) fail("Keeping the Settler costs 1 Food.");
+    if (!leaderAt(s, p, "dido", hex)) g.spendAction();
+    if (keep) {
+      applyPayment(g, p, planPayment(s, p, { food: 1 }));
+      g.log(`${g.name(p)} pays 1 food to keep the Settler (Queen Boudica).`);
+    } else removeUnits(g, [u.id]);
     const city = addCity(s, p, hex, "neutral");
     g.emit({ type: "found", city: city.id, hex, player: p });
     g.log(`${g.name(p)} founds a new city.`);
@@ -31056,10 +32114,14 @@
     if (hasAdv(s, p, "husbandry")) {
       for (const [k, d] of bfs(s, city.hex, 2, (n) => isLand(s, n))) if (d === 2) consider(k, true);
     }
-    if (hasCivAdv(s, p, "tribute_empire")) {
+    const toll = !hasCivAdv(s, p, "tribute_empire") && s.players[p].captives.length > 0 && leaderAt(s, p, "acamapichtli", city.hex);
+    if (hasCivAdv(s, p, "tribute_empire") || toll) {
       for (const [k] of revealedDistances(s, city.hex, 2)) {
         const target = cityAt(s, k);
         if (target && target.owner !== p) consider(k, false, true);
+      }
+      if (toll) {
+        for (const c of out.values()) if (c.tribute) c.toll = true;
       }
     }
     return [...out.values()];
@@ -31105,6 +32167,7 @@
     let far = 0;
     const resolved = [];
     const captives = [];
+    let tolled = false;
     for (const pk of picks) {
       const c = byHex.get(pk.hex);
       if (!c) fail("You cannot collect from that space.");
@@ -31114,6 +32177,7 @@
       if (!c.opts.includes(res)) fail("That space does not give that Resource.");
       if (c.sea) seas += 1;
       if (c.far) far += 1;
+      if (c.toll) tolled = true;
       if (res === "captive") {
         captives.push(pk.hex);
         resolved.push({ hex: pk.hex, res });
@@ -31127,6 +32191,10 @@
     if (s.players[p].captives.length + captives.length > CAPTIVE_LIMIT) fail("You can keep at most 4 Captives.");
     if (surge) useCard(g, p, surge);
     if (moodPlan) applyPayment(g, p, moodPlan);
+    if (tolled) {
+      spendCaptive(g, p);
+      g.log(`${g.name(p)} pays 1 Captive for Tribute Empire (Acamapichtli).`);
+    }
     if (free) t.econLib = true;
     else g.spendAction();
     t.collects += 1;
@@ -31154,13 +32222,13 @@
     const word = ([r, n]) => r === "mood" ? plural2(n, "Mood token") : `${n} ${r === "ideas" && n === 1 ? "idea" : r}`;
     const gotText = [...Object.entries(got).map(word), ...captives.length ? [plural2(captives.length, "Captive")] : []].join(", ");
     g.log(`${g.name(p)} collects ${gotText || "nothing"}.`);
-    yield* finishActivation(g, city);
+    yield* finishActivation(g, city, "collect");
   }
-  function constructBlocked(s, p, city, building) {
+  function constructBlocked(s, p, city, building, { angry = false } = {}) {
     if (!BUILDINGS.includes(building) || CIV_BUILDINGS.includes(building) && !s.civs) return "Unknown building.";
     const need = BUILDING_ADVANCE[building];
     if (!hasAdv(s, p, need)) return `You need ${ADVANCES[need].name}.`;
-    if (effMood(s, city) === "angry") return "You cannot construct in an Angry city.";
+    if (!angry && effMood(s, city) === "angry") return "You cannot construct in an Angry city.";
     if (city.buildings[building] !== void 0) return "The city already has that building.";
     if (citySize(city) + 1 > citySizeCap(s, p)) return "A city cannot grow larger than size 5 or your number of cities.";
     if (buildingsLeft(s, p, building) <= 0) return "You have no pieces of that building left.";
@@ -31194,11 +32262,59 @@
     const waived = owed.includes(waive) ? waive : owed[0];
     return { price: { ...price, [waived]: price[waived] - 1 }, waived };
   }
-  function* performConstruct(g, p, city, building, { portHex = null, templeBonus = "mood", cost = null, spendAction = true, rapid = null } = {}) {
+  function addCosts(a, b) {
+    const out = { ...a };
+    for (const [k, v] of Object.entries(b)) out[k] = (out[k] || 0) + v;
+    return out;
+  }
+  function leaderBuildPrice(s, p, city, building, price) {
+    const free = building === "fortress" && leaderAt(s, p, "hammurabi", city.hex) || building === "observatory" && leaderAt(s, p, "imhotep", city.hex);
+    return free ? { ...price, food: 0, wood: 0 } : price;
+  }
+  function* ramsesObelisk(g, p) {
+    if (!hasLeader(g.s, p, "ramses")) return;
+    const pick = yield* choose(g, p, {
+      kind: "ramses",
+      title: "Ramses II",
+      text: "Your new Obelisk gives 1 Culture token or 2 Ideas.",
+      options: [
+        { id: "culture", label: "1 Culture" },
+        { id: "ideas", label: "2 Ideas" }
+      ],
+      default: "culture"
+    });
+    gainRes(g, p, pick === "ideas" ? { ideas: 2 } : { culture: 1 });
+    g.log(`${g.name(p)} gains ${pick === "ideas" ? "2 ideas" : "1 culture"} (Ramses II).`);
+  }
+  function* afterSizeIncrease(g, p, city, building = null) {
+    const s = g.s;
+    if ((building === "academy" || building === "observatory") && leaderAt(s, p, "go_toba", city.hex)) yield* goTobaAdvance(g, p);
+    if (leaderAt(s, p, "siyaj_kak", city.hex)) yield* freeInfluence(g, p, city, "Siyaj Kak");
+  }
+  function* goTobaAdvance(g, p) {
+    const s = g.s;
+    const options = leaderAdvanceOptions(s, p, { full: true });
+    if (!options.length) return;
+    const id = yield* choose(g, p, {
+      kind: "leader_advance",
+      title: "Emperor Go-Toba",
+      text: "You may research an Advance at no action cost (you pay its usual price).",
+      options: [...options.map((o) => ({ id: o, label: ADVANCES[o].name })), { id: "none", label: "No Advance" }],
+      default: "none"
+    });
+    if (id === "none" || !options.includes(id)) return;
+    yield* leaderAdvance(g, p, id, { full: true });
+  }
+  function sacrificeCaptives(g, p, n) {
+    for (let i = 0; i < n; i++) spendCaptive(g, p);
+    if (n) g.log(`${g.name(p)} sacrifices ${plural2(n, "Captive")} (Ahuitzotl).`);
+  }
+  function* performConstruct(g, p, city, building, { portHex = null, templeBonus = "mood", cost = null, spendAction = true, rapid = null, extra = null, angry = false, sacrifice = 0 } = {}) {
     const s = g.s;
     const t = s.turn;
-    const why = constructBlocked(s, p, city, building);
+    const why = constructBlocked(s, p, city, building, { angry });
     if (why) fail(why);
+    if (s.players[p].captives.length < sacrifice) fail(`You need ${plural2(sacrifice, "Captive")} to sacrifice.`);
     let port = null;
     if (building === "port") {
       const seas = seaNbrs(s, city.hex);
@@ -31210,12 +32326,15 @@
       price = { ...price, food: 0 };
       stateReligion = true;
     }
+    price = leaderBuildPrice(s, p, city, building, price);
     if (rapid) price = rapidPrice(s, p, price, rapid.waive).price;
-    const plan = planPayment(s, p, price, sizePay(s, p, building));
+    if (extra) price = addCosts(price, extra);
+    const plan = planPayment(s, p, price, sizePay(s, p, building, city));
     if (!plan) fail(rapid ? "You cannot afford that, even with Rapid Construction." : "A building costs 1 Food, 1 Wood and 1 Ore.");
     if (rapid) useCard(g, p, rapid.card);
     if (spendAction) g.spendAction();
     applyPayment(g, p, plan);
+    sacrificeCaptives(g, p, sacrifice);
     if (stateReligion) t.used.stateReligion = true;
     city.buildings[building] = p;
     if (building === "port") city.port = port;
@@ -31227,7 +32346,11 @@
       if (hasAdv(s, p, "dogma")) yield* dogmaAdvance(g, p);
     }
     if (building === "observatory") yield* drawActionCard(g, p);
-    if (building === "obelisk") yield* stelaBonus(g, p);
+    if (building === "obelisk") {
+      yield* stelaBonus(g, p);
+      yield* ramsesObelisk(g, p);
+    }
+    yield* afterSizeIncrease(g, p, city, building);
   }
   function* constructAction(g, a) {
     const s = g.s;
@@ -31242,36 +32365,87 @@
   }
   function wonderBlocked(s, p, city, id) {
     const w = WONDERS[id];
-    if (!w || !s.players[p].hand.wonder.includes(id)) return "You do not hold that Wonder card.";
+    if (!w || !wonderSource(s, p, city, id)) return "You do not hold that Wonder card.";
     if (!hasAdv(s, p, "engineering")) return "You need Engineering to construct Wonders.";
     if (!hasAdv(s, p, w.advance)) return `You need ${ADVANCES[w.advance].name}.`;
-    if (city.mood !== "happy") return "Wonders can only be built in a Happy city.";
+    if (effMood(s, city) !== "happy") return "Wonders can only be built in a Happy city.";
     if (citySize(city) + 1 > citySizeCap(s, p)) return "A city cannot grow larger than size 5 or your number of cities.";
-    if (!planPayment(s, p, w.cost, { noArena: true, ...sizePay(s, p) })) return "You cannot afford that Wonder.";
+    if (!planPayment(s, p, wonderCost(s, p, city, id), { noArena: true, ...sizePay(s, p, null, city) })) return "You cannot afford that Wonder.";
     return null;
   }
-  function* wonderAction(g, a) {
+  var LEADER_WONDER = { nebuchadnezzar: "great_gardens", qin: "great_wall" };
+  function wonderSource(s, p, city, id) {
+    if (!WONDERS[id]) return null;
+    if (s.players[p].hand.wonder.includes(id)) return { kind: "hand" };
+    if (!Object.entries(LEADER_WONDER).some(([leader, w]) => w === id && leaderAt(s, p, leader, city.hex))) return null;
+    if (s.cities.some((c) => cityHasWonder(c, id))) return null;
+    const holder = s.players.find((x) => x.idx !== p && x.hand.wonder.includes(id));
+    if (holder) return { kind: "player", player: holder.idx };
+    return s.decks.wonder.includes(id) ? { kind: "deck" } : null;
+  }
+  function wonderChoices(s, p, city) {
+    const ids = [...s.players[p].hand.wonder];
+    for (const w of Object.values(LEADER_WONDER)) if (!ids.includes(w) && wonderSource(s, p, city, w)) ids.push(w);
+    return ids;
+  }
+  function wonderCost(s, p, city, id) {
+    const cost = { ...WONDERS[id].cost };
+    const pl = s.players[p];
+    const short2 = (k) => cost[k] - (k === "culture" ? pl.culture : pl.res[k]);
+    const waive = (kinds, n) => {
+      for (let i = 0; i < n; i++) {
+        const k = kinds.filter((x) => cost[x] > 0).sort((x, y) => short2(y) - short2(x))[0];
+        if (!k) return;
+        cost[k] -= 1;
+      }
+    };
+    if (Object.entries(LEADER_WONDER).some(([leader, w]) => w === id && leaderAt(s, p, leader, city.hex))) {
+      waive(["culture"], 1);
+      waive(["food", "wood", "ore"], 2);
+    }
+    if (leaderAt(s, p, "xerxes", city.hex)) waive(["food", "wood", "ore", "culture"], 2);
+    return cost;
+  }
+  function takeWonderCard(g, p, city, id) {
     const s = g.s;
-    const p = g.cur;
-    const city = ownCity(g, a.city, p);
-    checkActivatable(g, city);
-    markStart(g, city);
-    const why = wonderBlocked(s, p, city, a.wonder);
+    const src = wonderSource(s, p, city, id);
+    if (src.kind === "hand") s.players[p].hand.wonder.splice(s.players[p].hand.wonder.indexOf(id), 1);
+    else if (src.kind === "deck") s.decks.wonder.splice(s.decks.wonder.indexOf(id), 1);
+    else {
+      const theirs = s.players[src.player].hand.wonder;
+      theirs.splice(theirs.indexOf(id), 1);
+      drawWonderCard(g, src.player);
+      g.log(`${g.name(p)} takes the card from ${g.name(src.player)}, who draws a replacement.`);
+    }
+  }
+  function* performWonder(g, p, city, id, { spendAction = true, extra = null, sacrifice = 0 } = {}) {
+    const s = g.s;
+    const why = wonderBlocked(s, p, city, id);
     if (why) fail(why);
-    const w = WONDERS[a.wonder];
-    const plan = planPayment(s, p, w.cost, { noArena: true, ...sizePay(s, p) });
-    g.spendAction();
+    if (s.players[p].captives.length < sacrifice) fail(`You need ${plural2(sacrifice, "Captive")} to sacrifice.`);
+    const w = WONDERS[id];
+    const plan = planPayment(s, p, extra ? addCosts(wonderCost(s, p, city, id), extra) : wonderCost(s, p, city, id), { noArena: true, ...sizePay(s, p, null, city) });
+    if (!plan) fail("You cannot afford that Wonder.");
+    if (spendAction) g.spendAction();
     applyPayment(g, p, plan);
-    const hand = s.players[p].hand.wonder;
-    hand.splice(hand.indexOf(w.id), 1);
+    sacrificeCaptives(g, p, sacrifice);
+    takeWonderCard(g, p, city, id);
     city.wonders.push({ id: w.id, builder: p });
     s.players[p].builtWonders.push(w.id);
     g.emit({ type: "wonder", player: p, city: city.id, wonder: w.id });
     g.log(`${g.name(p)} completes the ${w.name}!`);
     if (w.id === "great_statue") drawObjectiveCard(g, p);
+    yield* afterSizeIncrease(g, p, city);
+  }
+  function* wonderAction(g, a) {
+    const p = g.cur;
+    const city = ownCity(g, a.city, p);
+    checkActivatable(g, city);
+    markStart(g, city);
+    yield* performWonder(g, p, city, a.wonder);
     yield* finishActivation(g, city);
   }
-  function recruitCost(s, p, units, { draft = 0, sanitation = 0, draftShip = 0, draftCard = 0, draftWith = "mood", ball = 0 } = {}) {
+  function recruitCost(s, p, units, { draft = 0, sanitation = 0, draftShip = 0, draftCard = 0, draftWith = "mood", ball = 0, leader = false } = {}) {
     const cost = { food: 0, wood: 0, ore: 0, mood: 0 };
     for (const type of RECRUIT_TYPES) {
       let n = units[type] || 0;
@@ -31285,6 +32459,10 @@
     else if (draftWith === "culture") cost.culture = price;
     else cost.mood = price;
     cost.mood += sanitation + ball;
+    if (leader) {
+      cost.culture = (cost.culture || 0) + LEADER_RECRUIT_COST.culture;
+      cost.mood += LEADER_RECRUIT_COST.mood;
+    }
     return cost;
   }
   function takeUnit(g, p, type, hex, reserved) {
@@ -31305,12 +32483,14 @@
     const s = g.s;
     const units = Object.fromEntries(RECRUIT_TYPES.map((type) => [type, Math.max(0, a.units?.[type] | 0)]));
     const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
+    const leader = a.leader || null;
+    if (leader && !leadersAvailable(s, p).includes(leader)) return { why: "You cannot recruit that Leader." };
     const draftCard = a.draftCard ? 1 : 0;
-    if (total + draftCard <= 0) return { why: "Choose at least one unit to recruit." };
+    if (total + (leader ? 1 : 0) + draftCard <= 0) return { why: "Choose at least one unit to recruit." };
     const ball = a.ballcourts ? 1 : 0;
     if (ball && (!hasCivAdv(s, p, "ballcourts") || effMood(s, city) === "angry")) return { why: "Ballcourts cannot make this city larger." };
     const cap2 = cityCapacity(s, city) + ball;
-    if (total + draftCard > cap2) return { why: `This city can recruit at most ${plural2(cap2, "unit")}.` };
+    if (total + (leader ? 1 : 0) + draftCard > cap2) return { why: `This city can recruit at most ${plural2(cap2, "unit")}.` };
     if (units.ship && !isPortCity(city)) return { why: "Ships need a city with a Port." };
     if (units.cavalry && !hasBuilding(city, "market") && !canMountHere(s, p, "cavalry")) return { why: "Cavalry need a city with a Market." };
     if (units.elephant && !hasBuilding(city, "market") && !canMountHere(s, p, "elephant")) return { why: "Elephants need a city with a Market." };
@@ -31325,11 +32505,17 @@
     const draftWith = a.draftWith === "gold" || a.draftWith === "culture" ? a.draftWith : "mood";
     if (draftWith === "gold" && !hasCivAdv(s, p, "mercenaries")) return { why: "You need Mercenaries to Draft with Gold." };
     if (draftWith === "culture" && !hasCivAdv(s, p, "spartans")) return { why: "You need the Spartans to Draft with Culture." };
-    const cost = recruitCost(s, p, units, { draft, sanitation, draftShip, draftCard, draftWith, ball });
+    const caesar = !!a.caesar && s.turn && s.turn.caesarCity === city.id;
+    if (a.caesar && !caesar) return { why: "Caesar can only build units in a city he has just captured." };
+    const cost = recruitCost(s, p, units, { draft, sanitation, draftShip, draftCard, draftWith, ball, leader: !!leader });
+    if (caesar) cost.gold = (cost.gold || 0) + 1;
     const plan = planPayment(s, p, cost);
     if (!plan) return { why: "You cannot afford that." };
-    const placed = units.infantry + units.cavalry + units.elephant;
-    if (armyAt(s, city.hex, p).length + placed > STACK_LIMIT) return { why: "A space holds at most 4 Army units." };
+    const placed = units.infantry + units.cavalry + units.elephant + (leader ? 1 : 0);
+    const old = leaderUnit(s, p);
+    const staying = armyAt(s, city.hex, p).length - (leader && old && old.hex === city.hex ? 1 : 0);
+    const limit = leader ? leader === "xerxes" ? STACK_LIMIT + 1 : STACK_LIMIT : stackLimit(s, p, city.hex);
+    if (!leaderAt(s, p, "vercingetorix", city.hex) && staying + placed > limit) return { why: `A space holds at most ${limit} Army units.` };
     for (const type of RECRUIT_TYPES) {
       const over = units[type] - Math.max(0, unitsLeft(s, p, type));
       if (over <= 0) continue;
@@ -31337,7 +32523,33 @@
       const pool = unitsOf(s, p, type).filter((u) => u.hex !== there);
       if (pool.length < over) return { why: `You have no ${type} left to recruit.` };
     }
-    return { units, draft, draftShip, draftCard, sanitation, cost, plan };
+    return { units, leader, caesar, draft, draftShip, draftCard, sanitation, cost, plan };
+  }
+  function deployHexes(s, p, city) {
+    return nbrs(s, city.hex).filter((k) => {
+      const c = cityAt(s, k);
+      return isLand(s, k) && !(c && c.owner !== p) && !s.units.some((u) => u.hex === k && u.owner !== p);
+    });
+  }
+  function* deployRecruits(g, p, city, made) {
+    const s = g.s;
+    const mine = made.filter((u) => u.type !== "ship" && u.type !== "leader");
+    for (const u of mine) {
+      const room = (k) => isArmy(u) ? armyAt(s, k, p).length < stackLimit(s, p, k) : true;
+      const spots2 = deployHexes(s, p, city).filter(room);
+      if (!spots2.length) break;
+      const to = yield* choose(g, p, {
+        kind: "pick_hex",
+        title: "Vercingetorix",
+        text: `Deploy this ${u.type} on a space next to the city, or leave it in the city.`,
+        options: [{ id: city.hex, label: "Stay in the city", hex: city.hex }, ...spots2.map((k) => ({ id: k, label: k, hex: k }))],
+        default: city.hex
+      });
+      if (to !== city.hex && spots2.includes(to)) {
+        u.hex = to;
+        g.log(`${g.name(p)} deploys a ${u.type} on ${to} (Vercingetorix).`);
+      }
+    }
   }
   function* recruitAction(g, a) {
     const s = g.s;
@@ -31348,24 +32560,37 @@
     markStart(g, city);
     const chk = recruitBlocked(g, p, city, a);
     if (chk.why) fail(chk.why);
-    const { units, draft, draftShip, draftCard, sanitation, plan } = chk;
-    g.spendAction();
+    const { units, leader, caesar, draft, draftShip, draftCard, sanitation, plan } = chk;
+    if (!caesar) g.spendAction();
     applyPayment(g, p, plan);
     const reserved = /* @__PURE__ */ new Set();
     const newShips = [];
+    const made = [];
+    if (leader) made.push(placeLeader(g, p, leader, city.hex));
     for (const type of ["settler", "infantry", "cavalry", "elephant", "ship"]) {
       for (let i = 0; i < units[type]; i++) {
         const u = takeUnit(g, p, type, type === "ship" ? city.port : city.hex, reserved);
         reserved.add(u.id);
+        made.push(u);
         if (type === "ship") newShips.push(u.id);
       }
     }
-    g.emit({ type: "recruit", player: p, city: city.id, units });
-    const made = countList(units, { infantry: ["Infantry", "Infantry"], cavalry: ["Cavalry", "Cavalry"], elephant: ["Elephant", "Elephants"], settler: ["Settler", "Settlers"], ship: ["Ship", "Ships"] });
-    g.log(`${g.name(p)} recruits ${draftCard && !made ? "an Action card" : made}.`);
+    if (caesar && t.move) for (const u of made) t.move.moved[u.id] = true;
+    g.emit({ type: "recruit", player: p, city: city.id, units, leader });
+    const names = { infantry: ["Infantry", "Infantry"], cavalry: ["Cavalry", "Cavalry"], elephant: ["Elephant", "Elephants"], settler: ["Settler", "Settlers"], ship: ["Ship", "Ships"] };
+    const text = [leader ? LEADERS[leader].name : "", countList(units, names)].filter(Boolean).join(" and ");
+    g.log(`${g.name(p)} recruits ${draftCard && !text ? "an Action card" : text}.`);
+    if (leaderAt(s, p, "vercingetorix", city.hex)) {
+      yield* deployRecruits(g, p, city, made);
+      if (armyAt(s, city.hex, p).length > stackLimit(s, p, city.hex)) fail(`A space holds at most ${stackLimit(s, p, city.hex)} Army units.`);
+    }
     if (draft || draftShip || draftCard) {
       t.draftUses += 1;
       if (t.draftUses >= 2) completeEvent(g, p, "draft_obj");
+      if (leaderAt(s, p, "leonidas", city.hex)) {
+        gainRes(g, p, { culture: 1 });
+        g.log(`${g.name(p)} gains 1 Culture token (Leonidas).`);
+      }
     }
     if (draftCard) yield* drawActionCard(g, p);
     formalTraining(g, p, city);
@@ -31401,7 +32626,7 @@
     }
     yield* finishActivation(g, city);
   }
-  function happinessPlan(s, p, amount, explicit) {
+  function happinessPlan(s, p, amount, explicit, culture = 0) {
     const pl = s.players[p];
     const arena = !!s.cities.some((c) => c.owner === p && cityHasWonder(c, "great_arena"));
     const rituals = hasAdv(s, p, "rituals");
@@ -31420,13 +32645,17 @@
         sum += n;
       }
       if (sum !== amount) fail(`The payment must total ${amount}.`);
+      if (culture) {
+        if (pl.culture - (plan2.culture || 0) < culture) fail("You cannot afford that.");
+        plan2.culture = (plan2.culture || 0) + culture;
+      }
       return plan2;
     }
-    const direct = planPayment(s, p, { mood: amount });
+    const direct = planPayment(s, p, { mood: amount, culture });
     if (direct) return direct;
     if (!rituals) return null;
-    const moodAvail = pl.mood + (arena ? pl.culture : 0);
-    const plan = planPayment(s, p, { mood: Math.min(amount, moodAvail) });
+    const moodAvail = pl.mood + (arena ? Math.max(0, pl.culture - culture) : 0);
+    const plan = planPayment(s, p, { mood: Math.min(amount, moodAvail), culture });
     if (!plan) return null;
     let rest = amount - Math.min(amount, moodAvail);
     for (const r of ["ideas", "gold", "wood", "ore", "food"]) {
@@ -31443,30 +32672,46 @@
     const p = g.cur;
     const list = a.cities || [];
     if (!list.length) fail("Choose at least one city.");
-    const free = !!a.free;
+    const caesar = !!a.caesar;
+    const free = !!a.free && !caesar;
     if (free && !hasAdv(s, p, "voting")) fail("You need Voting.");
+    if (caesar && list.length !== 1) fail("Caesar improves the one city he is in.");
     let total = free ? 1 : 0;
+    let culture = 0;
     const seen = /* @__PURE__ */ new Set();
     const todo = [];
     for (const e of list) {
       const c = ownCity(g, e.city, p);
       if (seen.has(c.id)) fail("Each city can only appear once.");
       seen.add(c.id);
+      if (caesar) {
+        if (!leaderAt(s, p, "caesar", c.hex)) fail("Caesar must be in that city.");
+        checkActivatable(g, c);
+        markStart(g, c);
+      }
+      if (e.hammurabi) {
+        if (!leaderAt(s, p, "hammurabi", c.hex)) fail("Hammurabi must be in that city.");
+        if (!happinessRoom(c)) fail("A city cannot be raised above Happy.");
+        culture += 1;
+        todo.push([c, happinessRoom(c)]);
+        continue;
+      }
       const steps = e.steps | 0;
       if (steps < 1) fail("Choose at least one step.");
       if (steps > happinessRoom(c)) fail("A city cannot be raised above Happy.");
       total += steps * citySize(c);
       todo.push([c, steps]);
     }
-    const plan = happinessPlan(s, p, total, a.pay);
-    if (!plan) fail(`You need ${plural2(total, "Mood token")}.`);
-    if (!free) g.spendAction();
+    const plan = happinessPlan(s, p, total, a.pay, culture);
+    if (!plan) fail(culture ? `You need ${plural2(total, "Mood token")} and ${plural2(culture, "Culture token")}.` : `You need ${plural2(total, "Mood token")}.`);
+    if (!free && !caesar) g.spendAction();
     applyPayment(g, p, plan);
     for (const [c, steps] of todo) {
       moodUp(c, steps);
       g.emit({ type: "mood", city: c.id });
     }
     g.log(`${g.name(p)} raises the Mood of ${plural2(todo.length, "city", "cities")}.`);
+    if (caesar) yield* finishActivation(g, todo[0][0]);
     yield* [];
   }
   function* sportsAction(g, a) {
@@ -31492,6 +32737,14 @@
     const t = s.turn;
     if (!hasAdv(s, p, "taxation")) fail("You need Taxation.");
     if (t.used.taxation) fail("Taxation can be used once per turn.");
+    let city = null;
+    if (a.cnut) {
+      city = ownCity(g, a.cnut, p);
+      if (!leaderAt(s, p, "cnut", city.hex)) fail("Cnut must be in that city.");
+      if (effMood(s, city) !== "happy") fail("Cnut needs a Happy city.");
+      checkActivatable(g, city);
+      markStart(g, city);
+    }
     const cities = citiesOf(s, p).length;
     const allowed = ["food", "wood", "ore"];
     if (hasAdv(s, p, "currency")) allowed.push("gold");
@@ -31504,14 +32757,15 @@
       n += v | 0;
     }
     if (n !== cities) fail(`Choose exactly ${plural2(cities, "Resource")}.`);
-    const plan = planPayment(s, p, { mood: 1 });
+    const plan = city ? {} : planPayment(s, p, { mood: 1 });
     if (!plan) fail("Taxation costs 1 Mood token.");
     g.spendAction();
     applyPayment(g, p, plan);
     t.used.taxation = true;
     gainRes(g, p, gain);
     if (gain.gold) t.goldCollected = true;
-    g.log(`${g.name(p)} collects taxes.`);
+    g.log(`${g.name(p)} collects taxes${city ? " (Cnut)" : ""}.`);
+    if (city) yield* finishActivation(g, city);
     yield* [];
   }
   function* civilLibertiesAction(g) {
@@ -31540,6 +32794,7 @@
   function influenceTypes(s, p, target) {
     const immune = target.owner !== BARBARIAN && target.owner !== p && target.wonders.length && owns(s, target.owner, "monuments");
     if (immune) return [];
+    if (target.owner !== p && leaderAt(s, target.owner, "sulla", target.hex)) return [];
     const types = Object.keys(target.buildings).filter((b) => target.buildings[b] !== p && buildingsLeft(s, p, b) > 0 && !immuneBuilding(s, target, b));
     if (target.owner === BARBARIAN && hasCivAdv(s, p, "druidic_influence") && target.druid === void 0) types.push("druid");
     return types;
@@ -31562,11 +32817,12 @@
   }
   function influenceRange(s, p, origin) {
     if (origin.settlers) return 1 + origin.settlers;
-    return citySize(origin) + (hasCivAdv(s, p, "proselytism") ? settlersAt(s, origin.hex, p) : 0);
+    const cleopatra = origin.owner === p && leaderAt(s, p, "cleopatra", origin.hex) ? 1 : 0;
+    return citySize(origin) + cleopatra + (hasCivAdv(s, p, "proselytism") ? settlersAt(s, origin.hex, p) : 0);
   }
   function zoroastrianTargets(s, p) {
     if (!hasCivAdv(s, p, "zoroastrianism")) return [];
-    return s.units.filter((u) => u.owner !== p && u.owner !== PIRATE && isArmy(u) && isLand(s, u.hex) && !cityAt(s, u.hex) && unitsLeft(s, p, u.type) > 0);
+    return s.units.filter((u) => u.owner !== p && u.owner !== PIRATE && isArmy(u) && u.type !== "leader" && isLand(s, u.hex) && !cityAt(s, u.hex) && unitsLeft(s, p, u.type) > 0);
   }
   var boundCity = (p, acting) => acting.owner === p && isInfluenced(acting);
   function canBoostInfluence(s, p, acting, target) {
@@ -31582,6 +32838,7 @@
       if (!zoroastrianTargets(s, p).some((u) => u.id === target.id)) return "That unit cannot be influenced.";
     } else {
       if (acting.settlers && target.owner === p) return "Settlers can only influence enemy cities.";
+      if (target.owner !== p && leaderAt(s, target.owner, "sulla", target.hex)) return "Sulla protects this city from foreign Influence.";
       if (!influenceTypes(s, p, target).length) return "That city has no Building you can influence.";
     }
     if (rangeBoost > 0 && !canBoostInfluence(s, p, acting, target)) return "You cannot boost this attempt.";
@@ -31613,6 +32870,8 @@
     const unitTarget = aimsAtUnit ? target : null;
     const free = !!a.free;
     if (free && (!hasAdv(s, p, "arts") || t.used.arts)) fail("Arts can be used once per turn.");
+    const granted = !!a.grant;
+    if (granted && (acting.settlers || t.siyajKak !== acting.id || !leaderAt(s, p, "siyaj_kak", acting.hex))) fail("Siyaj Kak must be in the city that makes the attempt.");
     const artsMood = free && !!a.artsMood;
     if (artsMood && !hasCivAdv(s, p, "hellenization")) fail("Only Hellenization lets Arts be paid with Mood.");
     const rangeBoost = a.rangeBoost | 0;
@@ -31628,9 +32887,24 @@
     if (!plan) fail(`You need ${[artsMood ? "2 Mood tokens" : "", upfront.culture ? plural2(upfront.culture, "Culture token") : ""].filter(Boolean).join(" and ")}.`);
     if (soft) useCard(g, p, soft);
     if (free) t.used.arts = true;
-    else g.spendAction();
+    else if (!granted) g.spendAction();
     applyPayment(g, p, plan);
     let result = roll(s, 6) + (hasAdv(s, p, "conversion") ? 1 : 0);
+    if (result < 5 && !acting.settlers && !t.used.ashoka && leaderAt(s, p, "ashoka", acting.hex) && (hasBuilding(acting, "temple") || building === "temple")) {
+      const again = yield* confirm(g, p, {
+        kind: "ashoka_reroll",
+        title: "Ashoka the Great",
+        text: `Your roll is ${result}. Reroll the attempt (once per turn)?`,
+        yes: "Reroll",
+        no: "Keep the roll",
+        default: true
+      });
+      if (again) {
+        t.used.ashoka = true;
+        result = roll(s, 6) + (hasAdv(s, p, "conversion") ? 1 : 0);
+        g.log(`${g.name(p)} rerolls the attempt (Ashoka): ${result}.`);
+      }
+    }
     let boosted = 0;
     const need = 5 - result;
     if (need > 0 && canBoostInfluence(s, p, acting, target) && canPay(s, p, { culture: need })) {
@@ -31669,6 +32943,10 @@
     t.influenceSuccess = true;
     s.players[p].stats.influenced += 1;
     if (hasAdv(s, p, "conversion")) gainRes(g, p, { culture: 1 });
+    if (!acting.settlers && leaderAt(s, p, "darius", acting.hex)) {
+      gainRes(g, p, { mood: 1 });
+      g.log(`${g.name(p)} gains 1 Mood token (Darius).`);
+    }
     if (unitTarget) yield* convertUnit(g, p, unitTarget);
     else if (building === "druid") {
       target.druid = p;
@@ -31682,6 +32960,40 @@
       yield* drawActionCard(g, p);
       g.log(`${g.name(p)} draws an Action card (Code of Laws).`);
     }
+  }
+  function* freeInfluence(g, p, city, who) {
+    const s = g.s;
+    if (s.turn && s.turn.influenceSuccess) return;
+    const targets = s.cities.filter((c) => !influenceBlocked(s, p, city, c));
+    if (!targets.length) return;
+    const yes = yield* confirm(g, p, {
+      kind: "leader_influence",
+      title: who,
+      text: `${who} lets you make a Cultural Influence attempt from this city at no action cost. Make one now?`,
+      yes: "Make an attempt",
+      no: "No thanks",
+      default: true
+    });
+    if (!yes) return;
+    const id = yield* choose(g, p, {
+      kind: "leader_influence_target",
+      title: who,
+      text: "Choose the city to influence.",
+      options: targets.map(cityOption),
+      default: targets[0].id
+    });
+    const target = cityById(s, id) || targets[0];
+    const types = influenceTypes(s, p, target);
+    const building = types.length > 1 ? yield* choose(g, p, {
+      kind: "leader_influence_building",
+      title: who,
+      text: "Choose the building to influence.",
+      options: types.map((b) => ({ id: b, label: b === "druid" ? "Druid token" : b })),
+      default: types[0]
+    }) : types[0];
+    s.turn.siyajKak = city.id;
+    yield* influenceAction(g, { type: "influence", city: city.id, target: target.id, building, grant: true });
+    delete s.turn.siyajKak;
   }
   function* convertUnit(g, p, unit) {
     const s = g.s;
@@ -31717,9 +33029,9 @@
       return key(q + DIRS[d2][0], r + DIRS[d2][1]);
     };
     const keys = Object.keys(hexes).sort((a, b) => {
-      const A3 = parse(a);
+      const A4 = parse(a);
       const B = parse(b);
-      return A3.q - B.q || A3.r - B.r;
+      return A4.q - B.q || A4.r - B.r;
     });
     const start = keys[0];
     let startSide = -1;
@@ -31811,6 +33123,99 @@
     revealRegion(g, region, flipped);
     g.log(`${g.name(player)} explores a new Region.`);
     return flipped;
+  }
+
+  // src/engine/leaderCapture.js
+  var NAMES = { infantry: "Infantry", cavalry: "Cavalry", elephant: "Elephant", settler: "Settler", ship: "Ship" };
+  function* afterCapture(g, p, hex) {
+    const city = cityAt(g.s, hex);
+    if (!city || city.owner !== p) return;
+    if (leaderAt(g.s, p, "wak", hex)) yield* wakRebuilds(g, p, city);
+    if (leaderAt(g.s, p, "caesar", hex)) yield* caesarRecruits(g, p, city);
+  }
+  function* caesarRecruits(g, p, city) {
+    const s = g.s;
+    const t = s.turn;
+    t.caesarCity = city.id;
+    const units = {};
+    const probe = (type) => recruitBlocked(g, p, city, { units: { ...units, [type]: (units[type] || 0) + 1 }, caesar: true });
+    const fits = () => RECRUIT_TYPES.filter((type) => !probe(type).why);
+    const cap2 = cityCapacity(s, city);
+    if (canPay(s, p, { gold: 1 }) && fits().length) {
+      const yes = yield* confirm(g, p, {
+        kind: "caesar",
+        title: "Gaius Julius Caesar",
+        text: `You captured the city at ${city.hex}. Pay 1 Gold to recruit there at no action cost? Those units cannot move in the same Move action.`,
+        yes: "Recruit (1 Gold)",
+        no: "No thanks",
+        default: true
+      });
+      if (yes) {
+        let total = 0;
+        while (total < cap2) {
+          const types = fits();
+          if (!types.length) break;
+          const options = types.map((type) => ({ id: type, label: NAMES[type] }));
+          if (total > 0) options.push({ id: "done", label: "Done" });
+          const pick = yield* choose(g, p, {
+            kind: "caesar_unit",
+            title: "Gaius Julius Caesar",
+            text: total ? "Recruit another unit?" : "Choose a unit to recruit.",
+            options,
+            default: total ? "done" : types.includes("infantry") ? "infantry" : types[0]
+          });
+          if (!types.includes(pick)) break;
+          units[pick] = (units[pick] || 0) + 1;
+          total += 1;
+        }
+        if (total > 0) yield* recruitAction(g, { type: "recruit", city: city.id, units, caesar: true });
+      }
+    }
+    delete t.caesarCity;
+  }
+  function* wakRebuilds(g, p, city) {
+    const s = g.s;
+    const mine = Object.keys(city.buildings).filter((type) => city.buildings[type] === p);
+    const swaps = [];
+    for (const out2 of mine) {
+      const colour = city.buildings[out2];
+      const port = city.port;
+      delete city.buildings[out2];
+      if (out2 === "port") city.port = null;
+      const ins2 = BUILDINGS.filter((b) => b !== out2 && !constructBlocked(s, p, city, b, { angry: true }));
+      city.buildings[out2] = colour;
+      city.port = port;
+      if (ins2.length) swaps.push({ out: out2, ins: ins2 });
+    }
+    if (!swaps.length) return;
+    const yes = yield* confirm(g, p, {
+      kind: "wak",
+      title: "Wak Chanil Ajaw",
+      text: `You captured the city at ${city.hex}. Remove one of your pieces from it and grow the city with another at no action and no resource cost?`,
+      yes: "Rebuild",
+      no: "No thanks",
+      default: false
+    });
+    if (!yes) return;
+    const out = yield* choose(g, p, {
+      kind: "wak_remove",
+      title: "Wak Chanil Ajaw",
+      text: "Which piece do you remove from the city?",
+      options: swaps.map((x) => ({ id: x.out, label: x.out })),
+      default: swaps[0].out
+    });
+    const swap = swaps.find((x) => x.out === out) || swaps[0];
+    const ins = yield* choose(g, p, {
+      kind: "wak_build",
+      title: "Wak Chanil Ajaw",
+      text: "Which building do you add to the city?",
+      options: swap.ins.map((b) => ({ id: b, label: b })),
+      default: swap.ins[0]
+    });
+    delete city.buildings[swap.out];
+    if (swap.out === "port") city.port = null;
+    g.log(`${g.name(p)} removes a ${swap.out} from the captured city (Wak Chanil Ajaw).`);
+    yield* performConstruct(g, p, city, swap.ins.includes(ins) ? ins : swap.ins[0], { cost: {}, spendAction: false, angry: true });
   }
 
   // src/engine/move.js
@@ -31943,6 +33348,10 @@
       explore: route.explore
     };
   }
+  var pakalGroup = (s, p, army, settlers) => {
+    const pakal = leaderOf(s, p, "pakal");
+    return !!pakal && settlers.length > 0 && army.length === 1 && army[0].id === pakal.id;
+  };
   function planLand(g, p, a, units, from, to, { scout = false, nomad = null } = {}) {
     const s = g.s;
     const t = s.turn;
@@ -31957,6 +33366,8 @@
       return !!c && c.owner === p;
     };
     const scouting = scout && army.length > 0 && !fromSea && !a.roads && !nomad;
+    const pakal = !a.roads && !fromSea && !nomad && pakalGroup(s, p, army, settlers);
+    const wide = scouting || pakal;
     const plan = { kind: "land", roads: false, scout: scouting, cost: null, battle: null, explore: null, carry: [], city: nomad ? nomad.id : null };
     if (nomad) {
       if (a.roads) fail("Cities cannot use Roads.");
@@ -31987,13 +33398,13 @@
       plan.cost = cost;
     }
     const imperial = plan.roads && mine(from) && mine(to) && hasCivAdv(s, p, "imperial_roads");
-    if (d < 1 || d > (imperial ? 4 : plan.roads || scouting ? 2 : 1)) fail("That space is too far away.");
+    if (d < 1 || d > (imperial ? 4 : plan.roads || wide ? 2 : 1)) fail("That space is too far away.");
     if (d >= 2) {
-      if (scouting && toTerr === null) fail("Scouting cannot explore a new Region.");
-      const clear = (m) => isLand(s, m) && !hostile(s, p, m) && (!army.length || armyAt(s, m, p).length + army.length <= STACK_LIMIT);
+      if (wide && toTerr === null) fail(scouting ? "Scouting cannot explore a new Region." : "Pakal cannot explore a new Region with a double step.");
+      const clear = (m) => isLand(s, m) && !hostile(s, p, m) && (!army.length || armyAt(s, m, p).length + army.length <= stackLimit(s, p, m, army));
       const vias = d === 2 ? nbrs(s, from).filter((m) => hexDistance(m, to) === 1 && clear(m)) : [];
       if (vias.length) plan.via = vias.includes(a.via) ? a.via : vias[0];
-      else if (!(imperial && bfs(s, from, 4, clear).has(to))) fail(scouting ? "There is no clear path to that space." : "There is no clear road to that space.");
+      else if (!(imperial && bfs(s, from, 4, clear).has(to))) fail(wide ? "There is no clear path to that space." : "There is no clear road to that space.");
     }
     if (toTerr === null) {
       const region = s.map.hexes[to].region;
@@ -32009,7 +33420,7 @@
       if (!army.length) fail("Settlers cannot enter enemy spaces without Army units.");
       const sworn = (s.flags.protect || []).find((e) => e.foe === p && (foeUnits.some((u) => u.owner === e.by) || foeCity && foeCity.owner === e.by));
       if (sworn) fail(`${g.name(sworn.by)} has played Non-Aggression: you cannot enter their spaces this round.`);
-      if (d === 2 && scouting) fail("Scouting cannot attack: the enemy is two spaces away.");
+      if (d === 2 && wide) fail(scouting ? "Scouting cannot attack: the enemy is two spaces away." : "Pakal's double step cannot attack: the enemy is two spaces away.");
       if (d > 2) fail("Imperial Roads cannot be used to attack.");
       if (d === 2 && !mine(from)) fail("Roads can only be used to attack when leaving one of your cities.");
       for (const u of units) {
@@ -32020,8 +33431,12 @@
         }
       }
       plan.battle = { defender: foeUnits.length ? foeUnits[0].owner : foeCity.owner };
-    } else if (army.length && armyAt(s, to, p).length + army.length > STACK_LIMIT) {
-      fail("A space holds at most 4 Army units.");
+      if (foeCity && foeCity.beloved > 0) {
+        plan.toll = planPayment(s, p, { culture: foeCity.beloved }, { noArena: true });
+        if (!plan.toll) fail(`The city at ${to} holds ${foeCity.beloved} Culture token${foeCity.beloved > 1 ? "s" : ""} (Cleopatra): pay as many to attack it.`);
+      }
+    } else if (army.length && armyAt(s, to, p).length + army.length > stackLimit(s, p, to, army)) {
+      fail(`A space holds at most ${stackLimit(s, p, to, army)} Army units.`);
     }
     plan.kind = fromSea ? "disembark" : "land";
     return plan;
@@ -32064,8 +33479,9 @@
         if (carry.some((u) => !u) || new Set(a.carry).size !== a.carry.length) fail("Those units are not on board.");
         if (carry.length < must) fail("The Ships left behind cannot hold the remaining units.");
       }
-      const army = (into === "infantry" ? units.length : 0) + carry.filter(isArmy).length;
-      if (armyAt(s, to, p).length + army > STACK_LIMIT) fail("A space holds at most 4 Army units.");
+      const landing = carry.filter(isArmy);
+      const army = (into === "infantry" ? units.length : 0) + landing.length;
+      if (armyAt(s, to, p).length + army > stackLimit(s, p, to, landing)) fail(`A space holds at most ${stackLimit(s, p, to, landing)} Army units.`);
       for (const u of units) plan.convert[u.id] = into;
       plan.carry = carry.map((u) => u.id);
       plan.landing = [...units, ...carry].map((u) => u.id);
@@ -32097,7 +33513,9 @@
     for (const u of units) {
       const f = t.unitFlags[u.id] || {};
       if (f.fought && !(u.type === "ship" && hasCivAdv(s, p, "longships"))) fail("Units that fought cannot move again this turn.");
-      if (f.stopped) fail(f.stopped === "hegemony" ? "Units landed by Hegemony cannot move again this turn." : "That unit stopped on a Mountain and cannot move again this turn.");
+      if (f.stopped) {
+        fail(f.stopped === "hegemony" ? "Units landed by Hegemony cannot move again this turn." : f.stopped === "hanno" ? "Hanno's Ships cannot be moved again this turn." : "That unit stopped on a Mountain and cannot move again this turn.");
+      }
     }
     const ships = units.filter((u) => u.type === "ship");
     if (ships.length && ships.length !== units.length) fail("Ships move separately from land units.");
@@ -32159,18 +33577,19 @@
     }
     const roads = hasAdv(s, p, "roads") && !nomad;
     const scouting = !!(s.turn && s.turn.move && s.turn.move.credits > 0 && s.turn.move.scout);
+    const wide = scouting || !nomad && pakalGroup(s, p, units.filter(isArmy), units.filter((u) => u.type === "settler"));
     for (const n of nbrs(s, from)) {
       attempt({ to: n });
       if (roads) attempt({ to: n, roads: true });
       if (shipcraft && !nomad && isSea(s, n)) attempt({ to: n, convert: true });
     }
-    if (roads || scouting) {
+    if (roads || wide) {
       const seen = new Set(nbrs(s, from));
       for (const n of nbrs(s, from)) {
         for (const m of nbrs(s, n)) {
           if (m === from || seen.has(m)) continue;
           seen.add(m);
-          if (scouting) attempt({ to: m });
+          if (wide) attempt({ to: m });
           if (roads) attempt({ to: m, roads: true });
         }
       }
@@ -32183,12 +33602,17 @@
     }
     return out;
   }
+  var hannibalStrides = (s, units) => {
+    const h = units.length ? leaderOf(s, units[0].owner, "hannibal") : null;
+    return !!h && units.some((u) => u.id === h.id) && units.some((u) => u.type === "elephant");
+  };
   function terrainFlags(g, plan, units, landTerrain) {
+    const strides = landTerrain === "mountain" && hannibalStrides(g.s, units);
     for (const u of units) {
       const f = unitFlags(g, u.id);
       if (landTerrain === "plains") f.plains = true;
       if (plan.roads || plan.scout) continue;
-      if (landTerrain === "mountain" && !(u.type === "settler" && hasCivAdv(g.s, u.owner, "terracing"))) f.stopped = true;
+      if (landTerrain === "mountain" && !strides && !(u.type === "settler" && hasCivAdv(g.s, u.owner, "terracing"))) f.stopped = true;
       if (landTerrain === "forest") f.noBattle = true;
     }
   }
@@ -32296,8 +33720,14 @@
     }
     t.move.credits -= 1;
     for (const id of plan.ids) t.move.moved[id] = true;
+    for (const id of [...plan.ids, ...plan.carry]) unitFlags(g, id).moved = true;
     if (plan.city) t.move.moved[`city:${plan.city}`] = true;
     if (plan.cost) applyPayment(g, p, plan.cost);
+    if (plan.toll) {
+      applyPayment(g, p, plan.toll);
+      delete cityAt(s, plan.to).beloved;
+      g.log(`${g.name(p)} pays Culture tokens to remove the ones in the city at ${plan.to} (Cleopatra).`);
+    }
     if (plan.kind === "ship") {
       yield* moveShips(g, p, plan);
       if (hasAdv(s, p, "cartography")) {
@@ -32341,11 +33771,18 @@
           if (u) u.hex = plan.via;
         }
       }
+      if (res.captured && res.winner === p) yield* afterCapture(g, p, to);
       return;
     }
     for (const u of units) u.hex = to;
     terrainFlags(g, plan, units, terrainOf(s, to));
     if (plan.city) yield* moveCity(g, p, cityById(s, plan.city), to);
+    const home2 = cityAt(s, to);
+    const akbar = leaderOf(s, p, "akbar");
+    if (home2 && home2.owner === p && akbar && units.some((u) => u.id === akbar.id)) {
+      gainRes(g, p, { gold: 1 });
+      g.log(`${g.name(p)} gains 1 gold (Akbar the Great).`);
+    }
   }
   function openFreeMove(g, { credits = 3, only = null, scout = false, sprawl = false } = {}) {
     const move = { credits, moved: {}, shipMoved: false, navUsed: false, only, scout, free: true };
@@ -32459,7 +33896,7 @@
     },
     *mass_levy(g, p, a) {
       const s = g.s;
-      const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < STACK_LIMIT);
+      const eligible = citiesOf(s, p).filter((c) => armyAt(s, c.hex, p).length < stackLimit(s, p, c.hex));
       const picked = yield* pickCities(g, p, a, { title: "Mass Levy", text: "Recruit a free Infantry in up to 2 cities.", eligible, max: 2, none: "There is no room for new Infantry." });
       const reserved = /* @__PURE__ */ new Set();
       for (const c of picked) {
@@ -32552,7 +33989,7 @@
     *reinforce(g, p, a) {
       const s = g.s;
       const besieged = (c2) => nbrs(s, c2.hex).some((k) => unitsAt(s, k).some((u) => u.owner !== p && isArmy(u)));
-      const eligible = citiesOf(s, p).filter((c2) => armyAt(s, c2.hex, p).length < STACK_LIMIT && besieged(c2));
+      const eligible = citiesOf(s, p).filter((c2) => armyAt(s, c2.hex, p).length < stackLimit(s, p, c2.hex) && besieged(c2));
       const [c] = yield* pickCities(g, p, { ...a, cities: void 0 }, {
         title: "Reinforce",
         text: "Place a free Infantry in a city with an enemy Army next to it.",
@@ -32611,14 +34048,14 @@
       g.log(`${g.name(p)} makes ${g.name(foe)} discard ${deck === "action" ? "an Action" : "an Objective"} card.`);
     },
     *non_aggression(g, p, a) {
-      var _a;
+      var _a2;
       const s = g.s;
       const sworn = (f) => (s.flags.protect || []).some((e) => e.by === p && e.foe === f);
       const marks = foesOf(s, p).filter((f) => !sworn(f));
       if (!marks.length) fail("You are already protected from every opponent this round.");
       const threat = [...marks].sort((x, y) => armyOf(s, y).length - armyOf(s, x).length)[0];
       const foe = yield* pickFoe(g, p, a, marks, { title: "Non-Aggression", text: "Choose the player whose Army units cannot enter your spaces this round.", fallback: threat });
-      ((_a = s.flags).protect || (_a.protect = [])).push({ by: p, foe });
+      ((_a2 = s.flags).protect || (_a2.protect = [])).push({ by: p, foe });
       g.log(`${g.name(foe)}'s Army units cannot enter ${g.name(p)}'s spaces until the end of the round.`);
     }
   };
@@ -32633,6 +34070,14 @@
     });
     return Number(ans);
   }
+  function alexanderCity(g, p) {
+    const s = g.s;
+    const city = leaderCity(s, p, "alexander");
+    if (!city) fail("Alexander the Great must be in one of your cities.");
+    checkActivatable(g, city);
+    if (!canPay(s, p, { culture: 1 })) fail("You need 1 Culture token.");
+    return city;
+  }
   function* playCard(g, a) {
     const s = g.s;
     const p = g.cur;
@@ -32646,18 +34091,22 @@
       fail(`${eff.name} is played together with ${action} action, not on its own.`);
     }
     const paid = eff.timing === "action" && !hasCivAdv(s, p, "shogunate");
-    if (paid && (!s.turn || s.turn.actionsLeft <= 0)) fail("You have no actions left.");
+    if (a.alexander && !paid) fail("Alexander the Great only plays the cards that need an action.");
+    const alexander = a.alexander ? alexanderCity(g, p) : null;
+    if (paid && !alexander && (!s.turn || s.turn.actionsLeft <= 0)) fail("You have no actions left.");
     pl.hand.action.splice(idx, 1);
     discardCard(g, p, "action", def.id);
     g.emit({ type: "card", player: p, card: def.id });
     g.log(`${g.name(p)} plays ${def.name}.`);
     if (yield* subterfuge(g, p, def)) return;
-    if (paid) g.spendAction();
-    if (GAINS[def.top]) {
-      gainRes(g, p, GAINS[def.top]);
-      return;
-    }
-    yield* EFFECTS2[def.top](g, p, a);
+    if (alexander) {
+      markStart(g, alexander);
+      applyPayment(g, p, planPayment(s, p, { culture: 1 }));
+      g.log(`${g.name(p)} pays 1 Culture token and activates the city at ${alexander.hex} instead of an action (Alexander the Great).`);
+    } else if (paid) g.spendAction();
+    if (GAINS[def.top]) gainRes(g, p, GAINS[def.top]);
+    else yield* EFFECTS2[def.top](g, p, a);
+    if (alexander) yield* finishActivation(g, alexander);
   }
 
   // src/engine/abilities.js
@@ -32900,10 +34349,31 @@
     };
     for (const c of foes) attempt(c, /* @__PURE__ */ new Set());
     const unitOf = new Map([...holder].map(([unit, c]) => [c.id, mine.find((u) => u.id === unit)]));
-    return foes.filter((c) => unitOf.has(c.id)).map((c) => {
-      const u = unitOf.get(c.id);
-      return { city: c.id, unit: u.port === null ? u.id : null, port: u.port, ship: u.ship, adjacent: u.ship && hexDistance(u.hex, c.hex) === 1 };
-    }).slice(0, MAX_ROUTES);
+    const matched = foes.filter((c) => unitOf.has(c.id));
+    const route = (c, u) => ({ city: c.id, unit: u.port === null ? u.id : null, port: u.port, ship: u.ship, adjacent: u.ship && hexDistance(u.hex, c.hex) === 1 });
+    const routes = matched.map((c) => route(c, unitOf.get(c.id)));
+    const hiram = routes.length > MAX_ROUTES ? leaderOf(s, p, "hiram") : null;
+    if (!hiram) return routes.slice(0, MAX_ROUTES);
+    const escorted = (id) => {
+      const u = id && unitById(s, id);
+      return !!u && (u.type === "settler" || u.type === "ship") && u.hex === hiram.hex;
+    };
+    let free = routes.findIndex((r, i) => i <= MAX_ROUTES && escorted(r.unit));
+    if (free < 0) free = routes.findIndex((r) => escorted(r.unit));
+    if (free < 0) {
+      for (const u of mine) {
+        if (!escorted(u.id)) continue;
+        const i = matched.slice(0, MAX_ROUTES + 1).findIndex((c) => reaches(u, c));
+        if (i < 0) continue;
+        routes[i] = route(matched[i], u);
+        free = i;
+        break;
+      }
+    }
+    if (free < 0) return routes.slice(0, MAX_ROUTES);
+    routes[free] = { ...routes[free], free: true };
+    const others = routes.filter((_, i) => i !== free).slice(0, MAX_ROUTES);
+    return routes.filter((r, i) => i === free || others.includes(r));
   }
   function* banking(g, p) {
     const s = g.s;
@@ -33006,6 +34476,26 @@
     }
   }
   var sayGain = (gain) => Object.entries(gain).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(", ");
+  function* pygmalion(g, p, routes, gain) {
+    const s = g.s;
+    const leader = leaderOf(s, p, "pygmalion");
+    if (!leader || !routes.some((r) => {
+      const u = r.unit && unitById(s, r.unit);
+      return !!u && (u.type === "settler" || u.type === "ship") && u.hex === leader.hex;
+    })) return;
+    const pick = yield* choose(g, p, {
+      kind: "pygmalion_trade",
+      title: "Pygmalion",
+      text: "A trade route traced from a unit with Pygmalion pays 1 more: take a Gold or a Culture token.",
+      options: [
+        { id: "culture", label: "1 Culture" },
+        { id: "gold", label: "1 Gold" }
+      ],
+      default: "culture"
+    });
+    const k = pick === "gold" ? "gold" : "culture";
+    gain[k] = (gain[k] || 0) + 1;
+  }
   function* tradePhase(g, p) {
     const s = g.s;
     yield* banking(g, p);
@@ -33026,6 +34516,7 @@
     }
     if (!routes.length) return;
     const gain = yield* routeIncome(g, p, routes);
+    yield* pygmalion(g, p, routes, gain);
     gainRes(g, p, gain);
     const marketGold = [...new Set(toMarket(routes).map((r) => cityById(s, r.city).owner))];
     for (const o of marketGold) gainRes(g, o, { gold: 1 });
@@ -33041,7 +34532,7 @@
   }
   var hegemonySites = (s, p, ship) => nbrs(s, ship.hex).filter((k) => !foundBlocked(s, p, k, { ship: true }));
   function* hegemonyAction(g, a) {
-    var _a, _b;
+    var _a2, _b;
     const s = g.s;
     const p = g.cur;
     const t = s.turn;
@@ -33059,7 +34550,7 @@
     const rest = navyAt(s, sea, p).filter((x) => x.id !== ship.id).length * shipCap(s, p);
     if (stay.length > rest) fail("The other Ships cannot carry that many units.");
     const landing = cargo.filter((u) => !stay.includes(u.id));
-    if (armyAt(s, to, p).length + landing.filter(isArmy).length > STACK_LIMIT) fail("That many Army units do not fit on the new city. Leave some on the Ships.");
+    if (armyAt(s, to, p).length + landing.filter(isArmy).length > stackLimit(s, p, to, landing.filter(isArmy))) fail("That many Army units do not fit on the new city. Leave some on the Ships.");
     g.spendAction();
     removeUnits(g, [ship.id]);
     const city = addCity(s, p, to, "neutral");
@@ -33067,7 +34558,7 @@
     g.log(`${g.name(p)} founds a new city from a Ship (Hegemony).`);
     for (const u of landing) {
       u.hex = to;
-      ((_a = t.unitFlags)[_b = u.id] || (_a[_b] = {})).stopped = "hegemony";
+      ((_a2 = t.unitFlags)[_b = u.id] || (_a2[_b] = {})).stopped = "hegemony";
     }
     if (landing.length) g.emit({ type: "move", player: p, units: landing.map((u) => u.id), from: sea, to });
     trimCargo(g, sea);
@@ -33100,7 +34591,7 @@
       if (isSea(s, hex)) continue;
       const here = units.filter((u) => u.hex === hex);
       const more = here.filter((u) => u.type === "settler").length - here.filter((u) => u.type === "infantry").length;
-      if (more > 0 && armyAt(s, hex, p).length + more > STACK_LIMIT) fail("Too many Army units would end up in one space.");
+      if (more > 0 && armyAt(s, hex, p).length + more > stackLimit(s, p, hex)) fail("Too many Army units would end up in one space.");
     }
     t.used.fightingBands = true;
     for (const u of asInfantry) u.type = "infantry";
@@ -33163,6 +34654,394 @@
       deck.unshift(deck.pop());
       g.log(`${g.name(p)} pays 1 culture to bury the next Event card (Calendar).`);
     }
+  }
+
+  // src/engine/leaderActions.js
+  var once2 = (t, key2, who) => {
+    if (t.used[key2]) fail(`${who} can be used once per turn.`);
+    t.used[key2] = true;
+  };
+  function homeCity(g, p, id) {
+    const city = leaderCity(g.s, p, id);
+    if (!city) fail(`${LEADERS[id].name} must be in one of your cities.`);
+    return city;
+  }
+  function begin(g, city) {
+    checkActivatable(g, city);
+    markStart(g, city);
+  }
+  function* groupAdvance(g, p, a, leader, group) {
+    const city = homeCity(g, p, leader);
+    begin(g, city);
+    if (!ADVANCES[a.advance]) fail("Choose an Advance.");
+    g.spendAction();
+    yield* leaderAdvance(g, p, a.advance, { swap: true, group, token: a.token });
+    yield* finishActivation(g, city);
+  }
+  function* freeBuild(g, p, a, leader, key2, extra, sacrifice) {
+    const city = homeCity(g, p, leader);
+    once2(g.s.turn, key2, LEADERS[leader].name);
+    if (a.wonder) {
+      if (!sacrifice) fail(`${LEADERS[leader].name} builds Buildings only.`);
+      yield* performWonder(g, p, city, a.wonder, { spendAction: false, sacrifice });
+      return;
+    }
+    yield* performConstruct(g, p, city, a.building, { portHex: a.port, templeBonus: a.templeBonus, spendAction: false, extra, sacrifice });
+  }
+  var cardName = (deck, id) => {
+    if (deck === "action") return ACTION_CARDS[id].name;
+    const card = OBJECTIVE_CARDS[id];
+    return `${OBJECTIVES[card.dev].name} / ${OBJECTIVES[card.mil].name}`;
+  };
+  function* freeMove(g, a, only) {
+    const t = g.s.turn;
+    const saved = t.move;
+    t.move = { credits: 1, moved: {}, shipMoved: false, navUsed: false, only, free: true };
+    try {
+      yield* moveAction(g, a);
+    } finally {
+      t.move = saved;
+    }
+  }
+  var ABILITIES = {
+    *wu_zetian_a(g, p, a) {
+      yield* groupAdvance(g, p, a, "wu_zetian", "agriculture");
+    },
+    *sun_tzu_a(g, p, a) {
+      yield* groupAdvance(g, p, a, "sun_tzu", "warfare");
+    },
+    *pericles_a(g, p, a) {
+      yield* groupAdvance(g, p, a, "pericles", "education");
+    },
+    *hiram_b(g, p, a) {
+      yield* groupAdvance(g, p, a, "hiram", "construction");
+    },
+    *maharaja_a(g, p, a) {
+      const city = homeCity(g, p, "maharaja");
+      begin(g, city);
+      if (!ADVANCES[a.advance]) fail("Choose an Advance.");
+      yield* leaderAdvance(g, p, a.advance, { newCategory: true, extra: { culture: 1 }, full: true });
+      yield* finishActivation(g, city);
+    },
+    *darius_b(g, p, a) {
+      yield* freeBuild(g, p, a, "darius", "darius", { culture: 2 }, 0);
+    },
+    *ahuitzotl_b(g, p, a) {
+      yield* freeBuild(g, p, a, "ahuitzotl", "ahuitzotl", null, 2);
+    },
+    *cyrus_a(g, p, a) {
+      const s = g.s;
+      const pl = s.players[p];
+      const city = homeCity(g, p, "cyrus");
+      begin(g, city);
+      const n = Math.min(citySize(city), regionsWithCities(s, p).size);
+      g.spendAction();
+      let culture = a.culture;
+      if (!Number.isInteger(culture) || culture < 0 || culture > n) {
+        let cult = pl.culture;
+        let mood = pl.mood;
+        for (let i = 0; i < n; i++) {
+          if (cult <= mood) cult += 1;
+          else mood += 1;
+        }
+        culture = yield* choose(g, p, {
+          kind: "cyrus_tokens",
+          title: "Cyrus the Great",
+          text: `Take ${plural2(n, "token")}: how many are Culture, how many Mood?`,
+          options: Array.from({ length: n + 1 }, (_, k) => ({ id: String(k), label: `${k} Culture, ${n - k} Mood` })),
+          default: String(cult - pl.culture)
+        });
+        culture = Number(culture);
+      }
+      gainRes(g, p, { culture, mood: n - culture });
+      g.log(`${g.name(p)} gains ${culture} Culture and ${n - culture} Mood (Cyrus the Great).`);
+      yield* finishActivation(g, city);
+    },
+    *augustus_a(g, p, a) {
+      const s = g.s;
+      const city = homeCity(g, p, "augustus");
+      begin(g, city);
+      once2(s.turn, "augustus", "Augustus");
+      const deck = a.draw === "objective" ? "objective" : "action";
+      if (!s.decks[deck].length && !s.decks[`${deck}Discard`].length) fail(`There is no ${deck === "action" ? "Action" : "Objective"} card to draw.`);
+      g.spendAction();
+      if (deck === "action") yield* drawActionCard(g, p);
+      else drawObjectiveCard(g, p);
+      const hand = s.players[p].hand[deck];
+      const ids = [...new Set(hand)];
+      const gone = ids.includes(a.discard) ? a.discard : yield* choose(g, p, {
+        kind: "augustus",
+        title: "Emperor Augustus",
+        text: `Discard ${deck === "action" ? "an Action" : "an Objective"} card.`,
+        options: ids.map((id) => ({ id, label: cardName(deck, id) })),
+        default: ids[0]
+      });
+      if (gone && hand.includes(gone)) {
+        hand.splice(hand.indexOf(gone), 1);
+        discardCard(g, p, deck, gone);
+        g.log(`${g.name(p)} discards ${deck === "action" ? "an Action" : "an Objective"} card (Emperor Augustus).`);
+      }
+      yield* finishActivation(g, city);
+    },
+    *cleopatra_b(g, p) {
+      const s = g.s;
+      const city = homeCity(g, p, "cleopatra");
+      once2(s.turn, "cleopatra", "Cleopatra");
+      const plan = planPayment(s, p, { culture: 1 }, { noArena: true });
+      if (!plan) fail("You need 1 Culture token.");
+      applyPayment(g, p, plan);
+      city.beloved = (city.beloved || 0) + 1;
+      g.emit({ type: "beloved", player: p, city: city.id });
+      g.log(`${g.name(p)} places a Culture token in the city at ${city.hex} (Cleopatra).`);
+      yield* [];
+    },
+    *eric_a(g, p, a, eric) {
+      const s = g.s;
+      const pl = s.players[p];
+      if (!isSea(s, eric.hex)) fail("Eric the Red must be on a Ship.");
+      const region = regionOf(s, eric.hex);
+      if (pl.ericTokens.includes(region)) fail("Eric has a Culture token on this Region already.");
+      const plan = planPayment(s, p, { culture: 1 }, { noArena: true });
+      if (!plan) fail("You need 1 Culture token.");
+      g.spendAction();
+      applyPayment(g, p, plan);
+      pl.ericTokens.push(region);
+      g.emit({ type: "eric_token", player: p, region, hex: eric.hex });
+      g.log(`${g.name(p)} places a Culture token on a Region (Eric the Red): 1 VP.`);
+      yield* [];
+    },
+    *eric_b(g, p, a, eric) {
+      const s = g.s;
+      if (!isSea(s, eric.hex)) fail("Eric the Red must be on a Ship.");
+      const crew = [...new Set(a.units || [])].filter((id) => id !== eric.id);
+      for (const id of crew) {
+        const u = unitById(s, id);
+        if (!u || u.owner !== p || u.hex !== eric.hex || u.type === "ship") fail("Only Land units on board with Eric can go with him.");
+      }
+      yield* freeMove(g, { type: "move", units: [eric.id, ...crew], to: a.to }, "army");
+    },
+    *hanno_a(g, p, a, hanno) {
+      const s = g.s;
+      const t = s.turn;
+      if (!isSea(s, hanno.hex)) fail("Hanno must be on a Ship.");
+      const ids = [...new Set(a.ships || [])];
+      const ships = ids.map((id) => unitById(s, id));
+      if (!ships.length || ships.some((u) => !u || u.owner !== p || u.type !== "ship" || u.hex !== hanno.hex)) fail("Choose the Ships Hanno sails with.");
+      if (ships.some((u) => {
+        const f = t.unitFlags[u.id] || {};
+        return f.moved || f.fought || f.stopped;
+      })) fail("Hanno can only sail Ships that have not moved this turn.");
+      once2(t, "hanno", "Hanno");
+      const aboard = cargoAt(s, hanno.hex).filter((u) => u.owner === p && u.id !== hanno.id).map((u) => u.id);
+      const room = Math.max(0, ids.length * shipCap(s, p) - 1);
+      const carry = [hanno.id, ...Array.isArray(a.carry) ? a.carry.filter((id) => id !== hanno.id) : aboard.slice(0, room)];
+      yield* freeMove(g, { type: "move", units: ids, to: a.to, nav: a.nav, attack: a.attack, carry }, "ships");
+      for (const id of ids) if (unitById(s, id)) unitFlags(g, id).stopped = "hanno";
+    },
+    *marqzen_b(g, p, a, marqzen) {
+      const s = g.s;
+      const unit = unitById(s, a.unit);
+      if (!unit || unit.owner === p || isNpc(unit.owner) || !isLand(s, unit.hex) || hexDistance(unit.hex, marqzen.hex) !== 1) {
+        fail("Choose an enemy player's Land unit next to Marqzen.");
+      }
+      const to = a.to;
+      if (!to || !nbrs(s, unit.hex).includes(to)) fail("Choose a space next to the unit.");
+      if (!isLand(s, to)) fail("The unit can only go to a revealed Land space.");
+      if (hexDistance(to, marqzen.hex) <= 1) fail("The space must not be next to Marqzen.");
+      const city = cityAt(s, to);
+      if (unitsAt(s, to).some((u) => u.owner !== unit.owner) || city && city.owner !== unit.owner) fail("The unit cannot be moved into a battle.");
+      if (isArmy(unit) && armyAt(s, to, unit.owner).length + 1 > stackLimit(s, unit.owner, to, [unit])) fail("That space is full.");
+      once2(s.turn, "marqzen", "Marqzen");
+      g.spendAction();
+      const from = unit.hex;
+      unit.hex = to;
+      g.emit({ type: "move", player: unit.owner, units: [unit.id], from, to });
+      g.log(`${g.name(p)} moves a ${unit.type} of ${g.name(unit.owner)} (Marqzen).`);
+      yield* [];
+    },
+    *suiko_a(g, p, a) {
+      const s = g.s;
+      const city = homeCity(g, p, "suiko");
+      const b = a.building;
+      const holder = city.buildings[b];
+      if (holder === void 0 || holder === p || b === "obelisk") fail("Choose a piece of another player in this city (not an Obelisk).");
+      if (buildingsLeft(s, p, b) <= 0) fail("You have no pieces of that building left.");
+      if (!hasAdv(s, p, "state_religion")) g.spendAction();
+      city.buildings[b] = p;
+      g.emit({ type: "revert", player: p, city: city.id, building: b });
+      g.log(`${g.name(p)} takes back the ${b} in the city at ${city.hex} (Empress Suiko).`);
+      yield* [];
+    },
+    *caesar_a(g, p, a) {
+      const city = homeCity(g, p, "caesar");
+      yield* happinessAction(g, { cities: [{ city: city.id, steps: a.steps || 1 }], caesar: true, pay: a.pay });
+    },
+    *cnut_b(g, p, a) {
+      const city = homeCity(g, p, "cnut");
+      yield* taxationAction(g, { cnut: city.id, gain: a.gain });
+    }
+  };
+  var LEADER_ABILITY_IDS = Object.keys(ABILITIES);
+  function* leaderAction(g, a) {
+    const s = g.s;
+    const p = g.cur;
+    if (!s.civs) fail("Leaders belong to the Civilizations module.");
+    const m = /^(.+)_([ab])$/.exec(String(a.ability || ""));
+    const leader = m && LEADERS[m[1]];
+    const ability = leader && leader.abilities.find((x) => x.id === a.ability);
+    if (!ability || ability.kind === "passive" || !ABILITIES[a.ability]) fail("That is not an ability you can use.");
+    const unit = leaderOf(s, p, m[1]);
+    if (!unit) fail(`${leader.name} is not in play.`);
+    yield* ABILITIES[a.ability](g, p, a, unit);
+  }
+  function taxGains(s, p) {
+    const n = s.cities.filter((c) => c.owner === p).length;
+    const kinds = hasAdv(s, p, "currency") ? ["food", "wood", "ore", "gold"] : ["food", "wood", "ore"];
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const a of kinds) {
+      for (const b of kinds) {
+        for (let k = 0; k <= n; k++) {
+          const gain = {};
+          gain[a] = (gain[a] || 0) + k;
+          gain[b] = (gain[b] || 0) + (n - k);
+          const key2 = JSON.stringify(Object.entries(gain).filter(([, v]) => v).sort());
+          if (seen.has(key2)) continue;
+          seen.add(key2);
+          out.push(gain);
+        }
+      }
+    }
+    return out;
+  }
+  function buildable(s, p, city, building, extra = null) {
+    if (constructBlocked(s, p, city, building)) return false;
+    const price = leaderBuildPrice(s, p, city, building, { ...BUILDING_COST });
+    return !!planPayment(s, p, extra ? addCosts(price, extra) : price, sizePay(s, p, building, city));
+  }
+  var stuck = (t, u) => {
+    const f = t.unitFlags[u.id];
+    return !!(f && (f.moved || f.fought || f.stopped));
+  };
+  function withFreeMove(t, only, fn) {
+    const saved = t.move;
+    t.move = { credits: 1, moved: {}, shipMoved: false, navUsed: false, only, free: true };
+    try {
+      return fn();
+    } finally {
+      t.move = saved;
+    }
+  }
+  var activatable = (g, city) => {
+    try {
+      checkActivatable(g, city);
+      return true;
+    } catch (e) {
+      if (!(e instanceof RuleError)) throw e;
+      return false;
+    }
+  };
+  function leaderActionList(g, p) {
+    const s = g.s;
+    const t = s.turn;
+    const id = leaderIdOf(s, p);
+    const unit = s.civs && id ? leaderUnit(s, p) : null;
+    if (!unit) return [];
+    const pl = s.players[p];
+    const out = [];
+    const add = (ability, params = {}, meta = {}) => out.push({ cat: "leader", action: { type: "leader", ability, ...params }, ability, leader: id, ...meta });
+    const left = t.actionsLeft;
+    const city = leaderCity(s, p, id);
+    const ready = !!city && activatable(g, city);
+    const hasCulture = !!planPayment(s, p, { culture: 1 }, { noArena: true });
+    const groups = { wu_zetian: "agriculture", sun_tzu: "warfare", pericles: "education", hiram: "construction" };
+    if (groups[id] && left > 0 && ready) {
+      const opts = { group: groups[id], swap: true };
+      const ability = `${id}_${id === "hiram" ? "b" : "a"}`;
+      for (const advance of leaderAdvanceOptions(s, p, opts)) {
+        for (const token of leaderTokens(s, p, advance, opts)) add(ability, { advance, token }, { advance });
+      }
+    }
+    if (id === "maharaja" && ready) {
+      for (const advance of leaderAdvanceOptions(s, p, { newCategory: true, extra: { culture: 1 }, full: true })) add("maharaja_a", { advance }, { advance });
+    }
+    if (id === "darius" && city && !t.used.darius) {
+      for (const building of BUILDINGS) {
+        if (!buildable(s, p, city, building, { culture: 2 })) continue;
+        if (building === "temple") for (const templeBonus of ["mood", "culture"]) add("darius_b", { building, templeBonus }, { building });
+        else add("darius_b", { building }, { building });
+      }
+    }
+    if (id === "ahuitzotl" && city && !t.used.ahuitzotl && pl.captives.length >= 2) {
+      for (const building of BUILDINGS) {
+        if (!buildable(s, p, city, building)) continue;
+        if (building === "temple") for (const templeBonus of ["mood", "culture"]) add("ahuitzotl_b", { building, templeBonus }, { building });
+        else add("ahuitzotl_b", { building }, { building });
+      }
+      for (const wonder of wonderChoices(s, p, city)) if (!wonderBlocked(s, p, city, wonder)) add("ahuitzotl_b", { wonder }, { wonder });
+    }
+    if (id === "cyrus" && left > 0 && ready) {
+      const n = Math.min(citySize(city), regionsWithCities(s, p).size);
+      for (const culture of /* @__PURE__ */ new Set([0, Math.floor(n / 2), n])) add("cyrus_a", { culture }, { culture });
+    }
+    if (id === "augustus" && left > 0 && ready && !t.used.augustus) {
+      for (const draw of ["action", "objective"]) {
+        if (s.decks[draw].length || s.decks[`${draw}Discard`].length) add("augustus_a", { draw }, { draw });
+      }
+    }
+    if (id === "cleopatra" && city && !t.used.cleopatra && hasCulture) add("cleopatra_b", {});
+    if (id === "eric" && isSea(s, unit.hex)) {
+      if (left > 0 && hasCulture && !pl.ericTokens.includes(regionOf(s, unit.hex))) add("eric_a", {});
+      const aboard = cargoAt(s, unit.hex).filter((u) => u.owner === p && u.id !== unit.id && !stuck(t, u)).map((u) => u.id);
+      const seen = /* @__PURE__ */ new Set();
+      withFreeMove(t, "army", () => {
+        for (const crew of aboard.length ? [[], aboard] : [[]]) {
+          for (const o of moveOptions(g, p, [unit.id, ...crew])) {
+            const key2 = `${crew.length}:${o.to}`;
+            if (seen.has(key2) || o.roads || o.convert || !isLand(s, o.to)) continue;
+            seen.add(key2);
+            add("eric_b", { units: [unit.id, ...crew], to: o.to }, { to: o.to, battle: !!o.battle });
+          }
+        }
+      });
+    }
+    if (id === "hanno" && !t.used.hanno && isSea(s, unit.hex)) {
+      const fleet = shipsAt(s, unit.hex, p).filter((u) => !stuck(t, u));
+      const sets = fleet.length > 1 ? [fleet.map((u) => u.id), ...fleet.map((u) => [u.id])] : fleet.length ? [fleet.map((u) => u.id)] : [];
+      withFreeMove(t, "ships", () => {
+        for (const ships of sets) {
+          for (const o of moveOptions(g, p, ships)) {
+            if (o.convert) continue;
+            add("hanno_a", { ships, to: o.to, ...o.nav ? { nav: o.nav } : {}, ...o.attack ? { attack: true } : {} }, { to: o.to, battle: !!o.battle, explore: o.explore !== null });
+          }
+        }
+      });
+    }
+    if (id === "marqzen" && left > 0 && !t.used.marqzen) {
+      for (const u of s.units) {
+        if (u.owner === p || isNpc(u.owner) || !isLand(s, u.hex) || hexDistance(u.hex, unit.hex) !== 1) continue;
+        for (const to of nbrs(s, u.hex)) {
+          if (!isLand(s, to) || hexDistance(to, unit.hex) <= 1) continue;
+          const there = cityAt(s, to);
+          if (unitsAt(s, to).some((x) => x.owner !== u.owner) || there && there.owner !== u.owner) continue;
+          add("marqzen_b", { unit: u.id, to }, { target: u.id, to });
+        }
+      }
+    }
+    if (id === "suiko" && city && (left > 0 || hasAdv(s, p, "state_religion"))) {
+      for (const [building, holder] of Object.entries(city.buildings)) {
+        if (holder !== p && building !== "obelisk" && buildingsLeft(s, p, building) > 0) add("suiko_a", { building }, { building });
+      }
+    }
+    if (id === "caesar" && ready) {
+      for (let steps = 1; steps <= happinessRoom(city); steps++) {
+        if (planPayment(s, p, { mood: steps * citySize(city) })) add("caesar_a", { steps }, { steps });
+      }
+    }
+    if (id === "cnut" && left > 0 && ready && hasAdv(s, p, "taxation") && !t.used.taxation && effMood(s, city) === "happy") {
+      for (const gain of taxGains(s, p)) add("cnut_b", { gain });
+    }
+    return out;
   }
 
   // src/engine/game.js
@@ -33253,6 +35132,7 @@
     tribal_allies: tribalAlliesAction,
     human_sacrifice: humanSacrificeAction,
     calendar: calendarAction,
+    leader: leaderAction,
     end_turn: endTurn
   };
   var ACTION_TYPES = Object.keys(ACTIONS);
@@ -33512,14 +35392,14 @@
     const base2 = cityCapacity(s, city);
     const ball = hasCivAdv(s, p, "ballcourts") && effMood(s, city) !== "angry" && canPay(s, p, { mood: 1 });
     const cap2 = base2 + (ball ? 1 : 0);
-    const room = STACK_LIMIT - armyAt(s, city.hex, p).length;
+    const room = stackLimit(s, p, city.hex) - armyAt(s, city.hex, p).length;
     const port = isPortCity(city);
     const market = hasBuilding(city, "market");
     const draft = hasAdv(s, p, "draft");
     const pays = [null, ...hasCivAdv(s, p, "mercenaries") ? ["gold"] : [], ...hasCivAdv(s, p, "spartans") ? ["culture"] : []];
     const seen = /* @__PURE__ */ new Set();
     const push = (units, extra = {}) => {
-      const total = Object.values(units).reduce((n, x) => n + x, 0) + (extra.draftCard ? 1 : 0);
+      const total = Object.values(units).reduce((n, x) => n + x, 0) + (extra.draftCard ? 1 : 0) + (extra.leader ? 1 : 0);
       const a = { type: "recruit", city: city.id, units, ...extra, ...total > base2 ? { ballcourts: true } : {} };
       const k = JSON.stringify(a);
       if (seen.has(k)) return;
@@ -33553,6 +35433,11 @@
         }
       }
     }
+    for (const leader of leadersAvailable(s, p)) {
+      push({}, { leader });
+      push({ infantry: 1 }, { leader });
+      if (cavalryOk) push({ cavalry: 1 }, { leader });
+    }
     return out;
   }
   function enumerateActions(g, p, { weights = uniform() } = {}) {
@@ -33563,7 +35448,7 @@
     const add = (cat, action, meta = {}) => out.push({ cat, action, ...meta });
     const left = t.actionsLeft;
     const mine = citiesOf(s, p);
-    const activatable = (c) => {
+    const activatable2 = (c) => {
       const n = t.activated[c.id] || 0;
       if (n === 0 || effMood(s, c) !== "angry") return true;
       return !!t.angryBy[c.id] && !t.angryExtra[c.id];
@@ -33606,7 +35491,7 @@
       }
     };
     for (const c of mine) {
-      if (!activatable(c)) continue;
+      if (!activatable2(c)) continue;
       if (left > 0) {
         for (const picks of collectPlans(s, p, c, weights)) collects(c, picks);
         if (hasCivAdv(s, p, "ballcourts") && effMood(s, c) !== "angry" && canPay(s, p, { mood: 1 })) {
@@ -33617,7 +35502,7 @@
         for (const b of BUILDINGS) {
           if (constructBlocked(s, p, c, b)) continue;
           const freeFood = b === "temple" && hasAdv(s, p, "state_religion") && !t.used.stateReligion;
-          if (!planPayment(s, p, { food: freeFood ? 0 : 1, wood: 1, ore: 1 }, sizePay(s, p, b))) continue;
+          if (!planPayment(s, p, leaderBuildPrice(s, p, c, b, { food: freeFood ? 0 : 1, wood: 1, ore: 1 }), sizePay(s, p, b, c))) continue;
           if (b === "temple") {
             add("construct", { type: "construct", city: c.id, building: b, templeBonus: "mood" }, { city: c.id, building: b });
             add("construct", { type: "construct", city: c.id, building: b, templeBonus: "culture" }, { city: c.id, building: b });
@@ -33625,7 +35510,7 @@
             add("construct", { type: "construct", city: c.id, building: b }, { city: c.id, building: b });
           }
         }
-        for (const w of pl.hand.wonder) {
+        for (const w of wonderChoices(s, p, c)) {
           if (!wonderBlocked(s, p, c, w)) add("wonder", { type: "construct_wonder", city: c.id, wonder: w }, { city: c.id, wonder: w });
         }
         for (const a of recruitVariants(g, p, c)) add("recruit", a, { city: c.id });
@@ -33633,7 +35518,7 @@
     }
     if (hasAdv(s, p, "economic_liberty") && t.collects === 0 && canPay(s, p, { mood: 1 })) {
       for (const c of mine) {
-        if (!activatable(c)) continue;
+        if (!activatable2(c)) continue;
         for (const picks of collectPlans(s, p, c, weights)) collects(c, picks, { free: true });
       }
     }
@@ -33658,7 +35543,7 @@
       const arts = hasAdv(s, p, "arts") && !t.used.arts;
       const artsMood = arts && hasCivAdv(s, p, "hellenization") && canPay(s, p, { mood: 2 });
       for (const acting of influenceOrigins(s, p)) {
-        if (acting.owner === p && !acting.settlers && !activatable(acting)) continue;
+        if (acting.owner === p && !acting.settlers && !activatable2(acting)) continue;
         const from = acting.settlers ? { unit: s.units.find((u) => u.owner === p && u.type === "settler" && u.hex === acting.hex).id } : { city: acting.id };
         for (const target of s.cities) {
           if (influenceBlocked(s, p, acting, target)) continue;
@@ -33705,14 +35590,14 @@
       for (const ids of moveGroups(s, p, hex)) moveAdd(ids, hex);
     }
     if (hasCivAdv(s, p, "nomads")) {
-      const stuck = (u) => {
+      const stuck2 = (u) => {
         const f = t.unitFlags[u.id];
         return !!(f && (f.fought || f.stopped));
       };
       for (const c of mine) {
         if (citySize(c) !== 1 || effMood(s, c) === "angry") continue;
         moveAdd([], c.hex, c.id);
-        const crew = s.units.filter((u) => u.owner === p && u.hex === c.hex && u.type !== "ship" && !stuck(u)).map((u) => u.id);
+        const crew = s.units.filter((u) => u.owner === p && u.hex === c.hex && u.type !== "ship" && !stuck2(u)).map((u) => u.id);
         if (crew.length) moveAdd(crew, c.hex, c.id);
       }
     }
@@ -33726,22 +35611,7 @@
       add("card", { type: "play_card", card: id }, { card: id, top: ACTION_CARDS[id].top });
     }
     if (hasAdv(s, p, "taxation") && !t.used.taxation && left > 0 && canPay(s, p, { mood: 1 })) {
-      const n = mine.length;
-      const kinds = hasAdv(s, p, "currency") ? ["food", "wood", "ore", "gold"] : ["food", "wood", "ore"];
-      const seen = /* @__PURE__ */ new Set();
-      for (const a of kinds) {
-        for (const b of kinds) {
-          for (let k = 0; k <= n; k++) {
-            const gain = {};
-            gain[a] = (gain[a] || 0) + k;
-            gain[b] = (gain[b] || 0) + (n - k);
-            const key2 = JSON.stringify(Object.entries(gain).filter(([, v]) => v).sort());
-            if (seen.has(key2)) continue;
-            seen.add(key2);
-            add("tax", { type: "taxation", gain }, {});
-          }
-        }
-      }
+      for (const gain of taxGains(s, p)) add("tax", { type: "taxation", gain }, {});
     }
     if (left > 0 && hasAdv(s, p, "civil_liberties")) add("civil", { type: "civil_liberties" });
     if (hasAdv(s, p, "bartering") && !t.used.bartering) {
@@ -33772,7 +35642,7 @@
         const army = cargoAt(s, ship.hex).filter((u) => u.owner === p && isArmy(u));
         const others = navyAt(s, ship.hex, p).filter((x) => x.id !== ship.id).length * shipCap(s, p);
         for (const to of hegemonySites(s, p, ship)) {
-          const over = Math.max(0, armyAt(s, to, p).length + army.length - STACK_LIMIT);
+          const over = Math.max(0, armyAt(s, to, p).length + army.length - stackLimit(s, p, to, army));
           const stay = army.slice(army.length - over).map((u) => u.id);
           if (stay.length > others) continue;
           add("hegemony", { type: "hegemony", unit: ship.id, to, ...stay.length ? { stay } : {} }, { unit: ship.id, to });
@@ -33784,7 +35654,7 @@
       for (const hex of hexes) {
         const settlers = s.units.filter((u) => u.owner === p && u.hex === hex && u.type === "settler");
         const infantry = s.units.filter((u) => u.owner === p && u.hex === hex && u.type === "infantry");
-        if (settlers.length && unitsLeft(s, p, "infantry") >= settlers.length && (isSea(s, hex) || armyAt(s, hex, p).length + settlers.length <= STACK_LIMIT)) {
+        if (settlers.length && unitsLeft(s, p, "infantry") >= settlers.length && (isSea(s, hex) || armyAt(s, hex, p).length + settlers.length <= stackLimit(s, p, hex))) {
           add("bands", { type: "fighting_bands", units: settlers.map((u) => u.id) }, { hex, to: "infantry" });
         }
         if (infantry.length && unitsLeft(s, p, "settler") >= infantry.length) {
@@ -33800,6 +35670,7 @@
       }
     }
     if (hasCivAdv(s, p, "calendar")) add("calendar", { type: "calendar" });
+    out.push(...leaderActionList(g, p));
     add("end", { type: "end_turn" });
     return out;
   }
@@ -34001,6 +35872,8 @@
   };
   var civAdvanceValue = (id) => CIV_ADV_BASE + (CIV_ADV_BONUS[id] ?? 0.5);
   var BUILDING_VALUE = { academy: 2.6, fortress: 2.1, market: 2.3, port: 2.4, temple: 2.6, obelisk: 2.3, observatory: 2.5 };
+  var LEADER_VALUE = 1.6;
+  var VP = 2.2;
   var CITY_BASE = 5;
   var WONDER_BUILT = 14;
   var WONDER_HELD = 4.4;
@@ -34218,15 +36091,16 @@
     return v;
   }
   function danger(s, q, ix) {
-    var _a;
+    var _a2;
     let pen = 0;
     const tally2 = (acc, u) => {
       acc.n += 1;
       if (u.type === "cavalry") acc.horse += 1;
       else if (u.type === "elephant") acc.tusk += 1;
+      else if (u.type === "leader" && acc.leader !== void 0) acc.leader += 1;
     };
     const armyOf2 = (k, owner) => {
-      const acc = { n: 0, horse: 0, tusk: 0 };
+      const acc = { n: 0, horse: 0, tusk: 0, leader: 0 };
       for (const u of ix.units.get(k) || []) if (u.owner === owner && isArmy(u)) tally2(acc, u);
       return acc;
     };
@@ -34235,7 +36109,7 @@
       const attackers = {};
       for (const n of nbrs(s, c.hex)) {
         for (const u of ix.units.get(n) || []) {
-          if (u.owner !== q && isArmy(u) && canAttack(s, u.owner)) tally2(attackers[_a = u.owner] || (attackers[_a] = { n: 0, horse: 0, tusk: 0 }), u);
+          if (u.owner !== q && isArmy(u) && canAttack(s, u.owner)) tally2(attackers[_a2 = u.owner] || (attackers[_a2] = { n: 0, horse: 0, tusk: 0 }), u);
         }
       }
       const worst = Object.values(attackers).reduce((top, a) => !top || a.n > top.n ? a : top, null);
@@ -34249,7 +36123,7 @@
         elephantD: def.tusk
       });
       const worth = CITY_BASE + 0.6 * (citySize(c) - 1) + 2.2 * Object.keys(c.buildings).length + 9 * c.wonders.length;
-      pen += odds.win * (worth + 2 * def.n) * 0.55;
+      pen += odds.win * (worth + 2 * def.n + def.leader * LEADER_CAPTURE_VP * VP) * 0.55;
     }
     const seen = /* @__PURE__ */ new Set();
     for (const u of s.units) {
@@ -34263,7 +36137,7 @@
       if (!foes.n) continue;
       const mine = armyOf2(u.hex, q);
       const odds = battleOdds(Math.min(foes.n, 5), mine.n, { horseA: foes.horse, horseD: mine.horse, elephantA: foes.tusk, elephantD: mine.tusk });
-      pen += odds.win * mine.n * 1.4 * 0.5;
+      pen += odds.win * (mine.n * 1.4 + mine.leader * LEADER_CAPTURE_VP * VP) * 0.5;
     }
     return pen;
   }
@@ -34297,6 +36171,8 @@
     v += 0.8 * Math.min(pl.hand.action.length, 3) + 0.3 * Math.max(0, pl.hand.action.length - 3);
     for (const id of pl.hand.wonder) v += pl.advances.includes(WONDERS[id].advance) ? 1.7 : 0.9;
     v += pl.vpBonus * 2.2;
+    if (pl.leader) v += LEADER_VALUE;
+    v += ((pl.leaderCaptured || []).length * LEADER_CAPTURE_VP + (pl.ericTokens || []).length * ERIC_TOKEN_VP) * VP;
     const tactics = pl.advances.includes("tactics");
     const enemyCities = s.cities.filter((c) => c.owner !== q);
     let settlerValue = 0;
@@ -34714,6 +36590,14 @@
       parent.add(txt(this.scene, x, y, n, { size: 11, bold: true, origin: 0.5, color: "#ffffff" }));
     }
     piece(parent, key2, x, y, w, owner, count) {
+      if (key2 === "u_leader") {
+        const ring = this.scene.add.graphics();
+        ring.fillStyle(790808, 0.6);
+        ring.fillCircle(x, y, w * 0.6);
+        ring.lineStyle(Math.max(1.6, w * 0.08), C.gold, 1);
+        ring.strokeCircle(x, y, w * 0.6);
+        parent.add(ring);
+      }
       const img = icon(this.scene, key2, x, y, w).setTint(PLAYER_COLORS[owner]);
       parent.add(img);
       if (count > 1) this.unitBadge(parent, x + w * 0.38, y + w * 0.36, count);
@@ -34730,7 +36614,7 @@
         const units = s.units.filter((u) => u.hex === h.k && !hide.has(u.id));
         const groups = [];
         for (const owner of OWNERS) {
-          for (const type of ["ship", "infantry", "cavalry", "elephant", "settler"]) {
+          for (const type of ["ship", "leader", "infantry", "cavalry", "elephant", "settler"]) {
             const n = units.filter((u) => u.owner === owner && u.type === type).length;
             if (n) groups.push({ owner, type, n });
           }
@@ -34749,19 +36633,25 @@
             c.add(icon(this.scene, `b_${type}`, bx, 20.5 * HEX_SCALE, (tight ? 16 : 18) * HEX_SCALE).setTint(PLAYER_COLORS[who]));
           });
           if (city.druid !== void 0) c.add(this.scene.add.circle(-31 * HEX_SCALE, 3 * HEX_SCALE, 6 * HEX_SCALE, PLAYER_COLORS[city.druid]).setStrokeStyle(2 * HEX_SCALE, 16777215));
+          if (city.beloved > 0) {
+            c.add(icon(this.scene, "ic_culture", 0, -42 * HEX_SCALE, 15 * HEX_SCALE));
+            if (city.beloved > 1) this.unitBadge(c, 9 * HEX_SCALE, -37 * HEX_SCALE, city.beloved);
+          }
           city.wonders.forEach((w, i) => c.add(icon(this.scene, "ic_wonder", (26 + i * 2) * HEX_SCALE, (-31 + i * 12) * HEX_SCALE, 17 * HEX_SCALE)));
           const crowded = groups.length > 2;
           const packed = groups.length > 3;
+          const tiny = groups.length > 4;
           groups.forEach((gp, i) => {
-            const gx = (i - (groups.length - 1) / 2) * (packed ? 18 : crowded ? 22 : 26) * HEX_SCALE;
-            this.piece(c, unitKey(gp), gx, 38 * HEX_SCALE, (packed ? 17 : crowded ? 20 : 22) * HEX_SCALE, gp.owner, gp.n);
+            const gx = (i - (groups.length - 1) / 2) * (tiny ? 16 : packed ? 18 : crowded ? 22 : 26) * HEX_SCALE;
+            this.piece(c, unitKey(gp), gx, 38 * HEX_SCALE, (tiny ? 15 : packed ? 17 : crowded ? 20 : 22) * HEX_SCALE, gp.owner, gp.n);
           });
         } else {
           const cargo = groups.filter((gp) => gp.type !== "ship");
           const ships = groups.filter((gp) => gp.type === "ship");
           const row = (list, yy, w) => {
-            const size = list.length > 3 ? w * 0.65 : list.length > 2 ? w * 0.8 : w;
-            list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * (size + 6), yy, size, gp.owner, gp.n));
+            const size = list.length > 4 ? w * 0.5 : list.length > 3 ? w * 0.65 : list.length > 2 ? w * 0.8 : w;
+            const step = size + (list.length > 4 ? 3 : 6);
+            list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * step, yy, size, gp.owner, gp.n));
           };
           if (ships.length && cargo.length) {
             row(ships, -8 * HEX_SCALE, 27 * HEX_SCALE);
@@ -34938,14 +36828,27 @@
   // src/ui/info.js
   var ownerName = (g, o) => o === BARBARIAN ? "Barbarian" : o === PIRATE ? "Pirate" : o === 0 ? "Your" : g.s.players.length > 2 ? g.s.players[o].name : "Enemy";
   var ownedBy = (g, o) => o === 0 ? "yours" : o === BARBARIAN ? "barbarian" : o === PIRATE ? "pirate" : g.s.players.length > 2 ? `${g.s.players[o].name}'s` : "enemy's";
-  var UNIT_NAME = { infantry: "Infantry", cavalry: "Cavalry", elephant: "Elephant", settler: "Settler", ship: "Ship" };
-  var unitPlural = (type, n = 2) => `${UNIT_NAME[type]}${n > 1 && type !== "infantry" && type !== "cavalry" ? "s" : ""}`;
+  var UNIT_NAME = { infantry: "Infantry", cavalry: "Cavalry", elephant: "Elephant", settler: "Settler", ship: "Ship", leader: "Leader" };
+  var unitPlural = (type, n = 2) => `${UNIT_NAME[type]}${n > 1 && type !== "infantry" && type !== "cavalry" && type !== "leader" ? "s" : ""}`;
+  var leaderLabel = (s, owner) => LEADERS[leaderIdOf(s, owner)]?.name ?? "Leader";
+  var LEADER_KIND = { passive: "Passive", action: "Action", free: "Free" };
+  var LEADER_KIND_HELP = {
+    passive: "Passive: always in effect while the Leader is in play.",
+    action: "Action: using it costs one of your three actions.",
+    free: "Free Action: using it costs no action."
+  };
+  var leaderAbilityLines = (id) => (LEADERS[id]?.abilities || []).map((a) => `${LEADER_KIND[a.kind]}: ${a.text}`);
   function unitCounts(s, k, owner) {
-    const out = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
+    const out = { leader: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
     for (const u of unitsAt(s, k)) if (owner === void 0 || u.owner === owner) out[u.type] += 1;
     return out;
   }
-  var countText = (c) => Object.entries(c).filter(([, n]) => n).map(([t, n]) => `${n} ${unitPlural(t, n)}`).join(", ");
+  var countText = (c, leader = "Leader") => Object.entries(c).filter(([, n]) => n).map(([t, n]) => t === "leader" ? leader : `${n} ${unitPlural(t, n)}`).join(", ");
+  function ericTokenLines(g, k) {
+    const region = g.s.map.hexes[k]?.region;
+    if (region === void 0) return [];
+    return g.s.players.filter((p) => (p.ericTokens || []).includes(region)).map((p) => `Eric the Red Culture token (${ownedBy(g, p.idx)}) lies in this Region: ${ERIC_TOKEN_VP} VP.`);
+  }
   function freeMoveText(mv) {
     const kind = mv.only === "army" ? "Army " : mv.only === "ships" ? "Ship " : mv.only === "settlers" ? "Settler " : "";
     return `${mv.credits} ${kind}group move${mv.credits === 1 ? "" : "s"}`;
@@ -34970,6 +36873,7 @@ Ends with the round.` });
     if (blds.length) parts.push(blds.join(", "));
     if (city.wonders.length) parts.push(city.wonders.map((w) => WONDERS[w.id].name).join(", "));
     if (city.druid !== void 0) parts.push(`${cap(seatOwner(g.s, city.druid))} Culture token lies under this city (Druidic Influence, 1 VP)`);
+    if (city.beloved > 0) parts.push(`Beloved by Cleopatra: ${plural(city.beloved, "Culture token")} placed here (an attacker pays as many Culture tokens)`);
     if (city.corrupt) parts.push("Corrupt: cannot Collect until another action has activated it");
     return parts.join("\n");
   }
@@ -34990,9 +36894,12 @@ Ends with the round.` });
     if (city) lines.push("", cityText(g, city));
     for (const owner of [...s.players.map((p) => p.idx), BARBARIAN, PIRATE]) {
       const c = unitCounts(s, k, owner);
-      const t = countText(c);
+      const t = countText(c, leaderLabel(s, owner));
       if (t) lines.push(`${ownerName(g, owner)} units: ${t}`);
+      if (c.leader) lines.push(leaderLabel(s, owner), ...leaderAbilityLines(leaderIdOf(s, owner)));
     }
+    const tokens = ericTokenLines(g, k);
+    if (tokens.length) lines.push("", ...tokens);
     return lines;
   }
   function placeWords(s, text, how = "terrain") {
@@ -35002,6 +36909,9 @@ Ends with the round.` });
       if (how === "outline") return " (outlined on the map)";
       return h.terrain ? ` (${TERRAIN2[h.terrain].toLowerCase()})` : m;
     });
+  }
+  function short(text, n = 60) {
+    return text.length > n ? `${text.slice(0, n - 1).trimEnd()}\u2026` : text;
   }
 
   // src/ui/modals.js
@@ -35218,7 +37128,20 @@ Ends with the round.` });
 
   // src/ui/civdialog.js
   var triggerText = (adv) => adv.trigger === GOVERNMENT_TRIGGER ? "any Government Advance" : ADVANCES[adv.trigger].name;
-  function civExtras(s, p) {
+  var KIND_TAG = { passive: "Passive", action: "Action", free: "Free Action" };
+  var KIND_COLOR = { passive: TXT.muted, action: TXT.gold, free: TXT.good };
+  var leaderBlurb = (id) => `${LEADERS[id].name}
+${LEADERS[id].abilities.map((a) => `${KIND_TAG[a.kind]}: ${a.text}`).join("\n")}`;
+  function leaderState(s, p, id) {
+    const pl = s.players[p];
+    if (pl.leader === id) return { id: "play", label: "In play" };
+    if (!(pl.leaderLost || []).includes(id)) return { id: "free", label: "Available" };
+    const taker = s.players.find((x) => (x.leaderCaptured || []).some((c) => c.id === id));
+    return { id: "gone", label: taker ? `Gone, taken by ${seatName(s, taker.idx)}` : "Gone" };
+  }
+  var leaderLine = (s, p) => s.players[p].leader ? `Leader: ${LEADERS[s.players[p].leader].name}` : "No Leader in play";
+  var CIV_SCORE = "Captives, Leaders, tokens, Runestones";
+  function peopleExtras(s, p) {
     const pl = s.players[p];
     const out = [];
     if (pl.captives.length || pl.civAdv.includes("captives")) {
@@ -35230,6 +37153,16 @@ Ends with the round.` });
     if (pl.runes) out.push(`Runestones raised: ${pl.runes}. Each is worth 1 VP.`);
     return out;
   }
+  function leaderExtras(s, p) {
+    const pl = s.players[p];
+    const out = [];
+    const held2 = pl.leaderCaptured || [];
+    if (held2.length) out.push(`Enemy Leaders held: ${held2.map((c) => `${LEADERS[c.id].name} (${CIVS[LEADERS[c.id].civ].name})`).join(", ")}. Each is worth ${LEADER_CAPTURE_VP} VP.`);
+    const eric = (pl.ericTokens || []).length;
+    if (eric) out.push(`Eric the Red tokens placed: ${eric}. Each is worth ${ERIC_TOKEN_VP} VP.`);
+    return out;
+  }
+  var civExtras = (s, p) => [...peopleExtras(s, p), ...leaderExtras(s, p)];
   function civSummary(s, p) {
     const pl = s.players[p];
     const civ = CIVS[pl.civ];
@@ -35237,13 +37170,9 @@ Ends with the round.` });
     const owned2 = civ.advances.filter((a) => pl.civAdv.includes(a.id)).map((a) => a.name);
     return `${civ.name}: ${owned2.length ? owned2.join(", ") : "no Advances yet"}`;
   }
-  function civilizationDialog(ctl, p) {
-    const s = ctl.g.s;
+  function advanceCards(f, s, p, civ) {
+    const scene = f.scene;
     const pl = s.players[p];
-    const civ = CIVS[pl.civ];
-    if (!civ) return null;
-    const scene = ctl.scene;
-    const f = new Flow(scene, 720, { top: 64 });
     f.text("Each Advance below comes free as soon as you take the Advance named beside it, and scores \xBD VP like any other Advance.", { size: 13, color: TXT.muted, center: true, gap: 10 });
     for (const adv of civ.advances) {
       const owned2 = pl.civAdv.includes(adv.id);
@@ -35268,12 +37197,62 @@ Ends with the round.` });
       f.box.addAt(back, 0);
       f.y = top + h + 8;
     }
-    const extras = civExtras(s, p);
-    for (const line of extras) f.text(line, { size: 13, color: TXT.gold, center: true, gap: 4 });
-    f.gap(2);
+    for (const line of peopleExtras(s, p)) f.text(line, { size: 13, color: TXT.gold, center: true, gap: 4 });
+  }
+  var LEADER_LOOK = {
+    play: { fill: 2761488, border: C.gold, name: TXT.gold, state: TXT.good, body: TXT.text },
+    free: { fill: 1713202, border: C.border, name: TXT.text, state: TXT.muted, body: TXT.muted },
+    gone: { fill: 1317669, border: 2568769, name: TXT.dim, state: TXT.bad, body: TXT.dim }
+  };
+  function leaderCards(f, s, p) {
+    const scene = f.scene;
+    f.text(`Each people has three Leaders, one of them in play at a time. A Leader is recruited like a unit, for ${LEADER_RECRUIT_COST.culture} more Culture and ${LEADER_RECRUIT_COST.mood} more Mood; the next one replaces him or her for good.`, { size: 13, color: TXT.muted, center: true, gap: 10 });
+    const tagW = 84;
+    for (const id of LEADERS_OF[s.players[p].civ]) {
+      const leader = LEADERS[id];
+      const state = leaderState(s, p, id);
+      const look = LEADER_LOOK[state.id];
+      const top = f.y;
+      const name = f.add(txt(scene, f.pad + 12, top + 10, leader.name, { size: 16, bold: true, serif: true, color: look.name }));
+      f.add(txt(scene, f.w - f.pad - 12, top + 12, state.label, { size: 12, bold: true, origin: [1, 0], color: look.state }));
+      let y = top + 10 + name.height + 4;
+      for (const ability of leader.abilities) {
+        f.add(txt(scene, f.pad + 12, y + 1, KIND_TAG[ability.kind], { size: 12, bold: true, color: state.id === "gone" ? TXT.dim : KIND_COLOR[ability.kind] }));
+        const body = f.add(txt(scene, f.pad + 12 + tagW, y, ability.text, { size: 13, wrap: f.inner - 24 - tagW, color: look.body }));
+        y += body.height + 4;
+      }
+      const h = y + 8 - top;
+      const back = scene.add.graphics();
+      drawPanel(back, f.pad, top, f.inner, h, { fill: look.fill, border: look.border, radius: 8 });
+      f.box.addAt(back, 0);
+      f.y = top + h + 8;
+    }
+    for (const line of leaderExtras(s, p)) f.text(line, { size: 13, color: TXT.gold, center: true, gap: 4 });
+  }
+  function civilizationDialog(ctl, p, tab = "advances") {
+    const s = ctl.g.s;
+    const pl = s.players[p];
+    const civ = CIVS[pl.civ];
+    if (!civ) return null;
+    const f = new Flow(ctl.scene, 720, { top: 64 });
     let modal = null;
+    f.buttons([["advances", "Advances"], ["leaders", "Leaders"]].map(([id, label]) => ({
+      label,
+      w: 150,
+      style: id === tab ? "primary" : "normal",
+      fn: () => {
+        if (id === tab) return;
+        modal.close();
+        civilizationDialog(ctl, p, id);
+      }
+    })), { h: 30 });
+    f.gap(4);
+    if (tab === "leaders") leaderCards(f, s, p);
+    else advanceCards(f, s, p, civ);
+    f.gap(2);
     f.buttons([{ label: "Close", w: 140, fn: () => modal.close() }]);
-    modal = f.finish({ title: civ.name, subtitle: `${cap(seatOwner(s, p))} civilization`, closable: true });
+    const leader = pl.leader ? ` \xB7 ${leaderLine(s, p)}` : "";
+    modal = f.finish({ title: civ.name, subtitle: `${cap(seatOwner(s, p))} civilization${leader}`, closable: true });
     return modal;
   }
 
@@ -35289,7 +37268,7 @@ Ends with the round.` });
   function scoreTip(s, p) {
     const pt = scoreOf(s, p).parts;
     const lines = ["Victory points so far", `Settlements and buildings: ${pt.core}`, `Advances (1 per 2): ${pt.advances}`, `Objectives (2 each): ${pt.objectives}`, `Wonders: ${pt.wonders}`, `Events and bonuses: ${pt.events}`];
-    if (pt.civ !== void 0) lines.push(`Captives, tokens and Runestones: ${pt.civ}`);
+    if (pt.civ !== void 0) lines.push(`${CIV_SCORE}: ${pt.civ}`);
     return lines.join("\n");
   }
   var Hud = class {
@@ -35440,6 +37419,7 @@ Each main action (Advance, Collect, Move...) uses one.`);
       body.on("pointerdown", open);
       tip(body, () => `${seatLabel(g.s, p)} (computer): Government ${gov}
 ${s.civs ? `${civSummary(g.s, p)}
+${leaderLine(g.s, p)}
 ` : ""}Cards in hand: ${cards.action.length} Action, ${cards.objective.length} Objective, ${cards.wonder.length} Wonder (hidden)
 Next Event in ${pl.cubes} Advance${pl.cubes === 1 ? "" : "s"}.
 Click for the Advances, Wonders, Objectives and score.`);
@@ -35567,9 +37547,20 @@ Click for the Advances, Wonders, Objectives and score.`);
       c.add(evHit);
       const civ = s.civs ? CIVS[pl.civ] : null;
       const half = (CARD_W - 26) / 2;
+      if (civ) {
+        const leader = pl.leader;
+        c.add(txt(sc, x + CARD_W / 2, y + 247, leaderLine(s, p), { size: 12, origin: 0.5, color: leader ? TXT.gold : TXT.dim }));
+        const hit = hitBox(sc, x + 10, y + 237, CARD_W - 20, 20);
+        hit.on("pointerdown", () => this.ctl.dialogs.civilization(p, "leaders"));
+        tip(hit, leader ? `${leaderBlurb(leader)}
+Click for all the Leaders of this civilization.` : `No Leader in play.
+${p === 0 ? `Recruit one in a city: it costs ${LEADER_RECRUIT_COST.culture} Culture and ${LEADER_RECRUIT_COST.mood} Mood on top of the units.
+` : ""}Click for the Leaders of this civilization.`);
+        c.add(hit);
+      }
       c.add(new Button(sc, x + 10, y + 258, civ ? half : CARD_W - 20, 32, "Overview", () => this.ctl.dialogs.overview(p), { size: 14, style: "ghost", tip: "Advances, wonders, objectives and score breakdown" }));
       if (civ) {
-        const civTip = () => [civSummary(this.ctl.g.s, p), ...civExtras(this.ctl.g.s, p), "Click for the four Advances of this civilization."].join("\n");
+        const civTip = [civSummary(s, p), leaderLine(s, p), ...civExtras(s, p), "Click for the four Advances and the Leaders of this civilization."].join("\n");
         c.add(new Button(sc, x + 16 + half, y + 258, half, 32, civ.name, () => this.ctl.dialogs.civilization(p), { size: 14, style: "ghost", tip: civTip }));
       }
     }
@@ -35612,6 +37603,7 @@ Click for the Advances, Wonders, Objectives and score.`);
       this.btnAdvance.setDisabled(!open, "Not available right now");
       this.btnCards.setDisabled(!open);
       this.btnAbilities.setDisabled(!open);
+      this.btnAbilities.setTipText(s.civs ? "Special abilities from your Advances, Wonders and Leader" : "Special abilities from your Advances and Wonders");
       this.btnEnd.setDisabled(!can, ctl.busy ? "Please wait" : "Wait for your turn");
       this.btnCards.setBadge(s.players[0].hand.action.length);
       let hint = "";
@@ -35690,6 +37682,11 @@ Click for the Advances, Wonders, Objectives and score.`);
   var BUILD_ICON = Object.fromEntries(BUILDINGS.map((b) => [b, `b_${b}`]));
   var STACK_DEPTH = 1100;
   var cityLine = (s, c) => `${TERRAIN2[terrainOf(s, c.hex)]} city \xB7 size ${citySize(c)} \xB7 ${MOOD_NAME[c.mood]}`;
+  var growthPay = (s, c) => {
+    if (leaderAt(s, 0, "acamapichtli", c.hex)) return "Acamapichtli: Captives can pay for missing resources, 1 for 1.";
+    if (leaderAt(s, 0, "pakal", c.hex)) return "Pakal: each Culture token can pay for any 2 missing resources.";
+    return "";
+  };
   function influenceTargets(s, origin, { free = false, card = null } = {}) {
     const out = [];
     const cheapest = (target, extra) => {
@@ -35760,9 +37757,11 @@ Click for the Advances, Wonders, Objectives and score.`);
     const f = new Flow(ctl.scene, cols === 2 ? 1e3 : 580, { top: 80 });
     f.text("A building costs 1 Food, 1 Wood and 1 Ore and uses one action. It makes the city one size larger.", { size: 13, color: TXT.muted, center: true, gap: 8 });
     haveLine(f, s);
+    const pay2 = growthPay(s, city);
+    if (pay2) f.text(pay2, { size: 12, color: TXT.muted, center: true, gap: 6 });
     let modal = null;
     let err = null;
-    const base2 = (b) => ({ food: b === "temple" && hasAdv(s, 0, "state_religion") && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
+    const base2 = (b) => leaderBuildPrice(s, 0, city, b, { food: b === "temple" && hasAdv(s, 0, "state_religion") && !s.turn.used.stateReligion ? 0 : 1, wood: 1, ore: 1 });
     const price = (b) => rapid ? rapidPrice(s, 0, base2(b), opts.waive).price : base2(b);
     if (card) {
       const again = (extra) => {
@@ -35823,8 +37822,8 @@ Click for the Advances, Wonders, Objectives and score.`);
     const colW = (f.inner - (cols - 1) * 12) / cols;
     const ys = new Array(cols).fill(f.y);
     const rows = list.map((b, i) => {
-      const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b), sizePay(s, 0, b)) ? null : `You need ${costText(price(b))}.`);
-      const note = b === "temple" && hasAdv(s, 0, "state_religion") && !s.turn.used.stateReligion ? " State Religion: the Food is free this turn." : "";
+      const why = constructBlocked(s, 0, city, b) || (planPayment(s, 0, price(b), sizePay(s, 0, b, city)) ? null : `You need ${costText(price(b))}.`);
+      const note = (b === "temple" && hasAdv(s, 0, "state_religion") && !s.turn.used.stateReligion ? " State Religion: the Food is free this turn." : "") + (base2(b).wood === 0 ? ` ${LEADERS[leaderIdOf(s, 0)].name}: no Food or Wood here.` : "");
       const c = i % cols;
       const row = new Choice(ctl.scene, f.pad + c * (colW + 12), ys[c], colW, {
         id: b,
@@ -35855,13 +37854,14 @@ Not possible: ${why}` : ""}`,
     const ball = hasCivAdv(s, 0, "ballcourts") && effMood(s, city) !== "angry";
     const cap2 = base2 + (ball ? 1 : 0);
     const port = isPortCity(city);
+    const vercingetorix = leaderAt(s, 0, "vercingetorix", city.hex);
     const f = new Flow(ctl.scene, 580, { top: 80 });
-    f.text(`This city can recruit up to ${base2} unit${base2 === 1 ? "" : "s"} in one action${ball ? `, or ${cap2} with Ballcourts (that costs 1 more Mood token)` : ""}.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+    f.text(`This city can recruit up to ${base2} unit${base2 === 1 ? "" : "s"} in one action${ball ? `, or ${cap2} with Ballcourts (that costs 1 more Mood token)` : ""}.${vercingetorix ? " Vercingetorix: new land units may be deployed on the spaces next to the city." : ""}`, { size: 13, color: TXT.muted, center: true, gap: 8 });
     haveLine(f, s);
     const count = { infantry: 0, cavalry: 0, elephant: 0, settler: 0, ship: 0 };
     let update = () => {
     };
-    const army = Math.max(0, Math.min(cap2, STACK_LIMIT - armyAt(s, city.hex, 0).length));
+    const army = Math.max(0, Math.min(cap2, vercingetorix ? cap2 : stackLimit(s, 0, city.hex) - armyAt(s, city.hex, 0).length));
     const mounted = (type) => hasBuilding(city, "market") || canMountHere(s, 0, type);
     const kinds = [
       ["infantry", "u_infantry", "1 Food + 1 Ore", army],
@@ -35870,8 +37870,9 @@ Not possible: ${why}` : ""}`,
       ["settler", "u_settler", "2 Food", cap2],
       ["ship", "u_ship", port ? "2 Wood, appears on the Port's sea space" : "2 Wood (this city needs a Port)", port ? cap2 : 0]
     ];
+    const steppers = [];
     for (const [type, img, caption, max] of kinds) {
-      stepRow(f, {
+      const st = stepRow(f, {
         img,
         tint: PLAYER_COLORS[0],
         label: UNIT_NAME[type],
@@ -35884,6 +37885,50 @@ Not possible: ${why}` : ""}`,
           update();
         }
       });
+      steppers.push({ type, st, max });
+    }
+    const leaders2 = s.civs ? leadersAvailable(s, 0) : [];
+    const inPlay = s.players[0].leader;
+    const leaderPrice = `+${LEADER_RECRUIT_COST.culture} Culture, +${LEADER_RECRUIT_COST.mood} Mood`;
+    const leaderRows = {};
+    const leaderWhy = {};
+    let picked = null;
+    let leaderNote = null;
+    if (leaders2.length) {
+      const width = (id) => {
+        const t = txt(ctl.scene, 0, 0, LEADERS[id].name, { size: 14, bold: true });
+        const w = t.width + 58;
+        t.destroy();
+        return w;
+      };
+      const want = leaders2.map(width);
+      const scale = Math.min(1, (f.inner - 8 * (leaders2.length - 1)) / want.reduce((n, w) => n + w, 0));
+      let x = f.pad;
+      let h = 0;
+      leaders2.forEach((id, i) => {
+        const w = Math.floor(want[i] * scale);
+        const row = new Choice(ctl.scene, x, f.y, w, {
+          id,
+          label: LEADERS[id].name,
+          toggle: true,
+          size: 14,
+          minH: 36,
+          onClick: (it) => {
+            picked = it.selected ? id : null;
+            for (const other of leaders2) if (other !== id) leaderRows[other].set(false);
+            update();
+          }
+        });
+        tip(row.hit, () => `${leaderBlurb(id)}${leaderWhy[id] ? `
+
+Not possible: ${leaderWhy[id]}` : ""}`);
+        f.add(row);
+        leaderRows[id] = row;
+        x += w + 8;
+        h = Math.max(h, row.h);
+      });
+      f.y += h + 6;
+      leaderNote = f.text(" \n ", { size: 12, color: TXT.muted, gap: 8 });
     }
     const opt = {};
     const rowH = s.civs ? 26 : 28;
@@ -35941,6 +37986,10 @@ Not possible: ${why}` : ""}`,
     let ok = null;
     let action = null;
     update = () => {
+      for (const { type, st, max } of steppers) {
+        st.setRange(0, Math.min(max, cap2 - (picked ? 1 : 0)));
+        count[type] = st.value;
+      }
       const units = { ...count };
       const total = units.infantry + units.cavalry + units.elephant + units.settler + units.ship;
       const fighters = units.infantry + units.cavalry + units.elephant + units.ship;
@@ -35965,7 +38014,8 @@ Not possible: ${why}` : ""}`,
       if (on("sanitation")) action.sanitation = true;
       if (on("nationalism") && fighters > 0) action.nationalism = "culture";
       if (on("attack") && units.ship > 0) action.attack = true;
-      const slots = total + (action.draftCard ? 1 : 0);
+      if (picked) action.leader = picked;
+      const slots = total + (action.draftCard ? 1 : 0) + (picked ? 1 : 0);
       if (slots > base2) action.ballcourts = true;
       const chk = recruitBlocked(g, 0, city, action);
       const cost = chk.plan ? chk.plan : recruitCost(s, 0, units, {
@@ -35974,12 +38024,21 @@ Not possible: ${why}` : ""}`,
         draftShip: action.draftShip ? 1 : 0,
         draftCard: action.draftCard ? 1 : 0,
         draftWith: action.draftWith,
-        ball: action.ballcourts ? 1 : 0
+        ball: action.ballcourts ? 1 : 0,
+        leader: !!picked
       });
       if (costRow) costRow.destroy();
       costRow = resRow(ctl.scene, f.pad + 70, costY, slots ? cost : {}, { size: 18, font: 14, gap: 12 });
       f.add(costRow);
-      if (!slots) note.setText("Choose how many units to recruit.").setColor(TXT.muted);
+      for (const id of leaders2) {
+        leaderWhy[id] = recruitBlocked(g, 0, city, { type: "recruit", city: city.id, units: {}, leader: id }).why || "";
+        leaderRows[id].setDisabled(!!leaderWhy[id] && picked !== id);
+      }
+      if (leaderNote) {
+        const gone = inPlay ? ` ${picked ? "Replaces" : "A new one replaces"} ${LEADERS[inPlay].name} (gone for good).` : "";
+        leaderNote.setText(picked ? `${LEADERS[picked].name}: ${leaderPrice}, takes up one recruit.${gone}` : `Optional Leader: ${leaderPrice}, takes up one recruit.${gone || " Hover a name to read the abilities."}`);
+      }
+      if (!slots) note.setText(leaders2.length ? "Choose how many units to recruit, or a Leader." : "Choose how many units to recruit.").setColor(TXT.muted);
       else if (chk.why) note.setText(chk.why).setColor(TXT.bad);
       else note.setText(`${action.ballcourts ? "Ballcourts add 1 to the capacity for 1 Mood. " : ""}${hasAdv(s, 0, "medicine") ? "Medicine will refund 1 of the resources you spend." : "Ready to recruit."}`).setColor(TXT.good);
       if (ok) ok.setDisabled(!slots || !!chk.why, chk.why || "Choose at least one unit.");
@@ -35993,19 +38052,27 @@ Not possible: ${why}` : ""}`,
   }
   function wonderDialog(ctl, city) {
     const s = ctl.g.s;
-    const hand = s.players[0].hand.wonder;
+    const ids = wonderChoices(s, 0, city);
+    const leaderName = leaderIdOf(s, 0) ? LEADERS[leaderIdOf(s, 0)].name : "";
     const f = new Flow(ctl.scene, 640, { top: 80 });
     f.text("A Wonder is worth Victory Points and gives a lasting power. It needs a Happy city and uses one action.", { size: 13, color: TXT.muted, center: true, gap: 8 });
     haveLine(f, s);
+    const pay2 = growthPay(s, city);
+    if (pay2) f.text(pay2, { size: 12, color: TXT.muted, center: true, gap: 6 });
     let modal = null;
-    for (const id of hand) {
+    for (const id of ids) {
       const w = WONDERS[id];
+      const cost = wonderCost(s, 0, city, id);
       const why = wonderBlocked(s, 0, city, id);
+      const src = wonderSource(s, 0, city, id);
+      const lent = src && src.kind !== "hand" ? `${leaderName} lets you build it without the card (taken from ${src.kind === "deck" ? "the Wonder deck" : `${seatOwner(s, src.player)} hand`}).` : "";
+      const cheaper = costText(cost) !== costText(w.cost);
       const row = new Choice(ctl.scene, f.pad, f.y, f.inner, {
         id,
         label: `${w.name} \xB7 ${w.vp} VP`,
         desc: `${w.text}
-Cost: ${costText(w.cost)}. Needs ${ADVANCES[w.advance].name}.${why ? `
+Cost: ${costText(cost)}${cheaper ? ` (${leaderName} saves some; normally ${costText(w.cost)})` : ""}. Needs ${ADVANCES[w.advance].name}.${lent ? `
+${lent}` : ""}${why ? `
 Not possible: ${why}` : ""}`,
         icon: "ic_wonder",
         disabled: !!why,
@@ -36013,7 +38080,7 @@ Not possible: ${why}` : ""}`,
         onClick: async () => {
           const yes = await confirmModal(ctl, {
             title: `Build the ${w.name}?`,
-            text: `It costs ${costText(w.cost)} and uses one action.`,
+            text: `It costs ${costText(cost)} and uses one action.${lent ? ` ${lent}` : ""}`,
             yes: "Build it",
             no: "Not now",
             depth: STACK_DEPTH
@@ -36032,7 +38099,7 @@ Not possible: ${why}` : ""}`,
       f.add(row);
       f.y += row.h + 8;
     }
-    if (!hand.length) f.text("You hold no Wonder cards.", { center: true, color: TXT.dim });
+    if (!ids.length) f.text("You hold no Wonder cards.", { center: true, color: TXT.dim });
     f.gap(2);
     f.buttons([{ label: "Close", w: 130, fn: () => modal.close() }]);
     modal = f.finish({ title: "Build a Wonder", subtitle: cityLine(s, city), closable: true });
@@ -36276,7 +38343,8 @@ Not possible: ${why}` : ""}`,
   var TOP = 48;
   var BOTTOM = LOG_Y - 6;
   var PAD = 12;
-  var UNIT_ROWS = ["ship", "infantry", "cavalry", "elephant", "settler"];
+  var UNIT_ROWS = ["ship", "leader", "infantry", "cavalry", "elephant", "settler"];
+  var KIND_COLOR2 = { passive: TXT.link, action: TXT.warn, free: TXT.good };
   var Context = class {
     constructor(scene, ctl) {
       this.scene = scene;
@@ -36384,6 +38452,7 @@ Not possible: ${why}` : ""}`,
       this.text(title, { size: 17, bold: true, serif: true, color: TXT.gold, gap: 2 });
       if (terr === null) this.text("Move a unit next to this region or sail a Ship beside it to reveal it.", { size: 12, color: TXT.muted });
       else this.text(TERRAIN_HELP[terr], { size: 12, color: TXT.muted });
+      for (const line of ericTokenLines(ctl.g, k)) this.text(line, { size: 12, color: "#c79bef", gap: 2 });
       const city = cityAt(s, k);
       if (city) {
         this.rule();
@@ -36413,6 +38482,7 @@ Not possible: ${why}` : ""}`,
       this.text(`Buildings: ${blds.length ? blds.join(", ") : "none"}`, { size: 12, color: TXT.muted, gap: 2 });
       if (city.wonders.length) this.text(`Wonders: ${city.wonders.map((w) => WONDERS[w.id].name).join(", ")}`, { size: 12, color: "#ffe9a8", gap: 2 });
       if (city.druid !== void 0) this.text(`${cap(seatOwner(s, city.druid))} Culture token lies under this city (Druidic Influence: worth 1 VP until the city is captured).`, { size: 12, color: "#c79bef", gap: 2 });
+      if (city.beloved > 0) this.text(`Beloved by Cleopatra: ${plural(city.beloved, "Culture token")} placed here. An attacker must pay as many Culture tokens first.`, { size: 12, color: "#c79bef", gap: 2 });
       if (!own) {
         if (can) this.hellenization(city);
         return;
@@ -36491,15 +38561,17 @@ Not possible: ${why}` : ""}`,
 ${why.map(([b, r]) => `${BUILDING_NAME[b]}: ${r}`).join("\n")}`;
         }
         case "recruit": {
-          const tries = RECRUIT_TYPES.map((u) => [u, recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
+          const tries = RECRUIT_TYPES.map((u) => [UNIT_NAME[u], recruitBlocked(g, 0, city, { units: { [u]: 1 } }).why]);
+          const leaders2 = leadersAvailable(s, 0).map((id) => recruitBlocked(g, 0, city, { units: {}, leader: id }).why);
+          if (leaders2.length) tries.push(["Leader", leaders2.every(Boolean) ? leaders2[0] : ""]);
           if (tries.some(([, r]) => !r)) return "";
           return `You cannot recruit anything here now:
-${tries.map(([u, r]) => `${UNIT_NAME[u]}: ${r}`).join("\n")}`;
+${tries.map(([u, r]) => `${u}: ${r}`).join("\n")}`;
         }
         case "wonder": {
-          const hand = s.players[0].hand.wonder;
-          if (!hand.length) return "You hold no Wonder cards.";
-          const why = hand.map((w) => [w, wonderBlocked(s, 0, city, w)]);
+          const choices = wonderChoices(s, 0, city);
+          if (!choices.length) return "You hold no Wonder cards.";
+          const why = choices.map((w) => [w, wonderBlocked(s, 0, city, w)]);
           if (why.some(([, r]) => !r)) return "";
           return `No Wonder can be built here now:
 ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
@@ -36517,11 +38589,11 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
       const ctl = this.ctl;
       const d = ctl.dialogs;
       const names = buildingsIn(ctl.g.s).map((b) => BUILDING_NAME[b]).sort();
-      const buildable = `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+      const buildable2 = `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
       const items = [
         ["collect", "Collect", () => ctl.startCollect(city.id), "Gather resources from this city and the spaces around it.", "ic_food"],
-        ["construct", "Construct", () => d.construct(city), `Build an ${buildable}.`, "b_academy"],
-        ["recruit", "Recruit", () => d.recruit(city), "Train Infantry, Cavalry, Elephants, Settlers or Ships.", "u_infantry"],
+        ["construct", "Construct", () => d.construct(city), `Build an ${buildable2}.`, "b_academy"],
+        ["recruit", "Recruit", () => d.recruit(city), `Train Infantry, Cavalry, Elephants, Settlers or Ships${ctl.g.s.civs ? ", or recruit a Leader" : ""}.`, "u_infantry"],
         ["wonder", "Wonder", () => d.wonder(city), "Build a Wonder (needs a Happy city and Engineering).", "ic_wonder"],
         ["happiness", "Happiness", () => d.happiness(city), "Spend Mood tokens to raise the Mood of your cities.", "mood_happy"],
         ["influence", "Influence", () => d.influence(city), "Try to win over a building in another city with Culture.", "ic_culture"]
@@ -36550,17 +38622,20 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
         this.text(can ? "Your units (choose who moves)" : "Your units", { size: 14, bold: true, gap: 4 });
         const sea = terrainOf(s, k) === "sea";
         const c = sel.counts;
-        const stuck = /* @__PURE__ */ new Map();
+        const stuck2 = /* @__PURE__ */ new Map();
         for (const type of UNIT_ROWS) {
           const free = gr[type].free.length;
           const locked = gr[type].locked.length;
           if (!free && !locked) continue;
-          const label = `${unitPlural(type)}${sea && type !== "ship" ? " aboard" : ""}`;
+          const lead = type === "leader";
+          const label = `${lead ? leaderLabel(s, 0) : unitPlural(type)}${sea && type !== "ship" ? " aboard" : ""}`;
           const img = icon(this.scene, unitTexture(type, 0), X + PAD + 11, this.y + 13, 22).setTint(PLAYER_COLORS[0]);
           this.box.add(img);
-          this.box.add(txt(this.scene, X + PAD + 28, this.y + 13, `${label}`, { size: 13, origin: [0, 0.5] }));
+          const name = txt(this.scene, X + PAD + 28, this.y + 13, `${label}`, { size: 13, origin: [0, 0.5] });
+          this.box.add(name);
           const total = free + locked;
-          this.box.add(txt(this.scene, X + WIDTH - 94, this.y + 13, `of ${total}`, { size: 12, color: TXT.muted, origin: [1, 0.5] }));
+          if (lead) this.leaderRow(name);
+          else this.box.add(txt(this.scene, X + WIDTH - 94, this.y + 13, `of ${total}`, { size: 12, color: TXT.muted, origin: [1, 0.5] }));
           if (free && can) {
             let max = free;
             if (sea && type !== "ship" && c.ship > 0) {
@@ -36573,13 +38648,50 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
             this.box.add(txt(this.scene, X + WIDTH - PAD, this.y + 13, `${free}`, { size: 14, bold: true, origin: [1, 0.5] }));
           }
           this.y += 30;
-          if (locked) stuck.set(gr[type].why, (stuck.get(gr[type].why) || 0) + locked);
+          if (locked) stuck2.set(gr[type].why, (stuck2.get(gr[type].why) || 0) + locked);
         }
-        for (const [why, n] of stuck) this.text(`${n} cannot move: ${why}.`, { size: 11, color: TXT.warn, indent: 4, gap: 2 });
+        for (const [why, n] of stuck2) this.text(`${n} cannot move: ${why}.`, { size: 11, color: TXT.warn, indent: 4, gap: 2 });
         if (can) this.moveHelp(sea);
+        if (gr.leader.free.length + gr.leader.locked.length) this.leaderBlock(0);
       }
       for (const [o, cnt] of foes) {
-        this.text(`${ownerName(ctl.g, o)} units: ${countText(cnt)}`, { size: 13, bold: true, color: PLAYER_HEX[o] });
+        this.text(`${ownerName(ctl.g, o)} units: ${countText(cnt, leaderLabel(s, o))}`, { size: 13, bold: true, color: PLAYER_HEX[o] });
+        if (cnt.leader) this.leaderBlock(o);
+      }
+    }
+    /** The Leader's row in the list of units: the name shrinks to fit beside the stepper, the hover text tells what he or she can do. */
+    leaderRow(name) {
+      const room = 116;
+      if (name.width > room) name.setScale(room / name.width);
+      const id = leaderIdOf(this.ctl.g.s, 0);
+      const hit = hitBox(this.scene, X + PAD, this.y, room + 28, 26);
+      tip(hit, [LEADERS[id]?.name ?? "Leader", ...leaderAbilityLines(id)].join("\n"));
+      this.box.add(hit);
+    }
+    /** The Leader on this space: the name and both abilities. It gets what room is left (the hover text has all of it). */
+    leaderBlock(owner) {
+      const def = LEADERS[leaderIdOf(this.ctl.g.s, owner)];
+      if (!def || this.y > BOTTOM - 70) return;
+      this.gap(2);
+      this.text(def.name, { size: 14, bold: true, serif: true, color: owner === 0 ? TXT.gold : PLAYER_HEX[owner], gap: 2 });
+      for (const a of def.abilities) {
+        const top = this.y;
+        const tag = this.text(LEADER_KIND[a.kind].toUpperCase(), { size: 10, bold: true, color: KIND_COLOR2[a.kind], gap: 0 });
+        const body = this.text(a.text, { size: 11, color: TXT.muted });
+        if (this.y > BOTTOM - 6) {
+          body.setText(short(a.text, 70));
+          this.y = body.y + body.height + 4;
+          if (this.y > BOTTOM - 6) {
+            tag.destroy();
+            body.destroy();
+            this.y = top;
+            return;
+          }
+        }
+        const hit = hitBox(this.scene, X + PAD, top, WIDTH - 2 * PAD, this.y - top);
+        tip(hit, `${def.name}: ${LEADER_KIND_HELP[a.kind]}
+${a.text}`);
+        this.box.add(hit);
       }
     }
     moveHelp(sea) {
@@ -36948,6 +39060,7 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
         const btn = new Button(scene, rightW - 206, STRIP_H - 52, 200, 38, `Choose ${adv.name}`, () => modal.close(id), { style: "primary", size: 15, wrap: true });
         pay2.add(btn);
       };
+      if (pick && pick.skip) box.add(new Button(scene, rightX + rightW - 374, STRIP_Y + STRIP_H - 52, 160, 38, pick.skip, () => modal.close("none"), { size: 15, wrap: true }));
       const researchControls = (id) => {
         const { cost, via } = advanceCost(s, 0, id);
         const n = cost.food || 0;
@@ -37239,7 +39352,7 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
     const o = OBJECTIVE_CARDS[id];
     return { id, label: `${OBJECTIVES[o.dev].name} / ${OBJECTIVES[o.mil].name}`, desc: `Objective card. ${OBJECTIVES[o.dev].text} Or: ${OBJECTIVES[o.mil].text}` };
   };
-  function taxationDialog(ctl, back) {
+  function taxationDialog(ctl, back, leader = null) {
     const scene = ctl.scene;
     const s = ctl.g.s;
     const pl = s.players[0];
@@ -37251,7 +39364,7 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
       amount[k] += 1;
     }
     const f = new Flow(scene, 580, { top: 80 });
-    f.text(`Pay 1 Mood token and 1 action to collect ${n} Resource${n === 1 ? "" : "s"} (one for each of your cities). Split them as you like. Anything over your storage limit is lost.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
+    f.text(`${leader ? "Spend 1 action" : "Pay 1 Mood token and 1 action"} to collect ${n} Resource${n === 1 ? "" : "s"} (one for each of your cities). Split them as you like. Anything over your storage limit is lost.`, { size: 13, color: TXT.muted, center: true, gap: 8 });
     haveLine(f, s);
     let modal = null;
     let confirm2 = null;
@@ -37281,8 +39394,9 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
     status = f.text("", { center: true, size: 13, color: TXT.gold, gap: 2 });
     err = f.text(" ", { center: true, size: 13, color: TXT.bad, gap: 6 });
     const gain = () => Object.fromEntries(kinds.filter((k) => amount[k]).map((k) => [k, amount[k]]));
+    const action = () => leader ? { type: "leader", ability: "cnut_b", gain: gain() } : { type: "taxation", gain: gain() };
     [confirm2] = f.buttons([
-      { label: "Collect taxes", style: "primary", w: 170, fn: () => submit(ctl, modal, { type: "taxation", gain: gain() }, err) },
+      { label: "Collect taxes", style: "primary", w: 170, fn: () => submit(ctl, modal, action(), err) },
       {
         label: "Back",
         w: 120,
@@ -37292,7 +39406,7 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
         }
       }
     ]);
-    modal = f.finish({ title: "Taxation", subtitle: "Costs 1 action and 1 Mood token", closable: false });
+    modal = f.finish({ title: "Taxation", subtitle: leader ? `${leader} collects them: costs 1 action, no Mood token` : "Costs 1 action and 1 Mood token", closable: false });
     sync();
   }
   function sacrificeDialog(ctl, back) {
@@ -37432,6 +39546,178 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
     if (to === "cancel") return;
     await ctl.act({ type: "hegemony", unit: ship.id, to });
   }
+  var LEADER_ONCE = { ahuitzotl_b: "ahuitzotl", augustus_a: "augustus", cleopatra_b: "cleopatra", cnut_b: "taxation", darius_b: "darius", hanno_a: "hanno", marqzen_b: "marqzen" };
+  var LEADER_AT_SEA = ["eric_a", "eric_b", "hanno_a"];
+  var LEADER_ROAMING = [...LEADER_AT_SEA, "marqzen_b"];
+  var LEADER_TOKEN_BUY = ["hiram_b", "pericles_a", "sun_tzu_a", "wu_zetian_a"];
+  var LEADER_NONE = {
+    ahuitzotl_b: "Nothing can be built in his city now.",
+    darius_b: "Nothing can be built in his city for its price and 2 Culture tokens.",
+    eric_b: "There is no Land space he can go ashore to.",
+    hanno_a: "None of the Ships with Hanno can sail now.",
+    marqzen_b: "No enemy Land unit next to Marqzen can be moved.",
+    suiko_a: "There is no piece of another player in her city to take back."
+  };
+  var BUY = "Buy an Advance...";
+  var LEADER_BUTTON = {
+    ahuitzotl_b: "Sacrifice...",
+    augustus_a: "Draw a card...",
+    caesar_a: "Increase Happiness...",
+    cleopatra_b: "Place a token",
+    cnut_b: "Collect taxes...",
+    cyrus_a: "Take tokens...",
+    darius_b: "Build...",
+    eric_a: "Place a token",
+    eric_b: "Go ashore...",
+    hanno_a: "Sail...",
+    hiram_b: BUY,
+    maharaja_a: BUY,
+    marqzen_b: "Move an enemy...",
+    pericles_a: BUY,
+    suiko_a: "Revert a piece...",
+    sun_tzu_a: BUY,
+    wu_zetian_a: BUY
+  };
+  var tokenOption = (kind, sign = "") => ({ id: kind, label: `${sign}1 ${kind === "mood" ? "Mood" : "Culture"} token`, icon: `ic_${kind}` });
+  var unitName = (s, u) => (u.type === "leader" ? LEADERS[leaderIdOf(s, u.owner)]?.name : UNIT_NAME[u.type]) || u.type;
+  var firstBy = (list, key2) => {
+    const seen = /* @__PURE__ */ new Map();
+    for (const c of list) if (!seen.has(key2(c))) seen.set(key2(c), c);
+    return [...seen.values()];
+  };
+  async function pickMove(ctl, { title, text, list, spaces, label, tag }) {
+    const options = list.flatMap((c, i) => spaces(c).map((hex) => ({ id: String(i), label, hex, tag: tag(c) })));
+    const k = await ctl.mapPick({ title, text, options: [...options, { id: "__cancel", label: "Cancel" }] });
+    return k === "__cancel" || k == null ? null : list[Number(k)];
+  }
+  async function leaderPlan(ctl, leader, ability, cands) {
+    const s = ctl.g.s;
+    const ask = (o) => optionModal(ctl, { title: leader.name, text: ability.text, closable: true, cancel: "Back", depth: SUB_DEPTH, ...o });
+    const city = leaderCity(s, 0, leader.id);
+    const [one] = cands;
+    if (one.advance) {
+      const options = [...new Set(cands.map((c) => c.advance))];
+      const id = await advancesDialog(ctl, { pick: { title: leader.name, text: ability.text, options, default: options[0], skip: "Back" }, depth: SUB_DEPTH });
+      if (!id || id === "none") return null;
+      const paid = cands.filter((c) => c.advance === id);
+      if (paid.length === 1) return paid[0].action;
+      const token = await ask({ text: `Pay for ${ADVANCES[id].name} with which token?`, options: paid.map((c) => tokenOption(c.action.token)) });
+      return token ? paid.find((c) => c.action.token === token).action : null;
+    }
+    if (one.building || one.wonder) {
+      const options = [...new Set(cands.filter((c) => c.building).map((c) => c.building))].map((b) => {
+        const holder = city.buildings[b];
+        return {
+          id: b,
+          label: BUILDING_NAME[b],
+          desc: holder === void 0 ? BUILDING_HELP[b].replace(/^[^:]+: /, "") : `Held by ${seatName(s, holder)}.`,
+          icon: `b_${b}`,
+          iconTint: PLAYER_COLORS[holder ?? 0]
+        };
+      });
+      for (const c of cands.filter((x) => x.wonder)) options.push({ id: `wonder:${c.wonder}`, label: WONDERS[c.wonder].name, desc: WONDERS[c.wonder].text, icon: "ic_wonder" });
+      const pick = await ask({ options });
+      if (!pick) return null;
+      if (pick.startsWith("wonder:")) return cands.find((c) => c.wonder === pick.slice(7)).action;
+      let list = cands.filter((c) => c.building === pick);
+      if (list.length > 1) {
+        const bonus = await ask({ title: "Temple blessing", text: "Choose the token the new Temple gives you.", options: list.map((c) => tokenOption(c.action.templeBonus, "+")) });
+        if (!bonus) return null;
+        list = list.filter((c) => c.action.templeBonus === bonus);
+      }
+      const action = { ...list[0].action };
+      const seas = seaNbrs(s, city.hex);
+      if (pick === "port" && seas.length > 1) {
+        const k = await ctl.mapPick({
+          title: "Where does the Port open?",
+          text: "Click the Sea space the new Port will face. Ships built here appear on that space.",
+          options: [...seas.map((hex) => ({ id: hex, label: "Sea space", hex, tag: "Port here" })), { id: "__cancel", label: "Cancel" }]
+        });
+        if (k === "__cancel" || k == null) return null;
+        action.port = k;
+      }
+      return action;
+    }
+    if (one.draw) {
+      const draw = await ask({ options: cands.map((c) => ({ id: c.draw, label: `Draw ${c.draw === "action" ? "an Action" : "an Objective"} card` })) });
+      return draw ? cands.find((c) => c.draw === draw).action : null;
+    }
+    if (one.culture !== void 0) {
+      const n = Math.max(...cands.map((c) => c.culture));
+      const pl = s.players[0];
+      const split = await ask({
+        text: `${ability.text}
+You take ${plural(n, "token")}. You hold ${pl.culture} Culture and ${pl.mood} Mood tokens now. How many are Culture tokens?`,
+        options: Array.from({ length: n + 1 }, (_, k) => ({ id: String(k), label: `${k} Culture, ${n - k} Mood` }))
+      });
+      return split ? { ...one.action, culture: Number(split) } : null;
+    }
+    if (one.steps) {
+      const ladder = ["angry", "neutral", "happy"];
+      const now = ladder.indexOf(city.mood);
+      const steps = await ask({
+        options: cands.map((c) => ({
+          id: String(c.steps),
+          label: c.steps === 1 ? "Once" : `${c.steps} times`,
+          desc: `${MOOD_NAME[city.mood]} to ${MOOD_NAME[ladder[Math.min(2, now + c.steps)]]}: pay ${plural(c.steps * citySize(city), "Mood token")}.`
+        }))
+      });
+      return steps ? cands.find((c) => c.steps === Number(steps)).action : null;
+    }
+    if (one.target !== void 0) {
+      const at = (c) => unitById(s, c.target).hex;
+      const from = await pickMove(ctl, {
+        title: leader.name,
+        text: "Click the space of the enemy unit to move.",
+        list: firstBy(cands, at),
+        spaces: (c) => [at(c)],
+        label: "Move an enemy unit from here",
+        tag: () => "Enemy"
+      });
+      if (!from) return null;
+      const units = firstBy(cands.filter((c) => at(c) === at(from)), (c) => unitById(s, c.target).type);
+      let unit = units[0];
+      if (units.length > 1) {
+        const id = await ask({ text: "Which unit do you move?", options: units.map((c) => ({ id: String(c.target), label: unitName(s, unitById(s, c.target)) })) });
+        if (!id) return null;
+        unit = units.find((c) => String(c.target) === id);
+      }
+      const to = await pickMove(ctl, {
+        title: leader.name,
+        text: "Click the space where the unit goes.",
+        list: cands.filter((c) => c.target === unit.target),
+        spaces: (c) => [c.to],
+        label: "Move it here",
+        tag: () => "Move"
+      });
+      return to ? to.action : null;
+    }
+    if (one.to) {
+      const ships = !!one.action.ships;
+      const members = (c) => c.action.ships || c.action.units;
+      const sizes = [...new Set(cands.map((c) => members(c).length))].sort((a, b) => b - a);
+      let size = sizes[0];
+      if (sizes.length > 1) {
+        const picked = await ask({
+          text: ships ? "Which Ships sail?" : `Who goes ashore with ${leader.name}?`,
+          options: sizes.map((n) => ({ id: String(n), label: ships ? n > 1 ? `All ${n} Ships` : "One Ship" : n > 1 ? `${leader.name} and ${plural(n - 1, "Land unit")} on board` : `${leader.name} alone` }))
+        });
+        if (!picked) return null;
+        size = Number(picked);
+      }
+      const group = JSON.stringify(members(cands.find((c) => members(c).length === size)));
+      const hit = await pickMove(ctl, {
+        title: leader.name,
+        text: ships ? "Click the space where the Ships sail." : "Click the Land space where they go ashore.",
+        list: firstBy(cands.filter((c) => JSON.stringify(members(c)) === group), (c) => c.to),
+        spaces: (c) => c.explore ? s.map.regions[s.map.hexes[c.to].region].keys : [c.to],
+        label: ships ? "Sail here" : "Go ashore here",
+        tag: (c) => c.explore ? "Explore" : c.battle ? "Attack" : ships ? "Sail" : "Land"
+      });
+      return hit ? hit.action : null;
+    }
+    return one.action;
+  }
   function abilitiesDialog(ctl) {
     const scene = ctl.scene;
     const s = ctl.g.s;
@@ -37458,6 +39744,58 @@ ${why.map(([w, r]) => `${WONDERS[w].name}: ${r}`).join("\n")}`;
     };
     const direct = (action) => run(() => ctl.act(action));
     const rows = [];
+    const lid = s.civs ? leaderIdOf(s, 0) : null;
+    const leader = lid ? LEADERS[lid] : null;
+    if (leader) {
+      const unit = leaderUnit(s, 0);
+      const home2 = leaderCity(s, 0, lid);
+      const cands = can && unit ? leaderActionList(ctl.g, 0) : [];
+      const passive = leader.abilities.filter((a) => a.kind === "passive");
+      if (passive.length) {
+        rows.push({
+          name: leader.name,
+          text: passive.map((a) => passive.length > 1 ? `\u2022 ${a.text}` : a.text).join("\n"),
+          tag: `Leader \xB7 ${KIND_TAG.passive}, always on`,
+          buttons: []
+        });
+      }
+      const whyNot = (a) => {
+        if (LEADER_AT_SEA.includes(a.id) && !(unit && isSea(s, unit.hex))) return `${leader.name} must be on a Ship at sea.`;
+        if (!home2 && !LEADER_ROAMING.includes(a.id)) return `${leader.name} must be in one of your cities.`;
+        if (a.id === "ahuitzotl_b" && pl.captives.length < 2) return "You need 2 Captives.";
+        if (LEADER_TOKEN_BUY.includes(a.id) && pl.culture + pl.mood < 1) return "You need 1 Culture or 1 Mood token.";
+        if (a.id === "maharaja_a" && pl.culture < 1) return "You need 1 Culture token.";
+        if (LEADER_NONE[a.id]) return LEADER_NONE[a.id];
+        const why = ctl.check({ type: "leader", ability: a.id }).error;
+        return why && !why.startsWith("Choose") ? why : "Not possible right now.";
+      };
+      for (const a of leader.abilities.filter((x) => x.kind !== "passive")) {
+        const list = cands.filter((c) => c.ability === a.id);
+        const once3 = LEADER_ONCE[a.id];
+        const costs = a.kind === "action" && !(a.id === "suiko_a" && hasAdv(s, 0, "state_religion"));
+        const spent = !!once3 && !!used[once3];
+        let reason = notNow;
+        if (!reason && spent) reason = `${a.id === "cnut_b" ? "Taxation" : leader.name} can be used once per turn.`;
+        if (!reason && costs) reason = noAction;
+        if (!reason && !list.length) reason = whyNot(a);
+        rows.push({
+          name: leader.name,
+          text: a.text,
+          tag: ["Leader", costs ? `${KIND_TAG.action} (costs 1 action)` : KIND_TAG.free, once3 && (spent ? "Already used this turn" : "once per turn")].filter(Boolean).join(" \xB7 "),
+          buttons: [{
+            label: LEADER_BUTTON[a.id] || "Use...",
+            w: 190,
+            ...off(reason),
+            fn: run(async () => {
+              if (a.id === "cnut_b") return taxationDialog(ctl, reopen, leader.name);
+              const action = await leaderPlan(ctl, leader, a, list);
+              if (action) return ctl.act(action);
+              return reopen();
+            })
+          }]
+        });
+      }
+    }
     if (hasAdv(s, 0, "bartering")) {
       const cards = [.../* @__PURE__ */ new Set([...hand.action, ...hand.objective])];
       rows.push({
@@ -37801,13 +40139,30 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       body: [
         "When Civilizations are on (a switch on the title screen), every player is dealt one of fifteen cultures. Each has four Advances of its own, which it gets the moment it researches the ordinary Advance printed on them. They need no tracker cube and cannot trigger an Event.",
         "# Finding your powers",
-        "\u2022 Click your Civilization on your player card to read its four powers and see which are active. In the Advances window a gold star marks an Advance that also gives you one of them.",
+        "\u2022 Click your Civilization on your player card to read its four powers and see which are active. In the Advances window a gold star marks an Advance that also gives you one of them. The same window has a Leaders tab (see Leaders).",
         "\u2022 Powers you start yourself have a button in the Abilities window: Hegemony, Sprawling, Fighting Bands, Tribal Allies, Human Sacrifice and the Calendar. Most others work by themselves, or ask you a question when they apply.",
         "\u2022 Some change the usual windows: Recruit can use Ballcourts, Mounts and Pirate Allies, and Influence can start from Settlers (Proselytism) or a Greek city (Hellenization).",
         "# Scoring and extras",
         "\u2022 Captives are worth \xBD VP each (at most 4). Runestones (Vikings) and the Druid tokens under captured cities (Celts) are worth 1 VP each. The VP tooltip shows them as one line.",
         "\u2022 Two more Buildings exist: the Obelisk (needs Arts; it cannot be Influenced, and it stays yours when its city is captured) and the Observatory (needs Math; building it draws an Action card).",
         "\u2022 Changing Government moves your tracker cubes, and the Civilization Advances that hang on the Advances they land on come with them."
+      ]
+    },
+    {
+      id: "leaders",
+      title: "Leaders",
+      body: [
+        "Leaders belong to the Civilizations module. Each people has three of them, and only one can be in play at a time. A Leader is an Army unit with two abilities of its own.",
+        "# Recruiting",
+        `\u2022 Recruit a Leader in a city from the Recruit window. He or she takes one of the city's recruit places and costs ${LEADER_RECRUIT_COST.culture} Culture and ${LEADER_RECRUIT_COST.mood} Mood on top of the units.`,
+        "\u2022 Recruiting another Leader replaces the one in play. A Leader who is replaced or killed is gone for good, and once all three are gone you cannot recruit another.",
+        "# On the board",
+        "\u2022 A Leader moves and fights with your other Army units and counts towards the limit of Army units in a space (4, or 5 with Xerxes).",
+        `\u2022 Killing an enemy Leader in battle wins his or her card, worth ${LEADER_CAPTURE_VP} VP. It is counted with the other Civilization points on the VP tooltip.`,
+        "# Abilities",
+        "\u2022 Passive abilities are always on, usually in the Leader's city or in the battles he or she fights.",
+        "\u2022 An Action ability costs one of your 3 actions; a Free Action costs none. Both have a button in the Abilities window.",
+        "\u2022 Read all three Leaders of your people in the Leaders tab of your Civilization window, or hover over the Leader line on a player card."
       ]
     },
     {
@@ -37894,7 +40249,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const row = new Choice(scene, listX, y, listW, { id: topic.id, label: topic.title, size: 15, minH: 40, onClick: () => show(topic.id) });
       modal.add(row);
       rows.push([topic.id, row]);
-      y += row.h + 6;
+      y += row.h + 4;
     }
     modal.add(txt(scene, listX, h - 54, "Esc closes this window.\nHover over anything in the game\nfor a short explanation.", { size: 12, color: TXT.dim }));
     show(startId);
@@ -38065,6 +40420,12 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       modal.add(head);
       modal.add(list);
       y += Math.max(head.height, list.height) + 8;
+      const lead = pl.leader ? LEADERS[pl.leader] : null;
+      const leadHead = txt(scene, leftX, y, "Leader", { size: 13, bold: true, color: TXT.gold });
+      const leadName = txt(scene, leftX + 130, y, lead ? lead.name : "None in play", { size: 13, color: lead ? TXT.text : TXT.muted });
+      modal.add(leadHead);
+      modal.add(leadName);
+      y += Math.max(leadHead.height, leadName.height) + 8;
       for (const line of civExtras(s, p)) {
         const t = txt(scene, leftX, y, line, { size: 12, wrap: leftW, color: TXT.muted });
         modal.add(t);
@@ -38082,7 +40443,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       ["Wonders", sc.parts.wonders],
       ["Events and bonuses", sc.parts.events]
     ];
-    if (s.civs) rows.push(["Captives, tokens and Runestones", sc.parts.civ]);
+    if (s.civs) rows.push([CIV_SCORE, sc.parts.civ]);
     for (const [name, value] of rows) {
       modal.add(txt(scene, rightX, y, name, { size: 13, color: TXT.muted }));
       modal.add(txt(scene, rightX + rightW, y, fmtVP(value), { size: 13, bold: true, origin: [1, 0] }));
@@ -38200,7 +40561,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
         ["Wonders", "wonders"],
         ["Events and bonuses", "events"]
       ];
-      if (s.civs) rows.push(["Captives, tokens and Runestones", "civ"]);
+      if (s.civs) rows.push([CIV_SCORE, "civ"]);
       for (const [name, key2] of rows) {
         f.add(txt(ctl.scene, f.pad, f.y, name, { size: 14, color: TXT.muted }));
         for (let i = 0; i < n; i++) f.add(txt(ctl.scene, colX(i), f.y, fmtVP(res.scores[i].parts[key2]), { size: 14, origin: [1, 0] }));
@@ -38235,7 +40596,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       cards: (tab) => cardsDialog(ctl, tab),
       abilities: () => abilitiesDialog(ctl),
       overview: (p) => overviewDialog(ctl, p),
-      civilization: (p) => civilizationDialog(ctl, p),
+      civilization: (p, tab) => civilizationDialog(ctl, p, tab),
       pickVariant: (k, options) => pickVariant(ctl, k, options),
       confirm: (o) => confirmModal(ctl, o),
       gameOver: () => gameOverDialog(ctl)
@@ -38244,10 +40605,13 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
   }
 
   // src/ui/prompts.js
-  var MAP_KINDS = /* @__PURE__ */ new Set(["pick_hex", "pick_city", "pick_cities", "raze", "city_states"]);
+  var MAP_KINDS = /* @__PURE__ */ new Set(["pick_hex", "pick_city", "pick_cities", "raze", "city_states", "leader_influence_target"]);
   var RECOMMENDED = /* @__PURE__ */ new Set(["government", "siege", "first_player"]);
   var TOKEN_ICON = { food: "ic_food", wood: "ic_wood", ore: "ic_ore", ideas: "ic_ideas", gold: "ic_gold", mood: "ic_mood", culture: "ic_culture", culture_a: "ic_culture", ideas_a: "ic_ideas" };
-  var TOKEN_KINDS = /* @__PURE__ */ new Set(["banking", "stelas", "star_catalogs", "trade_route_income", "marauders", "hunnic_tribes"]);
+  var TOKEN_KINDS = /* @__PURE__ */ new Set(["banking", "stelas", "star_catalogs", "trade_route_income", "marauders", "hunnic_tribes", "ramses", "leader_token", "pygmalion_trade"]);
+  var BUILDING_KINDS = /* @__PURE__ */ new Set(["choice", "wak_remove", "wak_build", "leader_influence_building"]);
+  var UNIT_KINDS = /* @__PURE__ */ new Set(["choice", "caesar_unit"]);
+  var UNIT_ID_KINDS = /* @__PURE__ */ new Set(["viriatus", "marqzen_units"]);
   var TERRAIN_ORDER = ["plains", "forest", "mountain", "barren", "sea"];
   var EFFECT = {
     gold_mine: { key: "ic_gold", text: (w) => `Gold mine: ${w.me ? "you gain" : `${w.name} gains`} 2 Gold.` },
@@ -38403,14 +40767,19 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       if (p.kind === "pick_resource" && RES[o.id]) {
         out.label = RES[o.id].name;
         out.icon = `ic_${o.id}`;
-      } else if (p.kind === "choice" && BUILDING_NAME[o.id]) {
+      } else if (BUILDING_KINDS.has(p.kind) && BUILDING_NAME[o.id]) {
         out.label = BUILDING_NAME[o.id];
         out.icon = `b_${o.id}`;
         out.iconTint = PLAYER_COLORS[0];
         out.desc = BUILDING_HELP[o.id];
-      } else if (p.kind === "choice" && UNIT_NAME[o.id]) {
+      } else if (UNIT_KINDS.has(p.kind) && UNIT_NAME[o.id]) {
         out.icon = unitTexture(o.id, 0);
         out.iconTint = PLAYER_COLORS[0];
+      } else if (UNIT_ID_KINDS.has(p.kind) && unitById(ctl.g.s, o.id)) {
+        const u = unitById(ctl.g.s, o.id);
+        out.label = o.label.replace(/\ba (?=[aeiou])/, "an ");
+        out.icon = unitTexture(u.type, u.owner);
+        out.iconTint = PLAYER_COLORS[u.owner];
       } else if ((p.kind === "trade_income" || p.kind === "pirate_loss" || p.kind === "pirate_bounty") && RES[o.id]) {
         out.icon = `ic_${o.id}`;
       } else if (p.kind === "nomad_resource" && RES[o.id]) {
@@ -38428,7 +40797,8 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const answer = await optionModal(ctl, {
         title: p.title,
         text: wordy(ctl.g.s, p.text || ""),
-        options: p.options.map((o) => tidy(p, o)),
+        // Viriatus lists every enemy unit: identical ones are only shown once.
+        options: p.options.map((o) => tidy(p, o)).filter((o, i, all) => p.kind !== "viriatus" || all.findIndex((x) => x.label === o.label) === i),
         multi: p.multi || null,
         chosen: p.multi ? p.default : void 0
       });
@@ -38447,6 +40817,11 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
           return cardView({ name: p.title, text: p.text, icon: p.icon }, p.player);
         case "free_advance":
           return advancesDialog(ctl, { pick: { title: p.title, text: p.text, options: p.options.map((o) => o.id), default: p.default } });
+        case "leader_advance": {
+          const none = p.options.find((o) => o.id === "none");
+          const options = p.options.filter((o) => o !== none).map((o) => o.id);
+          return advancesDialog(ctl, { pick: { title: p.title, text: p.text, options, default: p.default, skip: none ? none.label : null } });
+        }
         case "orientation":
           return orientation(p);
         case "combat_card":
@@ -38570,14 +40945,17 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
   var FACES = COMBAT_DIE.map(([v, ic]) => ({ v, icon: ic }));
   var MARKS = { infantry: "u_infantry", cavalry: "u_cavalry", elephant: "u_elephant" };
   var SPENT = 8116367;
+  var IDLE = 9081763;
   var STAGES = 3;
-  function makeDie(scene, x, y, color, final) {
+  var LEADER_DICE = "A Leader in the fight rolls one die with a Leader icon again (a crown marks it); any other Leader icon counts as a plain 1.";
+  function makeDie(scene, x, y, color, final, lead) {
     const root = scene.add.container(x, y);
     const g = scene.add.graphics();
     const value = txt(scene, 0, 0, "", { size: 22, bold: true, origin: 0.5 });
     const mark = icon(scene, "u_infantry", 0, 11, 13).setTint(16765503);
     const strike = scene.add.graphics();
-    root.add([g, value, mark, strike]);
+    const crown = icon(scene, "u_leader", 12, -12, 11).setTint(C.gold).setVisible(false);
+    root.add([g, value, mark, strike, crown]);
     let drawn = "";
     const die2 = {
       root,
@@ -38588,9 +40966,10 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       face: null,
       // what it shows now
       show(f, glow = 0) {
-        const tex = MARKS[f.icon];
+        const idle = !!lead && f.icon === "leader";
+        const tex = idle ? "u_leader" : MARKS[f.icon];
         const spent = !!(tex && f.ignored);
-        const key2 = `${f.v}${tex || ""}${spent ? "!" : ""}${Math.round(glow * 10)}`;
+        const key2 = `${f.v}${tex || ""}${spent ? "!" : ""}${f.leader ? "L" : ""}${Math.round(glow * 10)}`;
         if (key2 === drawn) return;
         drawn = key2;
         die2.face = f;
@@ -38600,14 +40979,21 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
           g.fillStyle(C.gold, 0.3 * glow);
           g.fillRoundedRect(-DIE / 2 - 4, -DIE / 2 - 4, DIE + 8, DIE + 8, 10);
         }
-        drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 1054495, border: spent ? C.good : tex ? C.gold : color, radius: 7, line: 2 });
+        drawPanel(g, -DIE / 2, -DIE / 2, DIE, DIE, { fill: 1054495, border: spent ? C.good : tex && !idle ? C.gold : color, radius: 7, line: 2 });
         value.setText(String(f.v)).setY(tex ? -5 : 0).setAlpha(spent ? 0.35 : 1);
         if (spent) {
           strike.lineStyle(2, SPENT, 1);
           strike.lineBetween(-10, -5, 10, -5);
         }
         if (tex) mark.setTexture(tex);
-        mark.setTint(spent ? SPENT : 16765503).setVisible(!!tex);
+        mark.setTint(spent ? SPENT : idle ? IDLE : 16765503).setVisible(!!tex);
+        crown.setVisible(!!f.leader);
+        if (f.leader) {
+          strike.fillStyle(1054495, 1);
+          strike.fillCircle(12, -12, 7);
+          strike.lineStyle(1.5, C.gold, 1);
+          strike.strokeCircle(12, -12, 7);
+        }
       }
     };
     return die2;
@@ -38620,7 +41006,10 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
     const col = PLAYER_HEX[side.owner];
     const units = ev.domain === "sea" ? "fleet" : "army";
     modal.add(txt(scene, x + w / 2, 86, `${ownerName(ctl.g, side.owner)} ${units}`, { size: 17, bold: true, serif: true, color: col, origin: 0.5 }));
-    modal.add(txt(scene, x + w / 2, 106, key2 === "a" ? "attacking" : "defending", { size: 12, color: TXT.muted, origin: 0.5 }));
+    const role = key2 === "a" ? "attacking" : "defending";
+    const lead = LEADERS[side.lead]?.name;
+    const sub = modal.add(txt(scene, x + w / 2 + (lead ? 9 : 0), 106, lead ? `${role} \xB7 ${lead}` : role, { size: 12, color: TXT.muted, origin: 0.5 }));
+    if (lead) modal.add(icon(scene, "u_leader", sub.x - sub.width / 2 - 10, 106, 16).setTint(PLAYER_COLORS[side.owner]));
     const perRow = Math.max(1, Math.floor((w + GAP2) / (DIE + GAP2)));
     const rows = Math.ceil(side.dice.length / perRow);
     const area = Math.max(2, rows);
@@ -38633,18 +41022,21 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const rowW = inRow * (DIE + GAP2) - GAP2;
       const cx = x + (w - rowW) / 2 + i % perRow * (DIE + GAP2) + DIE / 2;
       const cy = top + Math.floor(i / perRow) * (DIE + GAP2) + DIE / 2;
-      const die2 = makeDie(scene, cx, cy, PLAYER_COLORS[side.owner], d);
+      const die2 = makeDie(scene, cx, cy, PLAYER_COLORS[side.owner], d, !!side.lead);
       return die2;
     });
     let y = DICE_Y + area * (DIE + GAP2) + 6;
     const sum = side.dice.reduce((n, d) => n + (d.ignored ? 0 : d.v), 0);
     const horse = side.cavalry || 0;
     const tusks = side.elephants || 0;
+    const leaders2 = side.leaderCv || [];
+    const mod = side.mod - leaders2.reduce((n, x2) => n + x2.cv, 0);
     const other = side.cv - sum - side.bonus - horse - side.mod;
     const lines = [[tusks ? "Dice total (Elephant dice left out)" : "Dice total", sum]];
     if (side.bonus) lines.push(["Infantry bonus", `+${side.bonus}`]);
     if (horse) lines.push(["Cavalry bonus", `+${horse}`]);
-    if (side.mod) lines.push(["Cards and weapons", side.mod > 0 ? `+${side.mod}` : `${side.mod}`]);
+    if (mod) lines.push(["Cards and weapons", mod > 0 ? `+${mod}` : `${mod}`]);
+    for (const x2 of leaders2) lines.push([`Leader: ${x2.label}`, `+${x2.cv}`]);
     if (other) lines.push(["Other effects", other > 0 ? `+${other}` : `${other}`]);
     const total = stages[0];
     for (const [label, val] of lines) {
@@ -38743,7 +41135,9 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
     return new Promise((resolve) => {
       const w = 740;
       const notes = ev.notes || [];
-      const h = 502 + (ev.extraA || ev.extraD ? 16 : 0) + notes.length * 18;
+      const leaderLines = Math.max((ev.a.leaderCv || []).length, (ev.d.leaderCv || []).length);
+      const lead = !!(ev.a.lead || ev.d.lead);
+      const h = 502 + (ev.extraA || ev.extraD ? 16 : 0) + notes.length * 18 + leaderLines * 18 + (lead ? 14 : 0);
       const sea = ev.domain === "sea";
       const terr = TERRAIN2[terrainOf(g.s, ev.hex)] || "Sea";
       let live = true;
@@ -38767,9 +41161,9 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       });
       const stages = Array.from({ length: STAGES }, () => modal.add(scene.add.container(0, 0)));
       const half = (w - 80) / 2;
-      const A3 = sideColumn(modal, ctl, ev, "a", 20, half, stages);
+      const A4 = sideColumn(modal, ctl, ev, "a", 20, half, stages);
       const D = sideColumn(modal, ctl, ev, "d", w - 20 - half, half, stages);
-      const bottom = Math.max(A3.y, D.y);
+      const bottom = Math.max(A4.y, D.y);
       const mid = scene.add.graphics();
       mid.lineStyle(1, C.border, 1);
       mid.lineBetween(w / 2, 84, w / 2, bottom + 4);
@@ -38785,10 +41179,11 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const yourLoss = you.lost ? `You lose ${plural3(you.lost, sea ? "ship" : "unit", sea ? "ships" : "units")}.` : "You lose nothing.";
       const theirLoss = them.lost ? `The enemy loses ${plural3(them.lost, sea ? "ship" : "unit", sea ? "ships" : "units")}.` : "The enemy loses nothing.";
       stages[2].add(txt(scene, w / 2, yb, `${yourLoss}  ${theirLoss}`, { size: 15, bold: true, color: you.lost > them.lost ? TXT.bad : you.lost < them.lost ? TXT.good : TXT.text, origin: [0.5, 0] }));
-      modal.add(txt(scene, w / 2, h - 80, "A die with an Infantry mark adds +1 CV and one with a Cavalry mark adds +2 CV; the die of an Elephant is left out of the total, but the Elephant cancels one enemy hit. Each mark needs a matching unit in the fight (one die per unit). Every full 5 CV is one hit.", { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: "center" }));
+      const help = "A die with an Infantry mark adds +1 CV and one with a Cavalry mark adds +2 CV; the die of an Elephant is left out of the total, but the Elephant cancels one enemy hit. Each mark needs a matching unit in the fight (one die per unit). Every full 5 CV is one hit.";
+      modal.add(txt(scene, w / 2, h - (lead ? 94 : 80), lead ? `${help} ${LEADER_DICE}` : help, { size: 11, color: TXT.dim, origin: [0.5, 0], wrap: w - 40, align: "center" }));
       const order = [];
-      for (let i = 0; i < Math.max(A3.dice.length, D.dice.length); i++) {
-        if (A3.dice[i]) order.push([A3.dice[i], -1]);
+      for (let i = 0; i < Math.max(A4.dice.length, D.dice.length); i++) {
+        if (A4.dice[i]) order.push([A4.dice[i], -1]);
         if (D.dice[i]) order.push([D.dice[i], 1]);
       }
       const plans = planDice(order.map(([, dir]) => dir), Math.random, FACES);
@@ -38909,6 +41304,8 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
   // src/ui/controller.js
   var SPEED = { normal: 0.75, fast: 0.3, instant: 0 };
   var AI_ACTION_CAP = 40;
+  var LAND_TYPES = ["leader", "infantry", "cavalry", "elephant", "settler"];
+  var UNIT_TYPES = ["ship", ...LAND_TYPES];
   var copy = (x) => JSON.parse(JSON.stringify(x));
   var Controller = class {
     constructor(scene, g) {
@@ -39046,7 +41443,9 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
         if (c) lines.push("", `Click to collect: ${c.opts.map((r) => RES[r].name).join(" or ")}`);
       } else if (this.optByHex.has(k)) {
         const list = this.optByHex.get(k);
-        lines.push("", list.every((o) => o.battle) ? "Click to attack here." : list.every((o) => o.convert) ? "Click to change units and move here (Shipcraft)." : list[0].explore !== null ? "Click to explore here." : "Click to move here.");
+        const city = cityAt(this.g.s, k);
+        const toll = city && city.owner !== 0 ? city.beloved || 0 : 0;
+        lines.push("", list.every((o) => o.battle) ? `Click to attack here.${toll ? ` You first pay ${plural(toll, "Culture token")} (Cleopatra).` : ""}` : list.every((o) => o.convert) ? "Click to change units and move here (Shipcraft)." : list[0].explore !== null ? "Click to explore here." : "Click to move here.");
       } else if (this.sel && this.sel.hex !== k && this.humanCanAct()) {
         const why = this.whyNot(k);
         if (why) lines.push("", `Cannot move here: ${why}`);
@@ -39068,7 +41467,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
     }
     // ---------------------------------------------------------- selection
     select(k) {
-      this.sel = k ? { hex: k, counts: { ship: 0, infantry: 0, cavalry: 0, elephant: 0, settler: 0 }, groups: null, city: false } : null;
+      this.sel = k ? { hex: k, counts: Object.fromEntries(UNIT_TYPES.map((t) => [t, 0])), groups: null, city: false } : null;
       if (k) this.initCounts();
       this.refreshView();
     }
@@ -39096,13 +41495,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const t = s.turn;
       const tactics = hasAdv(s, 0, "tactics");
       const longships = hasCivAdv(s, 0, "longships");
-      const out = {
-        ship: { free: [], locked: [], why: "" },
-        infantry: { free: [], locked: [], why: "" },
-        cavalry: { free: [], locked: [], why: "" },
-        elephant: { free: [], locked: [], why: "" },
-        settler: { free: [], locked: [], why: "" }
-      };
+      const out = Object.fromEntries(UNIT_TYPES.map((t2) => [t2, { free: [], locked: [], why: "" }]));
       for (const u of s.units) {
         if (u.hex !== k || u.owner !== 0) continue;
         const f = t && t.unitFlags[u.id];
@@ -39125,16 +41518,14 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       if (terrainOf(this.g.s, sel.hex) === "sea") {
         c.ship = gr.ship.free.length;
         let room = c.ship * 2;
-        for (const type of ["infantry", "cavalry", "elephant", "settler"]) {
+        for (const type of LAND_TYPES) {
           c[type] = Math.min(gr[type].free.length, room);
           room -= c[type];
         }
       } else {
         c.ship = 0;
-        c.infantry = gr.infantry.free.length;
-        c.cavalry = gr.cavalry.free.length;
-        c.elephant = gr.elephant.free.length;
-        c.settler = c.infantry + c.cavalry + c.elephant ? 0 : gr.settler.free.length;
+        for (const type of ["leader", "infantry", "cavalry", "elephant"]) c[type] = gr[type].free.length;
+        c.settler = c.leader + c.infantry + c.cavalry + c.elephant ? 0 : gr.settler.free.length;
       }
     }
     /** Keep the unit counts valid after the board changed. */
@@ -39143,10 +41534,10 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       sel.groups = this.ownGroups(sel.hex);
       const gr = sel.groups;
       const c = sel.counts;
-      for (const type of ["ship", "infantry", "cavalry", "elephant", "settler"]) c[type] = Math.min(c[type], gr[type].free.length);
+      for (const type of UNIT_TYPES) c[type] = Math.min(c[type], gr[type].free.length);
       if (c.ship > 0) {
         let room = c.ship * 2;
-        for (const type of ["infantry", "cavalry", "elephant", "settler"]) {
+        for (const type of LAND_TYPES) {
           c[type] = Math.min(c[type], room);
           room -= c[type];
         }
@@ -39200,7 +41591,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       const gr = sel.groups || this.ownGroups(sel.hex);
       const c = sel.counts;
       const take = (list, n) => list.slice(0, n).map((u) => u.id);
-      const cargo = [...take(gr.infantry.free, c.infantry), ...take(gr.cavalry.free, c.cavalry), ...take(gr.elephant.free, c.elephant), ...take(gr.settler.free, c.settler)];
+      const cargo = LAND_TYPES.flatMap((type) => take(gr[type].free, c[type]));
       if (c.ship > 0) return { ids: take(gr.ship.free, c.ship), carry: cargo };
       return { ids: cargo, carry: [] };
     }
@@ -39241,7 +41632,7 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
       if (!res.ok) return;
       const dest = ship && o.explore !== null ? from : o.to;
       const here = this.ownGroups(dest);
-      const any = here.ship.free.length + here.infantry.free.length + here.cavalry.free.length + here.elephant.free.length + here.settler.free.length;
+      const any = UNIT_TYPES.reduce((n, type) => n + here[type].free.length, 0);
       if (any && this.humanCanAct()) this.select(dest);
       else if (this.sel) this.clearSelection();
     }
@@ -39648,6 +42039,16 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
     who(p) {
       return cap(seatName(this.g.s, p));
     }
+    /** What to tell the player when a Leader leaves the game: killed, taken by an opponent (worth VP to them) or replaced. */
+    leaderLostNote(ev) {
+      const s = this.g.s;
+      const name = LEADERS[ev.leader]?.name || "A Leader";
+      if (ev.by === null || ev.by === void 0) return { text: `${this.who(ev.player)} lost ${name}.`, kind: ev.player === 0 ? "error" : "info" };
+      return {
+        text: `${this.who(ev.by)} captured ${seatOwner(s, ev.player)} ${name} (+${LEADER_CAPTURE_VP} VP).`,
+        kind: ev.by === 0 ? "good" : ev.player === 0 ? "error" : "info"
+      };
+    }
     async playEvent(ev, next) {
       const s = this.g.s;
       const map = this.map;
@@ -39688,10 +42089,57 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
           this.syncBefore("all");
           this.draw();
           const hex = this.cityHex(ev.city);
-          if (hex) void map.floatText(hex, `+${countText(ev.units)}`, "#bde0ff");
+          const what = [LEADERS[ev.leader]?.name, countText(ev.units)].filter(Boolean).join(", ");
+          if (hex && what) void map.floatText(hex, `+${what}`, "#bde0ff");
           await this.sleep(350);
           break;
         }
+        case "leader":
+          this.syncBefore("all");
+          this.draw();
+          void map.pulse(ev.hex, 15909198, 60);
+          await this.sleep(300);
+          break;
+        case "leader_lost": {
+          const note = this.leaderLostNote(ev);
+          if (this.battle) this.battle.news.push(note);
+          else {
+            this.syncBefore("all");
+            this.draw();
+            this.hud.toast(note.text, note.kind, 2600);
+            await this.sleep(450);
+          }
+          break;
+        }
+        case "revert": {
+          const hex = this.cityHex(ev.city);
+          this.syncBefore("cities");
+          this.draw();
+          if (hex) {
+            void map.pulse(hex, 16771496);
+            void map.floatText(hex, `${BUILDING_NAME[ev.building] || "Building"} taken back`, "#ffe9a8");
+          }
+          await this.sleep(400);
+          break;
+        }
+        case "beloved": {
+          const hex = this.cityHex(ev.city);
+          this.syncBefore("cities");
+          this.draw();
+          if (hex) {
+            void map.pulse(hex, 13081583);
+            void map.floatText(hex, "+1 Culture token", "#c79bef");
+          }
+          await this.sleep(400);
+          break;
+        }
+        case "eric_token":
+          this.hud.update();
+          void map.pulse(ev.hex, 13081583);
+          void map.floatText(ev.hex, `Culture token +${ERIC_TOKEN_VP} VP`, "#c79bef", { size: 15 });
+          if (ev.player !== 0) this.hud.toast(`${this.who(ev.player)} placed a Culture token on a Region (Eric the Red, ${ERIC_TOKEN_VP} VP).`, "info", 2200);
+          await this.sleep(450);
+          break;
         case "construct": {
           this.syncBefore("all");
           this.draw();
@@ -39803,18 +42251,21 @@ Advances such as Bartering, Theaters, Taxation, Civil Liberties, Absolute Power 
           this.draw();
           break;
         case "battle_start":
-          this.battle = { hex: ev.hex, attacker: ev.attacker, defender: ev.defender, domain: ev.domain, rounds: [] };
+          this.battle = { hex: ev.hex, attacker: ev.attacker, defender: ev.defender, domain: ev.domain, rounds: [], news: [] };
           void map.pulse(ev.hex, 16734799, 60);
           await this.sleep(250);
           break;
         case "battle_round":
           await playBattleRound(this, ev);
           break;
-        case "battle_end":
+        case "battle_end": {
           this.syncBefore("all");
           this.draw();
+          const news = this.battle ? this.battle.news : [];
           this.battle = null;
+          if (news.length) this.hud.toast(news.map((n) => n.text).join("\n"), news.some((n) => n.kind === "error") ? "error" : news.some((n) => n.kind === "good") ? "good" : "info", 2800);
           break;
+        }
         case "mood":
           this.syncBefore("cities");
           this.draw();

@@ -1,11 +1,11 @@
 // Trade routes (the Trade Routes Advance), paid at the start of the owner's turn, and the Civilization powers that change them:
-// Banking, Tribal Trade, Indian Elephants, Cedars and Dyes, Prosperity, Alphabet, Marauders and Pirate Allies. Raiders (civs.js)
-// stops Settlers from forming routes.
+// Banking, Tribal Trade, Indian Elephants, Cedars and Dyes, Prosperity, Alphabet, Marauders and Pirate Allies, and the Leaders
+// Hiram and Pygmalion. Raiders (civs.js) stops Settlers from forming routes.
 import { BARBARIAN } from './data/constants.js';
 import { gainRes } from './core.js';
 import {
-  bfs, cityAt, cityById, citiesOf, controlledPirates, hasAdv, hasBuilding, hasCivAdv, hexDistance, isHidden, isNpc, isPortCity, isSea, nbrs,
-  pirateBlocked, resLimit,
+  bfs, cityAt, cityById, citiesOf, controlledPirates, hasAdv, hasBuilding, hasCivAdv, hexDistance, isHidden, isNpc, isPortCity, isSea, leaderOf,
+  nbrs, pirateBlocked, resLimit, unitById,
 } from './queries.js';
 import { choose, confirm } from './prompts.js';
 import { plural } from './text.js';
@@ -81,13 +81,33 @@ export function tradeRoutes(s, p) {
   };
   for (const c of foes) attempt(c, new Set());
   const unitOf = new Map([...holder].map(([unit, c]) => [c.id, mine.find((u) => u.id === unit)]));
-  return foes
-    .filter((c) => unitOf.has(c.id))
-    .map((c) => {
-      const u = unitOf.get(c.id);
-      return { city: c.id, unit: u.port === null ? u.id : null, port: u.port, ship: u.ship, adjacent: u.ship && hexDistance(u.hex, c.hex) === 1 };
-    })
-    .slice(0, MAX_ROUTES);
+  const matched = foes.filter((c) => unitOf.has(c.id));
+  const route = (c, u) => ({ city: c.id, unit: u.port === null ? u.id : null, port: u.port, ship: u.ship, adjacent: u.ship && hexDistance(u.hex, c.hex) === 1 });
+  const routes = matched.map((c) => route(c, unitOf.get(c.id)));
+  const hiram = routes.length > MAX_ROUTES ? leaderOf(s, p, 'hiram') : null;
+  if (!hiram) return routes.slice(0, MAX_ROUTES);
+
+  // Hiram (Phoenicia): a route traced from a Settler or Ship that is with him comes on top of the 4.
+  const escorted = (id) => {
+    const u = id && unitById(s, id);
+    return !!u && (u.type === 'settler' || u.type === 'ship') && u.hex === hiram.hex;
+  };
+  let free = routes.findIndex((r, i) => i <= MAX_ROUTES && escorted(r.unit));
+  if (free < 0) free = routes.findIndex((r) => escorted(r.unit));
+  if (free < 0) {
+    for (const u of mine) {
+      if (!escorted(u.id)) continue;
+      const i = matched.slice(0, MAX_ROUTES + 1).findIndex((c) => reaches(u, c));
+      if (i < 0) continue;
+      routes[i] = route(matched[i], u);
+      free = i;
+      break;
+    }
+  }
+  if (free < 0) return routes.slice(0, MAX_ROUTES);
+  routes[free] = { ...routes[free], free: true };
+  const others = routes.filter((_, i) => i !== free).slice(0, MAX_ROUTES);
+  return routes.filter((r, i) => i === free || others.includes(r));
 }
 
 /** Banking (Persia): a player who holds Gold gains 1 Gold or 1 Culture before the trade routes pay. */
@@ -204,6 +224,25 @@ function* marauders(g, p, routes) {
 
 const sayGain = (gain) => Object.entries(gain).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
 
+/** Pygmalion (Phoenicia): one route traced from a Settler or Ship that is with him also pays 1 Gold or 1 Culture token. */
+function* pygmalion(g, p, routes, gain) {
+  const s = g.s;
+  const leader = leaderOf(s, p, 'pygmalion');
+  if (!leader || !routes.some((r) => { const u = r.unit && unitById(s, r.unit); return !!u && (u.type === 'settler' || u.type === 'ship') && u.hex === leader.hex; })) return;
+  const pick = yield* choose(g, p, {
+    kind: 'pygmalion_trade',
+    title: 'Pygmalion',
+    text: 'A trade route traced from a unit with Pygmalion pays 1 more: take a Gold or a Culture token.',
+    options: [
+      { id: 'culture', label: '1 Culture' },
+      { id: 'gold', label: '1 Gold' },
+    ],
+    default: 'culture',
+  });
+  const k = pick === 'gold' ? 'gold' : 'culture';
+  gain[k] = (gain[k] || 0) + 1;
+}
+
 /** The start of a turn's trade: Banking first, then the routes pay (an opponent's Market is paid, unless the player declines). */
 export function* tradePhase(g, p) {
   const s = g.s;
@@ -226,6 +265,7 @@ export function* tradePhase(g, p) {
   }
   if (!routes.length) return;
   const gain = yield* routeIncome(g, p, routes);
+  yield* pygmalion(g, p, routes, gain);
   gainRes(g, p, gain);
   const marketGold = [...new Set(toMarket(routes).map((r) => cityById(s, r.city).owner))];
   for (const o of marketGold) gainRes(g, o, { gold: 1 });

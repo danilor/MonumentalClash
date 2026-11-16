@@ -1,7 +1,8 @@
 // Mutation helpers shared by every rules module. `g` is the Game facade, `g.s` its plain state.
 import { BARBARIAN, BASE_RESOURCES, RESOURCES } from './data/constants.js';
 import { ACTION_CARDS, TOP_EFFECTS } from './data/cards.js';
-import { resLimit, owns, cityAt, citiesOf, playerOwnsWonder, unitById } from './queries.js';
+import { LEADERS } from './data/leaders.js';
+import { resLimit, owns, cityAt, citiesOf, hasCivAdv, isNpc, playerOwnsWonder, unitById } from './queries.js';
 import { confirm } from './prompts.js';
 import { shuffle } from './rng.js';
 
@@ -41,6 +42,8 @@ export function clampResources(g, p) {
  * Great Arena makes Mood and Culture interchangeable unless `noArena`.
  * Civilization powers: `ideasFor` lets Ideas pay for any resource (Ziggurats); `moodFor` lets Mood pay for any resource
  * (Slave Economy: 'resources') and for Culture too (Architecture: true).
+ * Leader powers: `captives` is how many Captives may each pay 1 resource (Acamapichtli); `cultureAs2` lets each Culture token
+ * pay 2 resources (Pakal).
  * Returns the amounts to spend per type, or null when unaffordable.
  */
 export function planPayment(s, p, cost, opts = {}) {
@@ -48,7 +51,9 @@ export function planPayment(s, p, cost, opts = {}) {
   const have = { ...pl.res };
   let moodHave = pl.mood;
   let cultureHave = pl.culture;
-  const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0 };
+  let captivesHave = opts.captives || 0;
+  let spare = 0;
+  const spend = { food: 0, wood: 0, ore: 0, ideas: 0, gold: 0, mood: 0, culture: 0, captives: 0 };
   // Ideas first: an explicit Idea cost (Dark Age) must not lose its Ideas to Food that Ideas could stand in for.
   for (const r of ['ideas', 'food', 'wood', 'ore']) {
     let need = cost[r] || 0;
@@ -81,6 +86,23 @@ export function planPayment(s, p, cost, opts = {}) {
       moodHave -= use;
       spend.mood += use;
       need -= use;
+    }
+    if (need > 0 && captivesHave > 0) {
+      const use = Math.min(captivesHave, need);
+      captivesHave -= use;
+      spend.captives += use;
+      need -= use;
+    }
+    if (need > 0 && opts.cultureAs2) {
+      // A token pays any 2 resources: the second of a token spent on a single resource goes to the next one
+      const rest = Math.min(spare, need);
+      spare -= rest;
+      need -= rest;
+      const tokens = Math.min(cultureHave, Math.ceil(need / 2));
+      cultureHave -= tokens;
+      spend.culture += tokens;
+      spare += Math.max(0, 2 * tokens - need);
+      need = Math.max(0, need - 2 * tokens);
     }
     if (need > 0) return null;
   }
@@ -134,6 +156,16 @@ export function applyPayment(g, p, plan) {
     if (k === 'mood' || k === 'culture') pl[k] -= n;
     else pl.res[k] -= n;
   }
+  for (let i = 0; i < (plan.captives || 0); i++) spendCaptive(g, p);
+}
+
+/** Spend one Captive. A Barbarian one goes first: handing an opponent's Army unit back to its owner would help them. */
+export function spendCaptive(g, p) {
+  const list = g.s.players[p].captives;
+  const at = list.findIndex((c) => c.owner === BARBARIAN);
+  const [gone] = list.splice(at < 0 ? 0 : at, 1);
+  g.emit({ type: 'sacrifice', player: p, unit: gone.type, from: gone.owner });
+  return gone;
 }
 
 export function pay(g, p, cost, opts) {
@@ -172,10 +204,36 @@ export function addUnitTo(g, owner, type, hex) {
   return u;
 }
 
-export function removeUnits(g, ids) {
+export function removeUnits(g, ids, { by = null } = {}) {
   const set = new Set(ids);
+  const leaders = g.s.units.filter((u) => set.has(u.id) && u.type === 'leader');
   g.s.units = g.s.units.filter((u) => !set.has(u.id));
   if (g.s.turn) for (const id of set) delete g.s.turn.unitFlags[id];
+  for (const u of leaders) leaderGone(g, u.owner, by);
+}
+
+/**
+ * A player's Leader leaves the game (it died, or was replaced by another one) and its unit is already off the board. The card
+ * is gone for good: it goes to `by`, the opponent who killed it in a battle (worth 2 VP to them), or back to the box.
+ * Embalming pays 1 Culture for it whatever the Culture the player holds.
+ */
+export function leaderGone(g, owner, by = null) {
+  const s = g.s;
+  const pl = s.players[owner];
+  const id = pl && pl.leader;
+  if (!id) return null;
+  pl.leader = null;
+  pl.leaderLost.push(id);
+  const taken = by !== null && by !== undefined && !isNpc(by) && by !== owner;
+  if (taken) s.players[by].leaderCaptured.push({ id, from: owner });
+  if (id === 'cleopatra') for (const c of s.cities) if (c.owner === owner) delete c.beloved;
+  g.emit({ type: 'leader_lost', player: owner, leader: id, by: taken ? by : null });
+  g.log(`${g.name(owner)} loses ${LEADERS[id].name}${taken ? `, who is taken by ${g.name(by)}` : ''}.`);
+  if (hasCivAdv(s, owner, 'embalming')) {
+    gainRes(g, owner, { culture: 1 });
+    g.log(`${g.name(owner)} gains 1 culture (Embalming).`);
+  }
+  return id;
 }
 
 export function unitFlags(g, id) {

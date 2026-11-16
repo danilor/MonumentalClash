@@ -33,6 +33,10 @@ export function upgradeState(s) {
     p.civAdv ??= [];
     p.captives ??= [];
     p.runes ??= 0;
+    p.leader ??= null;
+    p.leaderLost ??= [];
+    p.leaderCaptured ??= [];
+    p.ericTokens ??= [];
   }
   return s;
 }
@@ -74,6 +78,10 @@ export function newPlayer(idx, name, human) {
     civAdv: [], // Civilization Advances gained so far (kept apart from `advances`: no cubes, no Government effects)
     captives: [], // Aztec Captives: { owner, type } of the Army units held (at most 4)
     runes: 0, // Runestones: Obelisk pieces kept as completed 1 VP Objectives
+    leader: null, // id of the Leader in play (a Leader unit stands on the map while this is set)
+    leaderLost: [], // ids of this player's Leaders that are gone for the game (dead, replaced or taken by an enemy)
+    leaderCaptured: [], // { id, from }: enemy Leader cards this player holds for killing them (2 VP each)
+    ericTokens: [], // Eric the Red: ids of the Regions holding one of this player's Culture tokens (1 VP each)
     stats: { battlesWon: 0, battlesLost: 0, citiesCaptured: 0, influenced: 0 },
   };
 }

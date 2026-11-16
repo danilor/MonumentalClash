@@ -2,8 +2,8 @@
 import { BARBARIAN, PIECE_LIMITS, STACK_LIMIT } from './data/constants.js';
 import { addCity } from './state.js';
 import {
-  allHexKeys, armyAt, bfs, cityAt, citiesOf, citySize, foesOf, hasCivAdv, hexDistance, isArmy, isLand, nbrs, settlementsLeft,
-  unitById, unitsAt, unitsLeft,
+  allHexKeys, armyAt, bfs, cityAt, citiesOf, citySize, foesOf, hasCivAdv, hexDistance, isArmy, isLand, leaderOf, nbrs, settlementsLeft,
+  stackLimit, unitById, unitsAt, unitsLeft,
 } from './queries.js';
 import { addUnitTo, applyPayment, canPay, planPayment } from './core.js';
 import { choose, chooseMany, confirm } from './prompts.js';
@@ -61,7 +61,7 @@ function retreatHexes(s, hex) {
   return nbrs(s, hex).filter((n) => {
     if (!isLand(s, n) || unitsAt(s, n).some((u) => u.owner !== owner)) return false;
     const city = cityAt(s, n);
-    return !(city && city.owner !== owner) && armyAt(s, n, owner).length + armySize <= STACK_LIMIT;
+    return !(city && city.owner !== owner) && armyAt(s, n, owner).length + armySize <= stackLimit(s, owner, n, group.filter(isArmy));
   });
 }
 
@@ -337,6 +337,33 @@ function* marchStep(g, p, from, group, cityMaps, auto) {
 }
 
 /**
+ * Sulla (Rome): his owner may call off a Barbarian attack on any city (a rival's too) within 2 spaces of him.
+ * Returns true when it is cancelled.
+ */
+function* sullaCancel(g, to) {
+  const s = g.s;
+  const city = cityAt(s, to);
+  if (!city || city.owner === BARBARIAN) return false;
+  for (const pl of s.players) {
+    const sulla = leaderOf(s, pl.idx, 'sulla');
+    if (!sulla || hexDistance(sulla.hex, to) > 2) continue;
+    const mine = city.owner === pl.idx;
+    const cancel = yield* confirm(g, pl.idx, {
+      kind: 'sulla_cancel',
+      title: 'Sulla',
+      text: `Barbarians attack ${mine ? 'your' : `${g.name(city.owner)}'s`} city at ${to}, within 2 spaces of Sulla. Call the attack off?`,
+      yes: 'Call off the attack',
+      no: 'Let them attack',
+      default: mine,
+      hex: to,
+    });
+    if (cancel) g.log(`${g.name(pl.idx)} calls off the Barbarian attack at ${to} (Sulla).`);
+    return cancel;
+  }
+  return false;
+}
+
+/**
  * Tribal Allies (Celts): the defender may pay 1 Food per attacking Barbarian unit to call the attack off.
  * Returns true when it is cancelled (the payment is made).
  */
@@ -378,7 +405,7 @@ function* advanceBarbarianArmy(g, p, army, cityMaps, { auto = false, steer = fal
   const city = cityAt(s, to);
   const enemyCity = city && city.owner !== BARBARIAN ? city : null;
   const defender = occupants.length ? occupants[0].owner : enemyCity ? enemyCity.owner : null;
-  if (defender !== null && (yield* tribalAlliesCancel(g, defender, group, to))) return from;
+  if (defender !== null && ((yield* sullaCancel(g, to)) || (yield* tribalAlliesCancel(g, defender, group, to)))) return from;
   g.emit({ type: 'barbarians', kind: 'move', from, hex: to });
   if (defender !== null) {
     yield* battle(g, {
@@ -437,7 +464,7 @@ export function* barbarianFeud(g) {
     if (!strike) return;
     for (const u of strike.group) fought.add(u.id);
     const defender = strike.defenders[0].owner;
-    if (yield* tribalAlliesCancel(g, defender, strike.group, strike.to)) continue;
+    if ((yield* sullaCancel(g, strike.to)) || (yield* tribalAlliesCancel(g, defender, strike.group, strike.to))) continue;
     g.emit({ type: 'barbarians', kind: 'move', from: strike.from, hex: strike.to });
     g.log(`Barbarian warlords strike ${g.name(defender)} at ${strike.to}.`);
     yield* battle(g, {

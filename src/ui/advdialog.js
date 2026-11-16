@@ -1,5 +1,5 @@
 // The Advances window: the 12 categories of the Advance board. Click an Advance to read it, then research it.
-// In "pick" mode (free Advances, Great Library) it only lets the player choose one of the offered Advances.
+// In "pick" mode (free Advances, Great Library, Leaders) it only lets the player choose one of the offered Advances.
 import { ADVANCES, ADVANCE_GROUPS } from '../engine/data/advances.js';
 import { BUILDING_ADVANCE, CIV_BUILDINGS } from '../engine/data/constants.js';
 import { CIVS } from '../engine/data/civs.js';
@@ -47,8 +47,9 @@ function paymentOptions(have, n) {
 }
 
 /**
- * pick: null for normal research, or { title, text, options: [advance ids], default } to choose one.
- * Resolves with the chosen id in pick mode, otherwise null when the window is closed.
+ * pick: null for normal research, or { title, text, options: [advance ids], default, skip? } to choose one.
+ * Resolves with the chosen id in pick mode (or 'none' when the player uses the `skip` button, whose label it is),
+ * otherwise null when the window is closed.
  */
 export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
   const scene = ctl.scene;
@@ -260,6 +261,7 @@ export function advancesDialog(ctl, { pick = null, depth = 1000 } = {}) {
       const btn = new Button(scene, rightW - 206, STRIP_H - 52, 200, 38, `Choose ${adv.name}`, () => modal.close(id), { style: 'primary', size: 15, wrap: true });
       pay.add(btn);
     };
+    if (pick && pick.skip) box.add(new Button(scene, rightX + rightW - 374, STRIP_Y + STRIP_H - 52, 160, 38, pick.skip, () => modal.close('none'), { size: 15, wrap: true }));
 
     const researchControls = (id) => {
       const { cost, via } = advanceCost(s, 0, id);

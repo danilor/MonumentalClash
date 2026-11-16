@@ -20,6 +20,7 @@ import { tradePhase, tradeRoutes } from './trade.js';
 import {
   calendarAction, fightingBandsAction, hegemonyAction, humanSacrificeAction, sprawlAction, tribalAlliesAction,
 } from './civActions.js';
+import { leaderAction } from './leaderActions.js';
 
 export { tradeRoutes };
 
@@ -116,6 +117,7 @@ const ACTIONS = {
   tribal_allies: tribalAlliesAction,
   human_sacrifice: humanSacrificeAction,
   calendar: calendarAction,
+  leader: leaderAction,
   end_turn: endTurn,
 };
 

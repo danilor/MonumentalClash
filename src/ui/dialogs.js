@@ -3,6 +3,7 @@ import { ADVANCE_GROUPS } from '../engine/data/advances.js';
 import { OBJECTIVES } from '../engine/data/cards.js';
 import { PIRATE } from '../engine/data/constants.js';
 import { CIVS } from '../engine/data/civs.js';
+import { LEADERS } from '../engine/data/leaders.js';
 import { WONDERS } from '../engine/data/wonders.js';
 import { citiesOf, shipsAt, terrainOf, totalAges } from '../engine/queries.js';
 import { finalResult, scoreOf } from '../engine/scoring.js';
@@ -13,7 +14,7 @@ import { Button, Modal, txt } from './widgets.js';
 import { createCityDialogs } from './citydialogs.js';
 import { advancesDialog } from './advdialog.js';
 import { abilitiesDialog, cardsDialog } from './carddialogs.js';
-import { civExtras, civilizationDialog } from './civdialog.js';
+import { CIV_SCORE, civExtras, civilizationDialog } from './civdialog.js';
 import { helpDialog } from './help.js';
 
 const SUB_DEPTH = 1100;
@@ -194,6 +195,12 @@ function overviewDialog(ctl, p) {
     modal.add(head);
     modal.add(list);
     y += Math.max(head.height, list.height) + 8;
+    const lead = pl.leader ? LEADERS[pl.leader] : null;
+    const leadHead = txt(scene, leftX, y, 'Leader', { size: 13, bold: true, color: TXT.gold });
+    const leadName = txt(scene, leftX + 130, y, lead ? lead.name : 'None in play', { size: 13, color: lead ? TXT.text : TXT.muted });
+    modal.add(leadHead);
+    modal.add(leadName);
+    y += Math.max(leadHead.height, leadName.height) + 8;
     for (const line of civExtras(s, p)) {
       const t = txt(scene, leftX, y, line, { size: 12, wrap: leftW, color: TXT.muted });
       modal.add(t);
@@ -213,7 +220,7 @@ function overviewDialog(ctl, p) {
     ['Wonders', sc.parts.wonders],
     ['Events and bonuses', sc.parts.events],
   ];
-  if (s.civs) rows.push(['Captives, tokens and Runestones', sc.parts.civ]);
+  if (s.civs) rows.push([CIV_SCORE, sc.parts.civ]);
   for (const [name, value] of rows) {
     modal.add(txt(scene, rightX, y, name, { size: 13, color: TXT.muted }));
     modal.add(txt(scene, rightX + rightW, y, fmtVP(value), { size: 13, bold: true, origin: [1, 0] }));
@@ -345,7 +352,7 @@ function gameOverDialog(ctl) {
       ['Wonders', 'wonders'],
       ['Events and bonuses', 'events'],
     ];
-    if (s.civs) rows.push(['Captives, tokens and Runestones', 'civ']);
+    if (s.civs) rows.push([CIV_SCORE, 'civ']);
     for (const [name, key] of rows) {
       f.add(txt(ctl.scene, f.pad, f.y, name, { size: 14, color: TXT.muted }));
       for (let i = 0; i < n; i++) f.add(txt(ctl.scene, colX(i), f.y, fmtVP(res.scores[i].parts[key]), { size: 14, origin: [1, 0] }));
@@ -377,7 +384,7 @@ export function createDialogs(ctl) {
     cards: (tab) => cardsDialog(ctl, tab),
     abilities: () => abilitiesDialog(ctl),
     overview: (p) => overviewDialog(ctl, p),
-    civilization: (p) => civilizationDialog(ctl, p),
+    civilization: (p, tab) => civilizationDialog(ctl, p, tab),
     pickVariant: (k, options) => pickVariant(ctl, k, options),
     confirm: (o) => confirmModal(ctl, o),
     gameOver: () => gameOverDialog(ctl),

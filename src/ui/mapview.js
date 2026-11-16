@@ -1,6 +1,6 @@
 // The board: hex terrain, region borders, cities, units, highlights and small animations.
 import Phaser from 'phaser';
-import { HEX_H, HEX_SCALE as K, HEX_TEX_W, HEX_W, H, LAYOUT, PLAYER_COLORS, S, W } from './theme.js';
+import { C, HEX_H, HEX_SCALE as K, HEX_TEX_W, HEX_W, H, LAYOUT, PLAYER_COLORS, S, W } from './theme.js';
 import { icon, tip, txt } from './widgets.js';
 import { textureForTerrain, unitTexture } from './textures.js';
 import { cityAt, citySize } from '../engine/queries.js';
@@ -200,6 +200,15 @@ export class MapView {
   }
 
   piece(parent, key, x, y, w, owner, count) {
+    if (key === 'u_leader') {
+      // a gold ring sets a Leader apart from the plain units
+      const ring = this.scene.add.graphics();
+      ring.fillStyle(0x0c1118, 0.6);
+      ring.fillCircle(x, y, w * 0.6);
+      ring.lineStyle(Math.max(1.6, w * 0.08), C.gold, 1);
+      ring.strokeCircle(x, y, w * 0.6);
+      parent.add(ring);
+    }
     const img = icon(this.scene, key, x, y, w).setTint(PLAYER_COLORS[owner]);
     parent.add(img);
     if (count > 1) this.unitBadge(parent, x + w * 0.38, y + w * 0.36, count);
@@ -217,7 +226,7 @@ export class MapView {
       const units = s.units.filter((u) => u.hex === h.k && !hide.has(u.id));
       const groups = [];
       for (const owner of OWNERS) {
-        for (const type of ['ship', 'infantry', 'cavalry', 'elephant', 'settler']) {
+        for (const type of ['ship', 'leader', 'infantry', 'cavalry', 'elephant', 'settler']) {
           const n = units.filter((u) => u.owner === owner && u.type === type).length;
           if (n) groups.push({ owner, type, n });
         }
@@ -237,19 +246,26 @@ export class MapView {
         });
         // Druidic Influence: a Culture token in the colour of its owner lies under the city.
         if (city.druid !== undefined) c.add(this.scene.add.circle(-31 * K, 3 * K, 6 * K, PLAYER_COLORS[city.druid]).setStrokeStyle(2 * K, 0xffffff));
+        // Cleopatra's Culture tokens lie above the city.
+        if (city.beloved > 0) {
+          c.add(icon(this.scene, 'ic_culture', 0, -42 * K, 15 * K));
+          if (city.beloved > 1) this.unitBadge(c, 9 * K, -37 * K, city.beloved);
+        }
         city.wonders.forEach((w, i) => c.add(icon(this.scene, 'ic_wonder', (26 + i * 2) * K, (-31 + i * 12) * K, 17 * K)));
         const crowded = groups.length > 2; // Infantry, Cavalry, Elephants and Settlers in one city
         const packed = groups.length > 3;
+        const tiny = groups.length > 4; // a Leader as well
         groups.forEach((gp, i) => {
-          const gx = (i - (groups.length - 1) / 2) * (packed ? 18 : crowded ? 22 : 26) * K;
-          this.piece(c, unitKey(gp), gx, 38 * K, (packed ? 17 : crowded ? 20 : 22) * K, gp.owner, gp.n);
+          const gx = (i - (groups.length - 1) / 2) * (tiny ? 16 : packed ? 18 : crowded ? 22 : 26) * K;
+          this.piece(c, unitKey(gp), gx, 38 * K, (tiny ? 15 : packed ? 17 : crowded ? 20 : 22) * K, gp.owner, gp.n);
         });
       } else {
         const cargo = groups.filter((gp) => gp.type !== 'ship');
         const ships = groups.filter((gp) => gp.type === 'ship');
         const row = (list, yy, w) => {
-          const size = list.length > 3 ? w * 0.65 : list.length > 2 ? w * 0.8 : w;
-          list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * (size + 6), yy, size, gp.owner, gp.n));
+          const size = list.length > 4 ? w * 0.5 : list.length > 3 ? w * 0.65 : list.length > 2 ? w * 0.8 : w;
+          const step = size + (list.length > 4 ? 3 : 6);
+          list.forEach((gp, i) => this.piece(c, unitKey(gp), (i - (list.length - 1) / 2) * step, yy, size, gp.owner, gp.n));
         };
         if (ships.length && cargo.length) {
           row(ships, -8 * K, 27 * K);

@@ -363,6 +363,22 @@ const ICONS = {
     for (const y of [16.2, 19.4, 22.6, 25.8]) p.line(14.2, y, 17.8, y);
     p.fill(OUT).circle(11.6, 9.4, 1.3).circle(20.4, 9.4, 1.3);
   },
+  u_leader(p) {
+    // a crowned bust seen from the front: shoulders, a face and a crown with three points
+    const shoulders = [[2.8, 31.2], ...curve([2.8, 31.2], [3.6, 22], [16, 21.6], 8), ...curve([16, 21.6], [28.4, 22], [29.2, 31.2], 8)];
+    p.fill(LIGHT).stroke(1.7, OUT).poly(shoulders, 'fs');
+    p.fill(SHADE).poly([[16, 26.4], [11.4, 22.2], [20.6, 22.2]]);
+    p.fill(WHITE).stroke(1.7, OUT).rect(13.4, 17.6, 5.2, 5.6, 'fs', 1.2);
+    const face = [...curve([9.4, 8.6], [9.2, 21.6], [16, 22], 8), ...curve([16, 22], [22.8, 21.6], [22.6, 8.6], 8)];
+    p.fill(WHITE).stroke(1.8, OUT).poly(face, 'fs');
+    p.fill(OUT).circle(13, 14.8, 1.2).circle(19, 14.8, 1.2);
+    p.stroke(1.3, INK).path(curve([13.2, 18.4], [16, 20.4], [18.8, 18.4], 6));
+    const crown = [[8.2, 10.8], [7.6, 2.6], [12, 6.4], [16, 1], [20, 6.4], [24.4, 2.6], [23.8, 10.8]];
+    p.fill(LIGHT).stroke(1.7, OUT).poly(crown, 'fs');
+    p.fill(SHADE).rect(8.4, 8, 15.2, 2.8, 'f');
+    p.stroke(1.7, OUT).line(8.2, 10.8, 23.8, 10.8);
+    p.fill(WHITE).stroke(1.2, OUT).circle(7.8, 2.8, 1.5, 'fs').circle(16, 1.6, 1.5, 'fs').circle(24.2, 2.8, 1.5, 'fs');
+  },
   u_settler(p) {
     // covered wagon
     const wheel = (x, y, r) => {
@@ -595,7 +611,7 @@ const ICONS = {
 const SIZES = {
   ic_food: [24, 24], ic_wood: [24, 24], ic_ore: [24, 24], ic_ideas: [24, 24], ic_gold: [24, 24], ic_mood: [24, 24], ic_culture: [24, 24], ic_captive: [24, 24],
   mood_happy: [24, 24], mood_neutral: [24, 24], mood_angry: [24, 24],
-  u_infantry: [32, 32], u_cavalry: [32, 32], u_elephant: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_pirate: [32, 32], u_barb: [32, 32], b_city: [48, 46],
+  u_infantry: [32, 32], u_cavalry: [32, 32], u_elephant: [32, 32], u_leader: [32, 32], u_settler: [32, 32], u_ship: [32, 32], u_pirate: [32, 32], u_barb: [32, 32], b_city: [48, 46],
   b_academy: [32, 32], b_fortress: [32, 32], b_market: [32, 32], b_port: [32, 32], b_temple: [32, 32], b_obelisk: [32, 32], b_observatory: [32, 32],
   ic_wonder: [32, 32], ic_swords: [24, 24], ic_explore: [24, 24], ic_boat: [24, 24], ic_exhaust: [24, 24],
   ic_action: [20, 20], ic_action_off: [20, 20], ic_card: [20, 24], ic_die: [36, 36], ic_spark: [12, 12],

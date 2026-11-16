@@ -5,6 +5,7 @@ import { hasAdv, hasCivAdv } from './queries.js';
 import { fail, gainRes, pay, planPayment, clampResources, drawActionCard, drawObjectiveCard, drawWonderCard, applyPayment } from './core.js';
 import { resolveEvent } from './events.js';
 import { grantCivAdvances, starCatalogs } from './civs.js';
+import { choose } from './prompts.js';
 
 const FREE_BY = {
   math: ['engineering', 'roads'],
@@ -155,6 +156,83 @@ export function* quickAdvance(g, p, id, cost) {
   const why = advanceBlocked(g.s, p, id);
   if (why) fail(why);
   pay(g, p, cost, { ideasAsFood: true, ideasFirst: true });
+  yield* gainAdvance(g, p, id);
+}
+
+// ----------------------------------------------------------------- Leaders
+const LEADER_PAY = { ideasAsFood: true, ideasFirst: true };
+
+/**
+ * What an Advance costs a Leader's player. `token` ('culture' or 'mood') replaces the Food of the price (Wu Zetian, Sun Tzu,
+ * Pericles and Hiram); `extra` is added to the price (Maharaja's Culture token). `full` ignores the discounts that stand for
+ * an action saved, as the Leader saves it already.
+ */
+export function leaderAdvanceCost(s, p, id, { token = null, extra = null, full = false } = {}) {
+  const base = advanceCost(s, p, id, { full });
+  const cost = { ...base.cost };
+  let via = base.via;
+  if (token && cost.food) {
+    delete cost.food;
+    cost[token] = (cost[token] || 0) + 1;
+    via = null;
+  }
+  for (const [k, v] of Object.entries(extra || {})) cost[k] = (cost[k] || 0) + v;
+  return { cost, via };
+}
+
+/** Whether `id` is an Advance a Leader's ability allows: in `group`, or (`newCategory`) the first of a category the player has none of. */
+function leaderAdvanceAllowed(s, p, id, { group = null, newCategory = false } = {}) {
+  const adv = ADVANCES[id];
+  if (advanceBlocked(s, p, id)) return false;
+  if (group && adv.group !== group) return false;
+  if (newCategory && (adv.index !== 0 || s.players[p].advances.some((x) => ADVANCES[x].group === adv.group))) return false;
+  return true;
+}
+
+/** The tokens a Leader's Advance could be paid with, given what the player holds. */
+export function leaderTokens(s, p, id, opts = {}) {
+  const tokens = opts.swap ? ['culture', 'mood'] : [null];
+  return tokens.filter((token) => {
+    const { cost } = leaderAdvanceCost(s, p, id, { ...opts, token });
+    return !!planPayment(s, p, cost, LEADER_PAY);
+  });
+}
+
+/** The Advances a Leader's ability could buy right now (affordable ones only). `swap` is for the abilities that take a token for the Food. */
+export function leaderAdvanceOptions(s, p, opts = {}) {
+  return Object.keys(ADVANCES).filter((id) => leaderAdvanceAllowed(s, p, id, opts) && leaderTokens(s, p, id, opts).length);
+}
+
+/**
+ * Research an Advance by a Leader's ability: `swap` takes a Culture or Mood token (`token`, asked for when both would do) for the Food,
+ * `extra` adds to the price, `group` limits the category and `newCategory` the first Advance of one the player has none of.
+ * The caller spends the action and activates the city.
+ */
+export function* leaderAdvance(g, p, id, opts = {}) {
+  const s = g.s;
+  const t = s.turn;
+  if (!ADVANCES[id]) fail('Unknown Advance.');
+  const why = advanceBlocked(s, p, id);
+  if (why) fail(why);
+  if (!leaderAdvanceAllowed(s, p, id, opts)) fail(opts.newCategory ? 'Choose the first Advance of a category you have no Advance in.' : 'That Advance is not in the right category.');
+  let token = null;
+  if (opts.swap) {
+    const ok = leaderTokens(s, p, id, opts);
+    if (!ok.length) fail('You cannot afford that Advance.');
+    token = ok.includes(opts.token) ? opts.token : ok.length === 1 ? ok[0] : yield* choose(g, p, {
+      kind: 'leader_token',
+      title: ADVANCES[id].name,
+      text: 'Pay with a Culture token or a Mood token?',
+      options: [{ id: 'culture', label: 'Culture token' }, { id: 'mood', label: 'Mood token' }],
+      default: s.players[p].culture >= s.players[p].mood ? 'culture' : 'mood',
+    });
+  }
+  const { cost, via } = leaderAdvanceCost(s, p, id, { ...opts, token });
+  const plan = planPayment(s, p, cost, LEADER_PAY);
+  if (!plan) fail('You cannot afford that Advance.');
+  applyPayment(g, p, plan);
+  if (via === 'priesthood') t.used.priesthood = true;
+  if (via === 'ballcourts') t.used.ballcourtsAdvance = true;
   yield* gainAdvance(g, p, id);
 }
 

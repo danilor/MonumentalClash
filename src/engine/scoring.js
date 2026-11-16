@@ -1,8 +1,9 @@
 // Final scoring and tiebreaks.
 import { BARBARIAN } from './data/constants.js';
 import { ADVANCES, GROUPS } from './data/advances.js';
+import { ERIC_TOKEN_VP, LEADER_CAPTURE_VP } from './data/leaders.js';
 import { WONDERS } from './data/wonders.js';
-import { hasCivAdv } from './queries.js';
+import { hasCivAdv, hexDistance, leaderCity } from './queries.js';
 
 export const SCORE_ORDER = ['core', 'advances', 'objectives', 'wonders', 'events'];
 /** The parts of a score in tiebreak order: the Civilizations module adds a part of its own (Captives, tokens, Runestones). */
@@ -36,10 +37,22 @@ function wonderPoints(s, p) {
   return pts;
 }
 
-/** Civilization points: Aztec Captives (1/2 VP), Celtic Culture tokens under Barbarian cities (1 VP), Runestones (1 VP). */
+/**
+ * Leader points: every enemy Leader killed in battle (2 VP), every Culture token Eric the Red placed (1 VP, they stay when he
+ * dies) and, if Cnut the Great is in a city of the player, 1/2 VP for each space between it and the starting city.
+ */
+function leaderPoints(s, p) {
+  const pl = s.players[p];
+  let pts = (pl.leaderCaptured || []).length * LEADER_CAPTURE_VP + (pl.ericTokens || []).length * ERIC_TOKEN_VP;
+  const cnut = leaderCity(s, p, 'cnut');
+  if (cnut && pl.homeHex !== null) pts += hexDistance(cnut.hex, pl.homeHex) / 2;
+  return pts;
+}
+
+/** Civilization points: Aztec Captives (1/2 VP), Celtic Culture tokens under Barbarian cities (1 VP), Runestones (1 VP), Leaders. */
 function civPoints(s, p) {
   const pl = s.players[p];
-  return (pl.captives || []).length / 2 + s.cities.filter((c) => c.druid === p).length + (pl.runes || 0);
+  return (pl.captives || []).length / 2 + s.cities.filter((c) => c.druid === p).length + (pl.runes || 0) + leaderPoints(s, p);
 }
 
 export function scoreOf(s, p) {
